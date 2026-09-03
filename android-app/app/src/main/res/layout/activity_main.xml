@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#f5f5f5"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="#f5c400"
+            android:padding="24dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="20dp"
+            android:gravity="center_horizontal"
+            android:clipToPadding="false">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ELETTRO"
+                android:textStyle="bold"
+                android:textSize="32sp"
+                android:textColor="#111111" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ENGINEERING ENTERPRISES"
+                android:textSize="12sp"
+                android:letterSpacing="0.08"
+                android:textColor="#111111"
+                android:layout_marginTop="4dp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Email"
+            android:textStyle="bold"
+            android:textColor="#111111"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/email_input"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="admin@elettro.com"
+            android:paddingHorizontal="12dp"
+            android:background="#ffffff"
+            android:textColor="#111111"
+            android:textColorHint="#757575" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Password"
+            android:textStyle="bold"
+            android:textColor="#111111"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="8dp" />
+
+        <EditText
+            android:id="@+id/password_input"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:hint="Password"
+            android:inputType="textPassword"
+            android:paddingHorizontal="12dp"
+            android:background="#ffffff"
+            android:textColor="#111111"
+            android:textColorHint="#757575" />
+
+        <RadioGroup
+            android:id="@+id/role_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="16dp">
+
+            <RadioButton
+                android:id="@+id/role_admin"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Admin"
+                android:checked="true" />
+
+            <RadioButton
+                android:id="@+id/role_tech"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Technician" />
+        </RadioGroup>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/login_button"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="LOGIN"
+            android:textStyle="bold"
+            android:backgroundTint="#f5c400"
+            android:textColor="#111111"
+            app:cornerRadius="8dp" />
+
+        <CheckBox
+            android:id="@+id/remember_me"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Remember me"
+            android:layout_marginTop="12dp" />
+
+    </LinearLayout>
+</ScrollView>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Elettro</string>
+    <string name="api_base_url">https://your-backend.example.com/api</string>
+    <string name="admin_email">admin@elettro.com</string>
+    <string name="admin_password">admin123</string>
+    <string name="tech_email">tech@elettro.com</string>
+    <string name="tech_password">tech123</string>
+</resources>

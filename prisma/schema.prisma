@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  role      Role     @default(CLIENT)
+  createdAt DateTime @default(now())
+  bookings  Booking[]
+  reports   Report[]
+}
+
+model Booking {
+  id           String   @id @default(uuid())
+  clientId     String
+  client       User     @relation(fields: [clientId], references: [id])
+  title        String
+  description  String?
+  status       BookingStatus @default(PENDING)
+  assignedToId String?
+  assignedTo   User?    @relation("AssignedBookings", fields: [assignedToId], references: [id])
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime @default(now())
+}
+
+model TechnicianActivity {
+  id         String   @id @default(uuid())
+  techId     String
+  tech       User     @relation(fields: [techId], references: [id])
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id])
+  message    String
+  createdAt  DateTime @default(now())
+}
+
+model InventoryItem {
+  id          String   @id @default(uuid())
+  name        String
+  sku         String?  @unique
+  quantity    Int      @default(0)
+  unit        String?  
+  createdAt   DateTime @default(now())
+}
+
+model Report {
+  id        String   @id @default(uuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  TECH
+  CLIENT
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}

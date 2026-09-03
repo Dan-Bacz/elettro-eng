@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #__next {
+  height: 100%;
+}
+
+/* simple brand styles */
+.btn { @apply px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600 }

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#f4f4f4"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Admin Dashboard"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#111111" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="18dp">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Inquiries\n12"
+                android:padding="12dp"
+                android:background="#f5c400"
+                android:gravity="center"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Total Projects\n15"
+                android:padding="12dp"
+                android:background="#ffffff"
+                android:gravity="center"
+                android:layout_marginStart="8dp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pending Bookings"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:textColor="#111111" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="B-2024-001 • Juan Dela Cruz • Electrical Installation"
+            android:background="#ffffff"
+            android:padding="14dp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="B-2024-002 • ABC Company • Maintenance Service"
+            android:background="#ffffff"
+            android:padding="14dp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="B-2024-003 • Maria Santos • Electrical Repair"
+            android:background="#ffffff"
+            android:padding="14dp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Inventory Overview"
+            android:textStyle="bold"
+            android:layout_marginTop="24dp"
+            android:textColor="#111111" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cable Breaker: 20 items\nPVC Conduit: 10 items\nElectrical Tape: 2 items"
+            android:background="#ffffff"
+            android:padding="14dp"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+</ScrollView>
