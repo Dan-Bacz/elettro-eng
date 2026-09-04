@@ -79,7 +79,7 @@ export default function ClientPage(){
     <main className="max-w-3xl mx-auto p-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-semibold">Book a Service or Order Products</h2>
-        <a href="/admin" className="text-sm text-brand-700 underline">Admin sign in</a>
+        <a href="/admin/login" className="text-sm text-brand-700 underline">Admin sign in</a>
       </div>
 
       <p className="mt-2">No login required — fill the form below to submit a booking or order. Admins can sign in from the link above.</p>

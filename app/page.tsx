@@ -68,7 +68,7 @@ export default function Home(){
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/admin"><a className="text-sm text-gray-700">Admin Sign In</a></Link>
+            <Link href="/admin/login"><a className="text-sm text-gray-700">Admin Sign In</a></Link>
             <Link href="/client"><a className="px-4 py-2 bg-yellow-400 text-black rounded">Book a Service</a></Link>
           </div>
         </div>
