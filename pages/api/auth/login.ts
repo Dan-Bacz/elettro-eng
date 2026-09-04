@@ -10,8 +10,36 @@ export default async function handler(req, res) {
   if (!email || !password) return res.status(400).json({ error: 'Missing credentials' })
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } })
-    if (!user) return res.status(401).json({ error: 'Invalid credentials' })
+    // Look up user in DB
+    let user = await prisma.user.findUnique({ where: { email } })
+
+    // If user not found, allow fallback creation using default admin creds.
+    // Defaults can be overridden via env: DEFAULT_ADMIN_EMAIL, DEFAULT_ADMIN_PASSWORD
+    const defaultAdminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'eldred@elettro.com'
+    const defaultAdminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'
+
+    if (!user) {
+      // If credentials match the default admin, create the user and proceed
+      if (email === defaultAdminEmail && password === defaultAdminPassword) {
+        const hashed = await bcrypt.hash(defaultAdminPassword, 10)
+        try {
+          user = await prisma.user.create({
+            data: {
+              name: 'Admin',
+              email: defaultAdminEmail,
+              password: hashed,
+              role: 'ADMIN'
+            }
+          })
+          console.log('Auto-created default admin user in DB:', user.email)
+        } catch (createErr) {
+          console.error('Failed to create default admin user:', createErr)
+          return res.status(500).json({ error: 'Failed to create admin user. Ensure DATABASE_URL is set in production.' })
+        }
+      } else {
+        return res.status(401).json({ error: 'Invalid credentials' })
+      }
+    }
 
     // Cast to any because Prisma generated types may be out-of-sync in some environments
     const u: any = user
