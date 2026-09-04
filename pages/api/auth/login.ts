@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import jwt from 'jsonwebtoken'
+import { serialize } from 'cookie'
 
 const prisma = new PrismaClient()
 
@@ -20,7 +22,17 @@ export default async function handler(req, res) {
     const ok = await bcrypt.compare(password, u.password)
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
 
-    // Authentication success. For now, return user basic info.
+    // Authentication success. Create JWT and set as HttpOnly cookie
+    const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
+    const cookie = serialize('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    })
+    res.setHeader('Set-Cookie', cookie)
+
     return res.json({ ok: true, user: { id: user.id, email: user.email, role: user.role } })
   } catch (err) {
     console.error(err)
