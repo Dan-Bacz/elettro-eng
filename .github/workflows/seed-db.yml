@@ -1,0 +1,35 @@
+name: Seed Production DB
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  seed:
+    name: Push schema & seed
+    runs-on: ubuntu-latest
+    env:
+      # DATABASE_URL must be added to repo secrets
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Prisma Client
+        run: npm run prisma:generate
+
+      - name: Push Prisma schema to DB
+        run: npm run prisma:push
+
+      - name: Seed database
+        run: npm run prisma:seed
