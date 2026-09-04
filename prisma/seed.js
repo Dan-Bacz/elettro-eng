@@ -1,9 +1,11 @@
 const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
 const prisma = new PrismaClient()
 
 async function main(){
-  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@elettro.com'
-  const adminName = process.env.DEFAULT_ADMIN_NAME || 'Admin'
+  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'eldred@elettro.com'
+  const adminName = process.env.DEFAULT_ADMIN_NAME || 'Eldred'
+  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'
 
   console.log('Checking for existing admin user with email', adminEmail)
   const existing = await prisma.user.findUnique({ where: { email: adminEmail } })
@@ -12,10 +14,13 @@ async function main(){
     return
   }
 
+  const hashed = await bcrypt.hash(adminPassword, 10)
+
   const user = await prisma.user.create({
     data: {
       name: adminName,
       email: adminEmail,
+      password: hashed,
       role: 'ADMIN'
     }
   })
