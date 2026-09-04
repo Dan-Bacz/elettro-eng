@@ -1,4 +1,4 @@
-package com.elettro.app;
+    package com.elettro.app;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -43,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
         RadioButton selectedRoleButton = findViewById(selectedId);
         String role = selectedRoleButton != null ? selectedRoleButton.getText().toString() : "Admin";
 
-        boolean validAdmin = "admin@elettro.com".equalsIgnoreCase(email) && "admin123".equals(password);
+        boolean validAdmin = "eldred@elettro.com".equalsIgnoreCase(email) && "admin123".equals(password);
         boolean validTech = "tech@elettro.com".equalsIgnoreCase(email) && "tech123".equals(password);
 
         if (validAdmin && "Admin".equals(role)) {
