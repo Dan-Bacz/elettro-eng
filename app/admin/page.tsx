@@ -4,6 +4,9 @@ import { useRouter } from 'next/navigation'
 
 export default function AdminPage(){
   const [loading, setLoading] = useState(true)
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
   const router = useRouter()
 
   useEffect(()=>{
@@ -22,41 +25,72 @@ export default function AdminPage(){
     check()
   },[router])
 
+  async function handleLogout() {
+    setLoggingOut(true)
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      router.push('/')
+    } catch (error) {
+      router.push('/')
+    } finally {
+      setLoggingOut(false)
+    }
+  }
+
   if (loading) return <div className="p-8">Checking authentication...</div>
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-72 bg-yellow-400 text-black h-screen sticky top-0 flex flex-col justify-between">
-          <div>
-            <div className="px-6 py-8 flex items-center gap-3">
-              <div className="bg-black text-yellow-400 rounded-full w-12 h-12 flex items-center justify-center font-bold text-xl">⚡</div>
-              <div>
-                <div className="font-bold text-lg">ELETTRO</div>
-                <div className="text-xs">ENGINEERING ENTERPRISES</div>
+        <aside className={`${sidebarOpen ? 'w-72' : 'w-24'} bg-yellow-400 text-black h-screen sticky top-0 flex flex-col justify-between transition-all duration-200 overflow-hidden`}>
+          <div className="flex flex-col h-full overflow-y-auto">
+            <div className="flex items-center justify-between px-4 py-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="bg-black text-yellow-400 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shrink-0">⚡</div>
+                {sidebarOpen && (
+                  <div className="min-w-0">
+                    <div className="font-bold text-lg leading-tight">ELETTRO</div>
+                    <div className="text-[10px] uppercase tracking-wide">Engineering Enterprises</div>
+                  </div>
+                )}
               </div>
+
+              <button
+                type="button"
+                onClick={() => setSidebarOpen((prev) => !prev)}
+                className="ml-2 bg-black/10 hover:bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shrink-0"
+                aria-label="Toggle sidebar"
+              >
+                {sidebarOpen ? '‹' : '›'}
+              </button>
             </div>
 
-            <nav className="mt-6 px-4 space-y-2">
+            <nav className="mt-4 px-3 space-y-2 overflow-y-auto">
               {[
                 'Dashboard','Inquiries','Bookings','Projects','Technicians','Inventory','Reports','Notifications','Settings'
               ].map((label, i)=> (
-                <div key={label} className={`flex items-center gap-3 px-4 py-3 rounded-lg ${i===0? 'bg-black text-yellow-400':'hover:bg-yellow-300'}`}>
-                  <div className="w-8 h-8 rounded bg-black/10 flex items-center justify-center">{label[0]}</div>
-                  <div className="font-medium">{label}</div>
+                <div key={label} className={`flex items-center gap-3 px-3 py-3 rounded-lg ${i===0? 'bg-black text-yellow-400':'hover:bg-yellow-300'}`}>
+                  <div className="w-8 h-8 rounded bg-black/10 flex items-center justify-center shrink-0">{label[0]}</div>
+                  {sidebarOpen && <div className="font-medium">{label}</div>}
                 </div>
               ))}
             </nav>
-          </div>
 
-          <div className="p-6">
-            <button className="w-full bg-white text-black rounded-lg py-3 font-medium">Logout</button>
+            <div className="mt-auto p-3 border-t border-black/10">
+              <button
+                type="button"
+                onClick={handleLogout}
+                disabled={loggingOut}
+                className={`w-full flex items-center justify-center gap-2 rounded-lg bg-white text-black py-3 font-medium hover:bg-gray-100 disabled:opacity-60 ${!sidebarOpen ? 'px-2' : ''}`}
+              >
+                <span>{sidebarOpen ? (loggingOut ? 'Logging out...' : 'Logout') : '⎋'}</span>
+              </button>
+            </div>
           </div>
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 p-8">
+        <main className="flex-1 p-8 overflow-auto">
           <header className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -67,12 +101,31 @@ export default function AdminPage(){
                 <button className="p-2 bg-white rounded-full shadow">🔔</button>
                 <span className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full text-xs w-5 h-5 flex items-center justify-center">4</span>
               </div>
-              <div className="flex items-center gap-3">
-                <img src="/avatar.png" alt="admin" className="w-10 h-10 rounded-full" onError={(e)=>{(e.target as HTMLImageElement).src = 'https://via.placeholder.com/40'}}/>
-                <div className="text-right">
-                  <div className="font-medium">Admin</div>
-                  <div className="text-xs text-gray-500">Administrator</div>
-                </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-3 rounded-full bg-white px-3 py-2 shadow-sm hover:bg-gray-100"
+                >
+                  <img src="/avatar.png" alt="admin" className="w-10 h-10 rounded-full" onError={(e)=>{(e.target as HTMLImageElement).src = 'https://via.placeholder.com/40'}}/>
+                  <div className="text-right">
+                    <div className="font-medium">Admin</div>
+                    <div className="text-xs text-gray-500">Administrator</div>
+                  </div>
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-44 rounded-lg border border-gray-200 bg-white shadow-lg z-10">
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                    >
+                      {loggingOut ? 'Logging out...' : 'Logout'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </header>
