@@ -127,16 +127,18 @@
                         android:elevation="2dp">
 
                         <TextView
+                            android:id="@+id/total_inventory_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Total Inquiries"
+                            android:text="Inventory Units"
                             android:textSize="12sp"
                             android:textColor="#666666" />
 
                         <TextView
+                            android:id="@+id/total_inventory_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="12"
+                            android:text="0"
                             android:textSize="28sp"
                             android:textStyle="bold"
                             android:textColor="#111111"
@@ -145,7 +147,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="↗ 20% from last month"
+                            android:text="Live from database"
                             android:textSize="11sp"
                             android:textColor="#16a34a"
                             android:layout_marginTop="6dp" />
@@ -169,9 +171,10 @@
                             android:textColor="#666666" />
 
                         <TextView
+                            android:id="@+id/total_bookings_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="8"
+                            android:text="0"
                             android:textSize="28sp"
                             android:textStyle="bold"
                             android:textColor="#111111"
@@ -180,7 +183,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="↗ 14% from last month"
+                            android:text="Live from database"
                             android:textSize="11sp"
                             android:textColor="#16a34a"
                             android:layout_marginTop="6dp" />
@@ -199,14 +202,15 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Total Projects"
+                            android:text="Low Stock Alerts"
                             android:textSize="12sp"
                             android:textColor="#666666" />
 
                         <TextView
+                            android:id="@+id/low_stock_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="15"
+                            android:text="0"
                             android:textSize="28sp"
                             android:textStyle="bold"
                             android:textColor="#111111"
@@ -215,7 +219,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="↗ 25% from last month"
+                            android:text="Needs attention"
                             android:textSize="11sp"
                             android:textColor="#16a34a"
                             android:layout_marginTop="6dp" />
@@ -231,6 +235,7 @@
                         android:elevation="2dp">
 
                         <TextView
+                            android:id="@+id/technicians_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Technicians"
@@ -238,9 +243,10 @@
                             android:textColor="#666666" />
 
                         <TextView
+                            android:id="@+id/technicians_value"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="6"
+                            android:text="0"
                             android:textSize="28sp"
                             android:textStyle="bold"
                             android:textColor="#111111"
@@ -249,7 +255,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="↗ 0% from last month"
+                            android:text="Active technicians"
                             android:textSize="11sp"
                             android:textColor="#666666"
                             android:layout_marginTop="6dp" />
@@ -360,15 +366,16 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Recent Inquiries"
+                            android:text="Recent Bookings"
                             android:textStyle="bold"
                             android:textSize="18sp"
                             android:textColor="#111111" />
 
                         <TextView
+                            android:id="@+id/recent_bookings_value"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:text="Wiring Installation\nJuan Dela Cruz"
+                            android:text="Loading live bookings..."
                             android:textColor="#111111"
                             android:layout_marginTop="14dp" />
 

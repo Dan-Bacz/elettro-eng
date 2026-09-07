@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     })
     res.setHeader('Set-Cookie', cookie)
 
-    return res.json({ ok: true, user: { id: user.id, email: user.email, role: user.role } })
+    return res.json({ ok: true, token, user: { id: user.id, email: user.email, role: user.role } })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: 'Server error' })

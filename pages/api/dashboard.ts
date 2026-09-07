@@ -1,9 +1,22 @@
 import { PrismaClient } from '@prisma/client'
+import jwt from 'jsonwebtoken'
 
 const prisma = new PrismaClient()
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
+
+  const authorization = req.headers.authorization || ''
+  const token = authorization.startsWith('Bearer ')
+    ? authorization.slice(7)
+    : req.cookies?.token
+  if (!token) return res.status(401).json({ error: 'Authentication required' })
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+  } catch {
+    return res.status(401).json({ error: 'Invalid session' })
+  }
 
   try {
     const [bookings, inventory, users] = await Promise.all([

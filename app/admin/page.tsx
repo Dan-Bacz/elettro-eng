@@ -114,6 +114,15 @@ export default function AdminPage() {
       }
     }
     check()
+    const refreshTimer = window.setInterval(async () => {
+      const dashboardRes = await fetch('/api/dashboard')
+      if (dashboardRes.ok) {
+        const payload = await dashboardRes.json()
+        setData(payload)
+        setInventory(payload.inventory || [])
+      }
+    }, 30000)
+    return () => window.clearInterval(refreshTimer)
   }, [router])
 
   async function refreshInventory() {
@@ -279,16 +288,16 @@ export default function AdminPage() {
   const stats = data?.stats
 
   return (
-    <div className="min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-[#f4f7f8]">
       <div className="flex">
-        <aside className={`${sidebarOpen ? 'w-72' : 'w-24'} bg-yellow-400 text-black h-screen sticky top-0 flex flex-col transition-all duration-200 overflow-hidden`}>
-          <div className="flex items-center justify-between px-4 py-4 border-b border-black/10">
+        <aside className={`${sidebarOpen ? 'w-72' : 'w-24'} bg-[#0b0f10] text-white h-screen sticky top-0 flex flex-col transition-all duration-200 overflow-hidden`}>
+          <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="bg-black text-yellow-400 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shrink-0">⚡</div>
+              <div className="bg-yellow-400 text-black rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shrink-0">⚡</div>
               {sidebarOpen && (
                 <div className="min-w-0">
-                  <div className="font-black text-lg leading-tight">ELETTRO</div>
-                  <div className="text-[10px] uppercase tracking-wide">Engineering Enterprises</div>
+                  <div className="font-black text-lg leading-tight text-white">ELETTRO</div>
+                  <div className="text-[10px] uppercase tracking-wide text-slate-400">Engineering Enterprises</div>
                 </div>
               )}
             </div>
@@ -296,7 +305,7 @@ export default function AdminPage() {
             <button
               type="button"
               onClick={() => setSidebarOpen((prev) => !prev)}
-              className="ml-2 bg-black/10 hover:bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shrink-0"
+              className="ml-2 bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shrink-0"
               aria-label="Toggle sidebar"
             >
               {sidebarOpen ? '‹' : '›'}
@@ -309,15 +318,15 @@ export default function AdminPage() {
                 key={item.key}
                 type="button"
                 onClick={() => setActiveSection(item.key)}
-                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition ${activeSection === item.key ? 'bg-black text-yellow-400 shadow-md' : 'hover:bg-yellow-300'}`}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition ${activeSection === item.key ? 'bg-yellow-400 text-black shadow-md' : 'text-slate-300 hover:bg-white/10'}`}
               >
-                <div className="w-8 h-8 rounded-lg bg-black/10 flex items-center justify-center shrink-0">{item.emoji}</div>
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center shrink-0">{item.emoji}</div>
                 {sidebarOpen && <div className="font-medium text-left">{item.label}</div>}
               </button>
             ))}
           </nav>
 
-          <div className="mt-auto p-3 border-t border-black/10">
+          <div className="mt-auto p-3 border-t border-white/10">
             <button
               type="button"
               onClick={handleLogout}

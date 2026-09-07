@@ -1,6 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Elettro</string>
+    <string name="app_name_full">ELETTRO</string>
+    <string name="app_tagline">ENGINEERING ENTERPRISES</string>
+    <string name="login_motto">Powering Solutions, Building Trust.</string>
+    <string name="welcome_back">Welcome Back!</string>
+    <string name="sign_in_subtitle">Sign in to your account to continue</string>
+    <string name="email_address">Email Address</string>
+    <string name="password">Password</string>
+    <string name="remember_me">Remember me</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="login">Login</string>
+    <string name="or">or</string>
+    <string name="continue_as_guest">Continue as Guest</string>
+    <string name="guest_footer">You can also browse services and products without an account.</string>
+    <string name="forgot_password_message">Password reset is not available yet. Contact your administrator.</string>
+    <string name="guest_message">Guest browsing is not available in the app yet.</string>
     <string name="api_base_url">https://your-backend.example.com/api</string>
     <string name="admin_email">admin@elettro.com</string>
     <string name="admin_password">admin123</string>
