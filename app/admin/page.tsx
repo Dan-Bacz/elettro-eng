@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 type DashboardData = {
@@ -39,17 +39,6 @@ type InventoryForm = {
   imageData: string
 }
 
-type AiRecommendation = {
-  id: string
-  title: string
-  category: string
-  brand: string
-  model: string
-  description: string
-  image: string
-  quantity: number
-  unit: string
-}
 
 const navItems = [
   { key: 'dashboard', label: 'Dashboard', emoji: '▣' },
@@ -76,27 +65,8 @@ const emptyForm = {
   imageData: ''
 } satisfies InventoryForm
 
-async function fetchAiRecommendations(query: string, imageData?: string): Promise<AiRecommendation[]> {
-  try {
-    const res = await fetch('/api/ai/recommend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: query || '', imageData: imageData || undefined })
-    })
-
-    if (!res.ok) {
-      return []
-    }
-
-    const json = await res.json()
-    // ensure the shape matches AiRecommendation[]
-    if (Array.isArray(json)) return json as AiRecommendation[]
-    return []
-  } catch (e) {
-    console.error('AI recommendation fetch failed', e)
-    return []
-  }
-}
+// Camera capture refs and state
+const cameraTimeoutMs = 10000
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
@@ -107,8 +77,12 @@ export default function AdminPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [inventory, setInventory] = useState<any[]>([])
   const [inventoryForm, setInventoryForm] = useState<InventoryForm>(emptyForm)
-  const [aiSuggestions, setAiSuggestions] = useState<AiRecommendation[]>([])
-  const [selectedAiId, setSelectedAiId] = useState('')
+  
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const [cameraActive, setCameraActive] = useState(false)
+  const [cameraError, setCameraError] = useState('')
   const [savingItem, setSavingItem] = useState(false)
   const router = useRouter()
 
@@ -189,33 +163,9 @@ export default function AdminPage() {
     setInventoryForm((prev) => ({ ...prev, [field]: value }))
   }
 
-  function applyAiSuggestion(suggestion: AiRecommendation) {
-    setSelectedAiId(suggestion.id)
-    setInventoryForm((prev) => ({
-      ...prev,
-      name: suggestion.title,
-      category: suggestion.category,
-      brand: suggestion.brand,
-      model: suggestion.model,
-      description: suggestion.description,
-      quantity: suggestion.quantity,
-      unit: suggestion.unit,
-      imageUrl: suggestion.image,
-      imageData: suggestion.image
-    }))
-    setAiSuggestions((prev) => prev.length ? prev : [suggestion])
-  }
 
   function handleAiQueryChange(value: string) {
     setInventoryForm((prev) => ({ ...prev, name: value }))
-    if (!value.trim()) {
-      setAiSuggestions([])
-      return
-    }
-    // call server-side AI recommendation endpoint (falls back to local catalog when no API key)
-    fetchAiRecommendations(value).then((items) => {
-      setAiSuggestions(items || [])
-    }).catch(() => setAiSuggestions([]))
   }
 
   async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -226,10 +176,6 @@ export default function AdminPage() {
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : ''
       setInventoryForm((prev) => ({ ...prev, imageData: result, imageUrl: result }))
-      // analyze uploaded image using AI recommendations
-      fetchAiRecommendations('', result).then((items) => {
-        setAiSuggestions(items || [])
-      }).catch(() => {})
     }
     reader.readAsDataURL(file)
   }
@@ -254,10 +200,7 @@ export default function AdminPage() {
         const error = await response.text()
         throw new Error(error || 'Failed to save item')
       }
-
       setInventoryForm(emptyForm)
-      setAiSuggestions([])
-      setSelectedAiId('')
       await refreshInventory()
     } catch (error) {
       alert('Unable to save inventory item. Please try again.')
@@ -280,6 +223,55 @@ export default function AdminPage() {
     } catch (error) {
       alert('Unable to delete inventory item.')
     }
+  }
+
+  async function startCamera() {
+    setCameraError('')
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Camera API not supported in this browser')
+        return
+      }
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+      setCameraActive(true)
+    } catch (e) {
+      console.error(e)
+      setCameraError('Unable to access camera. Check permissions.')
+    }
+  }
+
+  function stopCamera() {
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop())
+        streamRef.current = null
+      }
+      if (videoRef.current) {
+        try { videoRef.current.pause() } catch {}
+        try { videoRef.current.srcObject = null } catch {}
+      }
+    } finally {
+      setCameraActive(false)
+    }
+  }
+
+  function capturePhoto() {
+    if (!videoRef.current || !canvasRef.current) return
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    canvas.width = video.videoWidth || 640
+    canvas.height = video.videoHeight || 480
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const dataUrl = canvas.toDataURL('image/jpeg')
+    setInventoryForm((prev) => ({ ...prev, imageData: dataUrl, imageUrl: dataUrl }))
+    stopCamera()
   }
 
   if (loading) return <div className="p-8 text-lg font-medium">Checking authentication...</div>
@@ -636,11 +628,7 @@ export default function AdminPage() {
                   <div className="mt-5 flex items-center justify-end gap-3">
                     <button
                       type="button"
-                      onClick={() => {
-                        setInventoryForm(emptyForm)
-                        setAiSuggestions([])
-                        setSelectedAiId('')
-                      }}
+                      onClick={() => setInventoryForm(emptyForm)}
                       className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium"
                     >
                       Clear
@@ -658,40 +646,36 @@ export default function AdminPage() {
 
                 <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-black text-slate-800">AI recommendations</h3>
-                    <span className="text-xs text-slate-500">Smart suggestions</span>
+                    <h3 className="text-lg font-black text-slate-800">Capture / Upload Image</h3>
+                    <span className="text-xs text-slate-500">Use device camera or upload</span>
                   </div>
 
-                  {!aiSuggestions.length ? (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
-                      Type an item such as “bulb”, “wire”, “breaker”, “socket”, or “motor” to get an AI recommendation.
+                  <div className="space-y-4">
+                    <div className="text-sm text-slate-600">You can use your device camera or upload an image of the bought product. On mobile, pressing "Use Camera" will open the camera. On desktop, the webcam will be used if permitted.</div>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={startCamera}
+                        className="px-4 py-2 rounded-xl bg-black text-white font-medium"
+                      >
+                        Use Camera
+                      </button>
+
+                      <label className="inline-flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 cursor-pointer">
+                        Upload
+                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+                      </label>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {aiSuggestions.map((item) => (
-                        <div key={item.id} className={`rounded-2xl border ${selectedAiId === item.id ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200'} overflow-hidden`}>
-                          <img src={item.image} alt={item.title} className="h-32 w-full object-cover" />
-                          <div className="p-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <div>
-                                <div className="font-bold text-slate-800">{item.title}</div>
-                                <div className="text-xs text-slate-500">{item.category} • {item.brand}</div>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => applyAiSuggestion(item)}
-                                className="text-xs bg-black text-white px-2 py-1.5 rounded-lg"
-                              >
-                                Use
-                              </button>
-                            </div>
-                            <div className="mt-2 text-xs text-slate-600">Model: {item.model}</div>
-                            <div className="mt-1 text-xs text-slate-600">{item.description}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
+                    {cameraError && <div className="text-sm text-red-600">{cameraError}</div>}
+
+                    {inventoryForm.imageUrl && (
+                      <div className="mt-2">
+                        <img src={inventoryForm.imageUrl} alt="preview" className="w-full h-40 object-contain rounded-lg border" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -750,6 +734,18 @@ export default function AdminPage() {
             </section>
           )}
         </main>
+        {cameraActive && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-4 max-w-md w-full">
+              <video ref={videoRef} className="w-full h-64 bg-black rounded" autoPlay playsInline />
+              <div className="mt-3 flex items-center justify-between">
+                <button onClick={capturePhoto} className="px-4 py-2 rounded-xl bg-yellow-400 text-black font-semibold">Capture</button>
+                <button onClick={stopCamera} className="px-4 py-2 rounded-xl bg-slate-200 text-slate-800">Close</button>
+              </div>
+              <canvas ref={canvasRef} className="hidden" />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
