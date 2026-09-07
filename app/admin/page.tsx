@@ -26,6 +26,31 @@ type DashboardData = {
   admins: any[]
 }
 
+type InventoryForm = {
+  name: string
+  sku: string
+  category: string
+  brand: string
+  model: string
+  description: string
+  quantity: number
+  unit: string
+  imageUrl: string
+  imageData: string
+}
+
+type AiRecommendation = {
+  id: string
+  title: string
+  category: string
+  brand: string
+  model: string
+  description: string
+  image: string
+  quantity: number
+  unit: string
+}
+
 const navItems = [
   { key: 'dashboard', label: 'Dashboard', emoji: '▣' },
   { key: 'bookings', label: 'Bookings', emoji: '🧾' },
@@ -38,6 +63,123 @@ const navItems = [
   { key: 'settings', label: 'Settings', emoji: '⚙️' }
 ]
 
+const emptyForm = {
+  name: '',
+  sku: '',
+  category: '',
+  brand: '',
+  model: '',
+  description: '',
+  quantity: 1,
+  unit: 'pcs',
+  imageUrl: '',
+  imageData: ''
+} satisfies InventoryForm
+
+function generateAiRecommendations(query: string): AiRecommendation[] {
+  const q = (query || '').toLowerCase()
+  const catalog: Record<string, AiRecommendation> = {
+    bulb: {
+      id: 'bulb',
+      title: 'LED Bulb 12W',
+      category: 'Lighting',
+      brand: 'Philips',
+      model: 'LED-12W-220V',
+      description: 'Energy-saving LED lamp with warm white light, suitable for home and commercial lighting.',
+      image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80',
+      quantity: 20,
+      unit: 'pcs'
+    },
+    wire: {
+      id: 'wire',
+      title: 'Electrical Wire',
+      category: 'Cable',
+      brand: 'SAB',
+      model: 'THHN-2.5MM',
+      description: 'Copper conductor electrical cable for power distribution and wiring installation.',
+      image: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&w=900&q=80',
+      quantity: 50,
+      unit: 'meters'
+    },
+    breaker: {
+      id: 'breaker',
+      title: 'Circuit Breaker',
+      category: 'Protection',
+      brand: 'Schneider',
+      model: 'MCB-20A',
+      description: 'Miniature circuit breaker for overload and short-circuit protection in electrical systems.',
+      image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=900&q=80',
+      quantity: 12,
+      unit: 'pcs'
+    },
+    pipe: {
+      id: 'pipe',
+      title: 'PVC Conduit Pipe',
+      category: 'Piping',
+      brand: 'Royal',
+      model: 'PVC-25MM',
+      description: 'Durable conduit pipe used for protecting and routing electrical cables in walls and ceilings.',
+      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=80',
+      quantity: 30,
+      unit: 'pcs'
+    },
+    socket: {
+      id: 'socket',
+      title: 'Electrical Socket',
+      category: 'Accessories',
+      brand: 'Legrand',
+      model: 'SW-13A',
+      description: 'Wall socket for electrical appliance connection with durable construction and safety design.',
+      image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80',
+      quantity: 8,
+      unit: 'pcs'
+    },
+    switch: {
+      id: 'switch',
+      title: 'Light Switch',
+      category: 'Control',
+      brand: 'MK',
+      model: 'LS-1WAY',
+      description: 'One-way toggle switch for lighting systems in residential and commercial spaces.',
+      image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=900&q=80',
+      quantity: 10,
+      unit: 'pcs'
+    },
+    panel: {
+      id: 'panel',
+      title: 'Distribution Panel',
+      category: 'Panel Board',
+      brand: 'ABB',
+      model: 'DB-12WAY',
+      description: 'Main distribution board for branching and protection of electrical circuits.',
+      image: 'https://images.unsplash.com/photo-1592833186502-28a8c76dc109?auto=format&fit=crop&w=900&q=80',
+      quantity: 3,
+      unit: 'pcs'
+    },
+    motor: {
+      id: 'motor',
+      title: 'Electric Motor',
+      category: 'Machinery',
+      brand: 'Siemens',
+      model: 'Motor-1HP',
+      description: 'Compact electric motor for pumps, fans, and industrial equipment applications.',
+      image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=900&q=80',
+      quantity: 4,
+      unit: 'pcs'
+    }
+  }
+
+  const matched = Object.values(catalog).filter((item) => {
+    if (!q) return false
+    return q.includes(item.title.toLowerCase()) || q.includes(item.category.toLowerCase()) || q.includes(item.model.toLowerCase()) || item.title.toLowerCase().includes(q)
+  })
+
+  if (matched.length) return matched
+
+  const fallback = Object.values(catalog).slice(0, 3).map((item) => ({ ...item, id: `${item.id}-fallback-${Math.random()}` }))
+  return fallback
+}
+
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -45,6 +187,11 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeSection, setActiveSection] = useState('dashboard')
   const [data, setData] = useState<DashboardData | null>(null)
+  const [inventory, setInventory] = useState<any[]>([])
+  const [inventoryForm, setInventoryForm] = useState<InventoryForm>(emptyForm)
+  const [aiSuggestions, setAiSuggestions] = useState<AiRecommendation[]>([])
+  const [selectedAiId, setSelectedAiId] = useState('')
+  const [savingItem, setSavingItem] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -60,6 +207,13 @@ export default function AdminPage() {
         if (dashboardRes.ok) {
           const payload = await dashboardRes.json()
           setData(payload)
+          setInventory(payload.inventory || [])
+        }
+
+        const inventoryRes = await fetch('/api/inventory')
+        if (inventoryRes.ok) {
+          const list = await inventoryRes.json()
+          setInventory(list)
         }
       } catch (e) {
         router.push('/admin/login')
@@ -69,6 +223,19 @@ export default function AdminPage() {
     }
     check()
   }, [router])
+
+  async function refreshInventory() {
+    const res = await fetch('/api/inventory')
+    if (res.ok) {
+      const list = await res.json()
+      setInventory(list)
+      const dashboardRes = await fetch('/api/dashboard')
+      if (dashboardRes.ok) {
+        const payload = await dashboardRes.json()
+        setData(payload)
+      }
+    }
+  }
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -99,6 +266,96 @@ export default function AdminPage() {
       }
     })
   }, [data])
+
+  function updateField(field: keyof InventoryForm, value: string | number) {
+    setInventoryForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  function applyAiSuggestion(suggestion: AiRecommendation) {
+    setSelectedAiId(suggestion.id)
+    setInventoryForm((prev) => ({
+      ...prev,
+      name: suggestion.title,
+      category: suggestion.category,
+      brand: suggestion.brand,
+      model: suggestion.model,
+      description: suggestion.description,
+      quantity: suggestion.quantity,
+      unit: suggestion.unit,
+      imageUrl: suggestion.image,
+      imageData: suggestion.image
+    }))
+    setAiSuggestions((prev) => prev.length ? prev : [suggestion])
+  }
+
+  function handleAiQueryChange(value: string) {
+    setInventoryForm((prev) => ({ ...prev, name: value }))
+    if (!value.trim()) {
+      setAiSuggestions([])
+      return
+    }
+    setAiSuggestions(generateAiRecommendations(value))
+  }
+
+  async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : ''
+      setInventoryForm((prev) => ({ ...prev, imageData: result, imageUrl: result }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  async function handleSaveItem() {
+    if (!inventoryForm.name.trim()) {
+      alert('Please enter item name')
+      return
+    }
+
+    setSavingItem(true)
+
+    try {
+      const payload = { ...inventoryForm, imageUrl: inventoryForm.imageUrl || inventoryForm.imageData }
+      const response = await fetch('/api/inventory', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(error || 'Failed to save item')
+      }
+
+      setInventoryForm(emptyForm)
+      setAiSuggestions([])
+      setSelectedAiId('')
+      await refreshInventory()
+    } catch (error) {
+      alert('Unable to save inventory item. Please try again.')
+    } finally {
+      setSavingItem(false)
+    }
+  }
+
+  async function handleDeleteItem(id: string) {
+    const confirmed = window.confirm('Delete this inventory item?')
+    if (!confirmed) return
+
+    try {
+      await fetch('/api/inventory', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      await refreshInventory()
+    } catch (error) {
+      alert('Unable to delete inventory item.')
+    }
+  }
 
   if (loading) return <div className="p-8 text-lg font-medium">Checking authentication...</div>
 
@@ -197,146 +454,376 @@ export default function AdminPage() {
             </div>
           </header>
 
-          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-            {[
-              { label: 'Total Bookings', value: stats?.totalBookings ?? 0, delta: 'Live data' },
-              { label: 'Pending', value: stats?.pending ?? 0, delta: 'Awaiting review' },
-              { label: 'Inventory Total', value: stats?.totalInventory ?? 0, delta: 'Units' },
-              { label: 'Low Stock', value: stats?.lowStock ?? 0, delta: 'Needs restock' }
-            ].map((card) => (
-              <div key={card.label} className="bg-white rounded-2xl p-5 shadow-md border border-slate-200">
-                <div className="text-sm text-slate-500">{card.label}</div>
-                <div className="text-3xl font-black mt-2">{card.value}</div>
-                <div className="text-xs mt-2 text-emerald-600">{card.delta}</div>
-              </div>
-            ))}
-          </section>
+          {activeSection !== 'inventory' && (
+            <>
+              <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+                {[
+                  { label: 'Total Bookings', value: stats?.totalBookings ?? 0, delta: 'Live data' },
+                  { label: 'Pending', value: stats?.pending ?? 0, delta: 'Awaiting review' },
+                  { label: 'Inventory Total', value: stats?.totalInventory ?? 0, delta: 'Units' },
+                  { label: 'Low Stock', value: stats?.lowStock ?? 0, delta: 'Needs restock' }
+                ].map((card) => (
+                  <div key={card.label} className="bg-white rounded-2xl p-5 shadow-md border border-slate-200">
+                    <div className="text-sm text-slate-500">{card.label}</div>
+                    <div className="text-3xl font-black mt-2">{card.value}</div>
+                    <div className="text-xs mt-2 text-emerald-600">{card.delta}</div>
+                  </div>
+                ))}
+              </section>
 
-          <section className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
-            <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-md border border-slate-200">
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-bold text-slate-800">Bookings status overview</h3>
-                <span className="text-xs text-slate-500">Updated live</span>
-              </div>
+              <section className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+                <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                  <div className="flex items-center justify-between mb-5">
+                    <h3 className="text-lg font-bold text-slate-800">Bookings status overview</h3>
+                    <span className="text-xs text-slate-500">Updated live</span>
+                  </div>
 
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="relative w-52 h-52">
-                  <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-                    <circle cx="60" cy="60" r="42" fill="none" stroke="#e2e8f0" strokeWidth="16" />
-                    {chartSegments.map((segment) => (
-                      <circle
-                        key={segment.status}
-                        cx="60"
-                        cy="60"
-                        r="42"
-                        fill="none"
-                        stroke={segment.color}
-                        strokeWidth="16"
-                        strokeDasharray={`${(segment.end - segment.start) * 2.64} ${100 - (segment.end - segment.start) * 2.64}`}
-                        strokeLinecap="round"
-                        strokeDashoffset={-segment.start * 2.64}
-                      />
-                    ))}
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <div className="text-3xl font-black text-slate-900">{stats?.totalBookings ?? 0}</div>
-                    <div className="text-xs text-slate-500 uppercase tracking-wide">Bookings</div>
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="relative w-52 h-52">
+                      <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+                        <circle cx="60" cy="60" r="42" fill="none" stroke="#e2e8f0" strokeWidth="16" />
+                        {chartSegments.map((segment) => (
+                          <circle
+                            key={segment.status}
+                            cx="60"
+                            cy="60"
+                            r="42"
+                            fill="none"
+                            stroke={segment.color}
+                            strokeWidth="16"
+                            strokeDasharray={`${(segment.end - segment.start) * 2.64} ${100 - (segment.end - segment.start) * 2.64}`}
+                            strokeLinecap="round"
+                            strokeDashoffset={-segment.start * 2.64}
+                          />
+                        ))}
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <div className="text-3xl font-black text-slate-900">{stats?.totalBookings ?? 0}</div>
+                        <div className="text-xs text-slate-500 uppercase tracking-wide">Bookings</div>
+                      </div>
+                    </div>
+
+                    <div className="w-full space-y-3">
+                      {chartSegments.map((segment) => (
+                        <div key={segment.status} className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2">
+                            <span className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
+                            <span className="text-sm text-slate-700 uppercase tracking-wide">{segment.status}</span>
+                          </div>
+                          <div className="font-semibold text-slate-800">{segment.value}</div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="w-full space-y-3">
-                  {chartSegments.map((segment) => (
-                    <div key={segment.status} className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
-                        <span className="text-sm text-slate-700 uppercase tracking-wide">{segment.status}</span>
-                      </div>
-                      <div className="font-semibold text-slate-800">{segment.value}</div>
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Recent bookings</h3>
+                    <span className="text-xs text-slate-500">Last 5</span>
+                  </div>
+
+                  <ul className="space-y-3">
+                    {(data?.recentBookings ?? []).map((booking) => (
+                      <li key={booking.id} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
+                        <div>
+                          <div className="font-medium text-slate-800">{booking.title}</div>
+                          <div className="text-xs text-slate-500">{booking.clientName}</div>
+                        </div>
+                        <span className="text-[10px] px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 font-semibold uppercase tracking-wide">{booking.status}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </section>
+
+              <section className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200 xl:col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Inventory overview</h3>
+                    <span className="text-xs text-slate-500">{stats?.totalInventory ?? 0} total units</span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-left text-slate-500">
+                        <tr>
+                          <th className="pb-3">Item</th>
+                          <th className="pb-3">SKU</th>
+                          <th className="pb-3">Qty</th>
+                          <th className="pb-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(data?.inventory ?? []).slice(0, 5).map((item) => {
+                          const isLow = Number(item.quantity || 0) <= 10
+                          return (
+                            <tr key={item.id} className="border-t border-slate-100">
+                              <td className="py-3 font-medium text-slate-700">{item.name}</td>
+                              <td className="py-3 text-slate-500">{item.sku || 'N/A'}</td>
+                              <td className="py-3 font-semibold text-slate-800">{item.quantity}</td>
+                              <td className="py-3">
+                                <span className={`px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide ${isLow ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                  {isLow ? 'Low stock' : 'Healthy'}
+                                </span>
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-slate-800">Stock alerts</h3>
+                    <span className="text-xs text-amber-600">{stats?.lowStock ?? 0} items</span>
+                  </div>
+
+                  <div className="space-y-4">
+                    {(data?.inventoryAlerts ?? []).length === 0 ? (
+                      <div className="text-sm text-slate-500">No low stock alerts right now.</div>
+                    ) : (
+                      (data?.inventoryAlerts ?? []).map((item) => (
+                        <div key={item.id} className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                          <div className="font-semibold text-slate-800">{item.name}</div>
+                          <div className="text-xs text-slate-500">SKU: {item.sku || 'N/A'}</div>
+                          <div className="mt-2 text-xs text-amber-700 font-semibold">Qty left: {item.quantity}</div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </section>
+            </>
+          )}
+
+          {activeSection === 'inventory' && (
+            <section className="space-y-6">
+              <div className="grid grid-cols-1 xl:grid-cols-[1.1fr_0.9fr] gap-6">
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-black text-slate-800">Add inventory item</h3>
+                    <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full font-semibold">AI assisted</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Item name</label>
+                      <input
+                        value={inventoryForm.name}
+                        onChange={(e) => handleAiQueryChange(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                        placeholder="e.g. bulb, wire, breaker, socket..."
+                      />
                     </div>
-                  ))}
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                      <input
+                        value={inventoryForm.category}
+                        onChange={(e) => updateField('category', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                        placeholder="Lighting"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Brand</label>
+                      <input
+                        value={inventoryForm.brand}
+                        onChange={(e) => updateField('brand', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-yellow-300"
+                        placeholder="Philips"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Model</label>
+                      <input
+                        value={inventoryForm.model}
+                        onChange={(e) => updateField('model', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5"
+                        placeholder="LED-12W-220V"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">SKU</label>
+                      <input
+                        value={inventoryForm.sku}
+                        onChange={(e) => updateField('sku', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5"
+                        placeholder="INV-001"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Quantity</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={inventoryForm.quantity}
+                        onChange={(e) => updateField('quantity', Number(e.target.value) || 0)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Unit</label>
+                      <input
+                        value={inventoryForm.unit}
+                        onChange={(e) => updateField('unit', e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5"
+                        placeholder="pcs"
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                      <textarea
+                        value={inventoryForm.description}
+                        onChange={(e) => updateField('description', e.target.value)}
+                        rows={4}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2.5"
+                        placeholder="Add a short description of the material or equipment..."
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Image URL or upload</label>
+                      <div className="flex gap-3 flex-col sm:flex-row">
+                        <input
+                          value={inventoryForm.imageUrl}
+                          onChange={(e) => updateField('imageUrl', e.target.value)}
+                          className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5"
+                          placeholder="https://example.com/image.jpg"
+                        />
+                        <label className="inline-flex items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-700 cursor-pointer">
+                          Upload image
+                          <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleImageUpload} />
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInventoryForm(emptyForm)
+                        setAiSuggestions([])
+                        setSelectedAiId('')
+                      }}
+                      className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 font-medium"
+                    >
+                      Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveItem}
+                      disabled={savingItem}
+                      className="px-5 py-2.5 rounded-xl bg-black text-white font-semibold disabled:opacity-60"
+                    >
+                      {savingItem ? 'Saving...' : 'Save item'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-black text-slate-800">AI recommendations</h3>
+                    <span className="text-xs text-slate-500">Smart suggestions</span>
+                  </div>
+
+                  {!aiSuggestions.length ? (
+                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                      Type an item such as “bulb”, “wire”, “breaker”, “socket”, or “motor” to get an AI recommendation.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {aiSuggestions.map((item) => (
+                        <div key={item.id} className={`rounded-2xl border ${selectedAiId === item.id ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200'} overflow-hidden`}>
+                          <img src={item.image} alt={item.title} className="h-32 w-full object-cover" />
+                          <div className="p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <div>
+                                <div className="font-bold text-slate-800">{item.title}</div>
+                                <div className="text-xs text-slate-500">{item.category} • {item.brand}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => applyAiSuggestion(item)}
+                                className="text-xs bg-black text-white px-2 py-1.5 rounded-lg"
+                              >
+                                Use
+                              </button>
+                            </div>
+                            <div className="mt-2 text-xs text-slate-600">Model: {item.model}</div>
+                            <div className="mt-1 text-xs text-slate-600">{item.description}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
 
-            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Recent bookings</h3>
-                <span className="text-xs text-slate-500">Last 5</span>
-              </div>
+              <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-black text-slate-800">Available stock</h3>
+                  <span className="text-xs text-slate-500">{inventory.length} items</span>
+                </div>
 
-              <ul className="space-y-3">
-                {(data?.recentBookings ?? []).map((booking) => (
-                  <li key={booking.id} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-                    <div>
-                      <div className="font-medium text-slate-800">{booking.title}</div>
-                      <div className="text-xs text-slate-500">{booking.clientName}</div>
-                    </div>
-                    <span className="text-[10px] px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 font-semibold uppercase tracking-wide">{booking.status}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          <section className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200 xl:col-span-2">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Inventory overview</h3>
-                <span className="text-xs text-slate-500">{stats?.totalInventory ?? 0} total units</span>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="text-left text-slate-500">
-                    <tr>
-                      <th className="pb-3">Item</th>
-                      <th className="pb-3">SKU</th>
-                      <th className="pb-3">Qty</th>
-                      <th className="pb-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(data?.inventory ?? []).slice(0, 5).map((item) => {
-                      const isLow = Number(item.quantity || 0) <= 10
-                      return (
-                        <tr key={item.id} className="border-t border-slate-100">
-                          <td className="py-3 font-medium text-slate-700">{item.name}</td>
-                          <td className="py-3 text-slate-500">{item.sku || 'N/A'}</td>
-                          <td className="py-3 font-semibold text-slate-800">{item.quantity}</td>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="text-left text-slate-500">
+                      <tr>
+                        <th className="pb-3">Image</th>
+                        <th className="pb-3">Item</th>
+                        <th className="pb-3">Category</th>
+                        <th className="pb-3">Brand</th>
+                        <th className="pb-3">Model</th>
+                        <th className="pb-3">Qty</th>
+                        <th className="pb-3">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inventory.map((item) => (
+                        <tr key={item.id} className="border-t border-slate-100 align-top">
                           <td className="py-3">
-                            <span className={`px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide ${isLow ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                              {isLow ? 'Low stock' : 'Healthy'}
-                            </span>
+                            {item.imageUrl ? (
+                              <img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded-lg border border-slate-200" />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-lg">📦</div>
+                            )}
+                          </td>
+                          <td className="py-3">
+                            <div className="font-semibold text-slate-800">{item.name}</div>
+                            <div className="text-xs text-slate-500">{item.description || 'No description'}</div>
+                          </td>
+                          <td className="py-3 text-slate-600">{item.category || 'General'}</td>
+                          <td className="py-3 text-slate-600">{item.brand || 'N/A'}</td>
+                          <td className="py-3 text-slate-600">{item.model || 'N/A'}</td>
+                          <td className="py-3 font-bold text-slate-800">{item.quantity} {item.unit || 'pcs'}</td>
+                          <td className="py-3">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold"
+                            >
+                              Delete
+                            </button>
                           </td>
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-slate-800">Stock alerts</h3>
-                <span className="text-xs text-amber-600">{stats?.lowStock ?? 0} items</span>
-              </div>
-
-              <div className="space-y-4">
-                {(data?.inventoryAlerts ?? []).length === 0 ? (
-                  <div className="text-sm text-slate-500">No low stock alerts right now.</div>
-                ) : (
-                  (data?.inventoryAlerts ?? []).map((item) => (
-                    <div key={item.id} className="rounded-xl bg-amber-50 border border-amber-200 p-3">
-                      <div className="font-semibold text-slate-800">{item.name}</div>
-                      <div className="text-xs text-slate-500">SKU: {item.sku || 'N/A'}</div>
-                      <div className="mt-2 text-xs text-amber-700 font-semibold">Qty left: {item.quantity}</div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </section>
+            </section>
+          )}
         </main>
       </div>
     </div>
