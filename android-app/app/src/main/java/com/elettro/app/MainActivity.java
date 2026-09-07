@@ -10,7 +10,12 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.elettro.app.network.ApiClient;
 import com.google.android.material.button.MaterialButton;
+
+import org.json.JSONObject;
+
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private EditText emailInput;
@@ -41,23 +46,48 @@ public class MainActivity extends AppCompatActivity {
 
         int selectedId = roleGroup.getCheckedRadioButtonId();
         RadioButton selectedRoleButton = findViewById(selectedId);
-        String role = selectedRoleButton != null ? selectedRoleButton.getText().toString() : "Admin";
+        String selectedRole = selectedRoleButton != null ? selectedRoleButton.getText().toString() : "Admin";
 
-        boolean validAdmin = "eldred@elettro.com".equalsIgnoreCase(email) && "admin123".equals(password);
-        boolean validTech = "tech@elettro.com".equalsIgnoreCase(email) && "tech123".equals(password);
+        new Thread(() -> {
+            try {
+                JSONObject payload = new JSONObject();
+                payload.put("email", email);
+                payload.put("password", password);
 
-        if (validAdmin && "Admin".equals(role)) {
-            startActivity(new Intent(this, AdminDashboardActivity.class));
-            finish();
-            return;
-        }
+                String response = ApiClient.post("/auth/login", payload.toString());
+                JSONObject json = new JSONObject(response);
+                boolean ok = json.optBoolean("ok", false);
+                JSONObject user = json.optJSONObject("user");
+                String role = user != null ? user.optString("role", "") : "";
 
-        if (validTech && "Technician".equals(role)) {
-            startActivity(new Intent(this, TechnicianDashboardActivity.class));
-            finish();
-            return;
-        }
+                runOnUiThread(() -> {
+                    if (!ok || user == null) {
+                        Toast.makeText(this, "Invalid credentials for selected role", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
 
-        Toast.makeText(this, "Invalid credentials for selected role", Toast.LENGTH_SHORT).show();
+                    String normalizedRole = role.toUpperCase(Locale.US);
+                    String selectedRoleUpper = selectedRole.toUpperCase(Locale.US);
+
+                    if ("ADMIN".equals(normalizedRole) && "ADMIN".equals(selectedRoleUpper)) {
+                        startActivity(new Intent(this, AdminDashboardActivity.class));
+                        finish();
+                        return;
+                    }
+
+                    if ("TECHNICIAN".equals(normalizedRole) && "TECHNICIAN".equals(selectedRoleUpper)) {
+                        startActivity(new Intent(this, TechnicianDashboardActivity.class));
+                        finish();
+                        return;
+                    }
+
+                    Toast.makeText(this, "Invalid credentials for selected role", Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Unable to connect to server. Check your internet and backend URL.", Toast.LENGTH_LONG).show();
+                });
+            }
+        }).start();
     }
 }

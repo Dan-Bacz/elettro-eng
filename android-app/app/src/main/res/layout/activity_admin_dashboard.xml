@@ -1,97 +1,595 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/admin_drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#f4f4f4"
-    android:padding="16dp">
+    android:background="#f2f2f2">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Admin Dashboard"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:textColor="#111111" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#f4f4f4">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="18dp">
+            android:background="#f5c400"
+            android:padding="16dp"
+            android:gravity="center_vertical"
+            android:elevation="4dp">
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Total Inquiries\n12"
-                android:padding="12dp"
+            <ImageButton
+                android:id="@+id/menu_button"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
                 android:background="#f5c400"
-                android:gravity="center"
-                android:textStyle="bold" />
+                android:src="@android:drawable/ic_menu_more"
+                android:contentDescription="Open menu"
+                android:tint="#111111" />
 
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Total Projects\n15"
-                android:padding="12dp"
-                android:background="#ffffff"
-                android:gravity="center"
-                android:layout_marginStart="8dp"
-                android:textStyle="bold" />
+                android:text="Dashboard"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:textColor="#111111"
+                android:paddingStart="12dp"
+                android:paddingEnd="8dp" />
+
+            <FrameLayout
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="#111111"
+                android:layout_marginEnd="10dp">
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@android:drawable/ic_lock_idle_alarm"
+                    android:contentDescription="Notifications"
+                    android:tint="#f5c400"
+                    android:layout_gravity="center" />
+
+                <TextView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_gravity="top|end"
+                    android:background="#ffffff"
+                    android:text="4"
+                    android:textColor="#111111"
+                    android:textSize="9sp"
+                    android:gravity="center"
+                    android:textStyle="bold" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Admin"
+                    android:textStyle="bold"
+                    android:textSize="15sp"
+                    android:textColor="#111111" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Administrator"
+                    android:textSize="11sp"
+                    android:textColor="#666666" />
+            </LinearLayout>
         </LinearLayout>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Pending Bookings"
-            android:textStyle="bold"
-            android:layout_marginTop="24dp"
-            android:textColor="#111111" />
-
-        <TextView
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="B-2024-001 • Juan Dela Cruz • Electrical Installation"
-            android:background="#ffffff"
-            android:padding="14dp"
-            android:layout_marginTop="8dp" />
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:padding="16dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="B-2024-002 • ABC Company • Maintenance Service"
-            android:background="#ffffff"
-            android:padding="14dp"
-            android:layout_marginTop="8dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="B-2024-003 • Maria Santos • Electrical Repair"
-            android:background="#ffffff"
-            android:padding="14dp"
-            android:layout_marginTop="8dp" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome back, Admin!"
+                    android:textSize="18sp"
+                    android:textColor="#111111"
+                    android:layout_marginBottom="14dp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Inventory Overview"
-            android:textStyle="bold"
-            android:layout_marginTop="24dp"
-            android:textColor="#111111" />
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:weightSum="4"
+                    android:layout_marginBottom="18dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Cable Breaker: 20 items\nPVC Conduit: 10 items\nElectrical Tape: 2 items"
-            android:background="#ffffff"
-            android:padding="14dp"
-            android:layout_marginTop="8dp" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="14dp"
+                        android:layout_marginEnd="8dp"
+                        android:elevation="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Total Inquiries"
+                            android:textSize="12sp"
+                            android:textColor="#666666" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="12"
+                            android:textSize="28sp"
+                            android:textStyle="bold"
+                            android:textColor="#111111"
+                            android:layout_marginTop="8dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="↗ 20% from last month"
+                            android:textSize="11sp"
+                            android:textColor="#16a34a"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="14dp"
+                        android:layout_marginEnd="8dp"
+                        android:elevation="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Total Bookings"
+                            android:textSize="12sp"
+                            android:textColor="#666666" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="8"
+                            android:textSize="28sp"
+                            android:textStyle="bold"
+                            android:textColor="#111111"
+                            android:layout_marginTop="8dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="↗ 14% from last month"
+                            android:textSize="11sp"
+                            android:textColor="#16a34a"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="14dp"
+                        android:layout_marginEnd="8dp"
+                        android:elevation="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Total Projects"
+                            android:textSize="12sp"
+                            android:textColor="#666666" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="15"
+                            android:textSize="28sp"
+                            android:textStyle="bold"
+                            android:textColor="#111111"
+                            android:layout_marginTop="8dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="↗ 25% from last month"
+                            android:textSize="11sp"
+                            android:textColor="#16a34a"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="120dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="14dp"
+                        android:elevation="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Technicians"
+                            android:textSize="12sp"
+                            android:textColor="#666666" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="6"
+                            android:textSize="28sp"
+                            android:textStyle="bold"
+                            android:textColor="#111111"
+                            android:layout_marginTop="8dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="↗ 0% from last month"
+                            android:textSize="11sp"
+                            android:textColor="#666666"
+                            android:layout_marginTop="6dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="18dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="240dp"
+                        android:layout_weight="2"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="18dp"
+                        android:layout_marginEnd="12dp"
+                        android:elevation="3dp"
+                        android:translationZ="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Project Status Overview"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:textColor="#111111" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="20dp"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:background="#f59e0b"
+                                android:layout_marginEnd="10dp"
+                                android:rotation="45" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Completed 60% (9)"
+                                android:textColor="#111111"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:background="#fbbf24"
+                                android:layout_marginEnd="10dp"
+                                android:rotation="45" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Ongoing 25% (4)"
+                                android:textColor="#111111"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:background="#f5c400"
+                                android:layout_marginEnd="10dp"
+                                android:rotation="45" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Pending 15% (2)"
+                                android:textColor="#111111"
+                                android:textSize="16sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="240dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="18dp"
+                        android:elevation="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Recent Inquiries"
+                            android:textStyle="bold"
+                            android:textSize="18sp"
+                            android:textColor="#111111" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Wiring Installation\nJuan Dela Cruz"
+                            android:textColor="#111111"
+                            android:layout_marginTop="14dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Pending"
+                            android:background="#fef3c7"
+                            android:textColor="#92400e"
+                            android:padding="4dp"
+                            android:layout_marginTop="4dp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Electrical Repair\nMaria Santos"
+                            android:textColor="#111111"
+                            android:layout_marginTop="12dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Pending"
+                            android:background="#fef3c7"
+                            android:textColor="#92400e"
+                            android:padding="4dp"
+                            android:layout_marginTop="4dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="250dp"
+                        android:layout_weight="2"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="18dp"
+                        android:layout_marginEnd="12dp"
+                        android:elevation="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Ongoing Projects"
+                            android:textStyle="bold"
+                            android:textSize="18sp"
+                            android:textColor="#111111" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="P-001 • Juan Dela Cruz • 70% • Ongoing\nP-002 • ABC Company • 40% • Ongoing\nP-003 • Maria Santos • 20% • Ongoing"
+                            android:textColor="#111111"
+                            android:layout_marginTop="18dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="250dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="#ffffff"
+                        android:padding="18dp"
+                        android:elevation="2dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Calendar (Today)"
+                            android:textStyle="bold"
+                            android:textSize="18sp"
+                            android:textColor="#111111" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="08:00 AM\n10:00 AM\n01:00 PM\n03:00 PM"
+                            android:textColor="#111111"
+                            android:layout_marginTop="16dp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
     </LinearLayout>
-</ScrollView>
+
+    <LinearLayout
+        android:id="@+id/admin_sidebar"
+        android:layout_width="260dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="#f5c400"
+        android:padding="16dp"
+        android:layout_gravity="start"
+        android:fitsSystemWindows="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="18dp">
+
+            <TextView
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="#111111"
+                android:text="⚡"
+                android:textColor="#f5c400"
+                android:textStyle="bold"
+                android:gravity="center" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginStart="10dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ELETTRO"
+                    android:textStyle="bold"
+                    android:textColor="#111111"
+                    android:textSize="24sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="ENGINEERING ENTERPRISES"
+                    android:textColor="#111111"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Dashboard"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:textStyle="bold"
+                android:background="#111111"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Inquiries"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bookings"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Projects"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Technicians"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Inventory"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Reports"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:layout_marginBottom="4dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Settings"
+                android:padding="14dp"
+                android:textColor="#111111"
+                android:layout_marginBottom="4dp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/logout_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#111111"
+            android:text="Logout"
+            android:textColor="#ffffff"
+            android:textStyle="bold"
+            android:layout_marginTop="12dp" />
+    </LinearLayout>
+</androidx.drawerlayout.widget.DrawerLayout>

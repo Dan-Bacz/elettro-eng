@@ -46,6 +46,7 @@
             android:layout_height="wrap_content"
             android:text="Email"
             android:textStyle="bold"
+            android:textSize="15sp"
             android:textColor="#111111"
             android:layout_marginBottom="8dp" />
 
@@ -53,7 +54,7 @@
             android:id="@+id/email_input"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:hint="admin@elettro.com"
+            android:hint="lanzaderasjezamae959@gmail.com"
             android:paddingHorizontal="12dp"
             android:background="#ffffff"
             android:textColor="#111111"
@@ -64,6 +65,7 @@
             android:layout_height="wrap_content"
             android:text="Password"
             android:textStyle="bold"
+            android:textSize="15sp"
             android:textColor="#111111"
             android:layout_marginTop="16dp"
             android:layout_marginBottom="8dp" />
@@ -85,7 +87,9 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="18dp"
-            android:layout_marginBottom="16dp">
+            android:layout_marginBottom="16dp"
+            android:background="#ffffff"
+            android:padding="8dp">
 
             <RadioButton
                 android:id="@+id/role_admin"

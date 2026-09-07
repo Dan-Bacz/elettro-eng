@@ -1,29 +1,74 @@
 "use client"
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function AdminPage(){
+type DashboardData = {
+  stats: {
+    totalBookings: number
+    pending: number
+    approved: number
+    assigned: number
+    inProgress: number
+    completed: number
+    totalInventory: number
+    lowStock: number
+    technicians: number
+    clients: number
+    admins: number
+  }
+  statusBreakdown: { status: string; value: number }[]
+  recentBookings: { id: string; title: string; status: string; clientName: string; createdAt: string }[]
+  inventoryAlerts: { id: string; name: string; quantity: number; sku: string | null }[]
+  bookings: any[]
+  inventory: any[]
+  technicians: any[]
+  clients: any[]
+  admins: any[]
+}
+
+const navItems = [
+  { key: 'dashboard', label: 'Dashboard', emoji: '▣' },
+  { key: 'bookings', label: 'Bookings', emoji: '🧾' },
+  { key: 'inventory', label: 'Inventory', emoji: '📦' },
+  { key: 'projects', label: 'Projects', emoji: '🛠️' },
+  { key: 'technicians', label: 'Technicians', emoji: '👷' },
+  { key: 'clients', label: 'Clients', emoji: '👥' },
+  { key: 'reports', label: 'Reports', emoji: '📊' },
+  { key: 'notifications', label: 'Notifications', emoji: '🔔' },
+  { key: 'settings', label: 'Settings', emoji: '⚙️' }
+]
+
+export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [loggingOut, setLoggingOut] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [activeSection, setActiveSection] = useState('dashboard')
+  const [data, setData] = useState<DashboardData | null>(null)
   const router = useRouter()
 
-  useEffect(()=>{
-    async function check(){
-      try{
+  useEffect(() => {
+    async function check() {
+      try {
         const res = await fetch('/api/auth/me')
         if (!res.ok) {
           router.push('/admin/login')
           return
         }
-        // ok
-      }catch(e){
+
+        const dashboardRes = await fetch('/api/dashboard')
+        if (dashboardRes.ok) {
+          const payload = await dashboardRes.json()
+          setData(payload)
+        }
+      } catch (e) {
         router.push('/admin/login')
-      }finally{ setLoading(false) }
+      } finally {
+        setLoading(false)
+      }
     }
     check()
-  },[router])
+  }, [router])
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -37,79 +82,101 @@ export default function AdminPage(){
     }
   }
 
-  if (loading) return <div className="p-8">Checking authentication...</div>
+  const chartSegments = useMemo(() => {
+    if (!data) return []
+    const colors = ['#fbbf24', '#f59e0b', '#f97316', '#fb7185', '#a78bfa', '#34d399']
+    const total = data.statusBreakdown.reduce((sum, item) => sum + item.value, 0) || 1
+    let running = 0
+
+    return data.statusBreakdown.map((item, index) => {
+      const start = running
+      running += (item.value / total) * 100
+      return {
+        ...item,
+        color: colors[index % colors.length],
+        start,
+        end: running
+      }
+    })
+  }, [data])
+
+  if (loading) return <div className="p-8 text-lg font-medium">Checking authentication...</div>
+
+  const stats = data?.stats
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-100">
       <div className="flex">
-        <aside className={`${sidebarOpen ? 'w-72' : 'w-24'} bg-yellow-400 text-black h-screen sticky top-0 flex flex-col justify-between transition-all duration-200 overflow-hidden`}>
-          <div className="flex flex-col h-full overflow-y-auto">
-            <div className="flex items-center justify-between px-4 py-4">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="bg-black text-yellow-400 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shrink-0">⚡</div>
-                {sidebarOpen && (
-                  <div className="min-w-0">
-                    <div className="font-bold text-lg leading-tight">ELETTRO</div>
-                    <div className="text-[10px] uppercase tracking-wide">Engineering Enterprises</div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSidebarOpen((prev) => !prev)}
-                className="ml-2 bg-black/10 hover:bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shrink-0"
-                aria-label="Toggle sidebar"
-              >
-                {sidebarOpen ? '‹' : '›'}
-              </button>
-            </div>
-
-            <nav className="mt-4 px-3 space-y-2 overflow-y-auto">
-              {[
-                'Dashboard','Inquiries','Bookings','Projects','Technicians','Inventory','Reports','Notifications','Settings'
-              ].map((label, i)=> (
-                <div key={label} className={`flex items-center gap-3 px-3 py-3 rounded-lg ${i===0? 'bg-black text-yellow-400':'hover:bg-yellow-300'}`}>
-                  <div className="w-8 h-8 rounded bg-black/10 flex items-center justify-center shrink-0">{label[0]}</div>
-                  {sidebarOpen && <div className="font-medium">{label}</div>}
+        <aside className={`${sidebarOpen ? 'w-72' : 'w-24'} bg-yellow-400 text-black h-screen sticky top-0 flex flex-col transition-all duration-200 overflow-hidden`}>
+          <div className="flex items-center justify-between px-4 py-4 border-b border-black/10">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="bg-black text-yellow-400 rounded-full w-10 h-10 flex items-center justify-center font-bold text-lg shrink-0">⚡</div>
+              {sidebarOpen && (
+                <div className="min-w-0">
+                  <div className="font-black text-lg leading-tight">ELETTRO</div>
+                  <div className="text-[10px] uppercase tracking-wide">Engineering Enterprises</div>
                 </div>
-              ))}
-            </nav>
-
-            <div className="mt-auto p-3 border-t border-black/10">
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={loggingOut}
-                className={`w-full flex items-center justify-center gap-2 rounded-lg bg-white text-black py-3 font-medium hover:bg-gray-100 disabled:opacity-60 ${!sidebarOpen ? 'px-2' : ''}`}
-              >
-                <span>{sidebarOpen ? (loggingOut ? 'Logging out...' : 'Logout') : '⎋'}</span>
-              </button>
+              )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              className="ml-2 bg-black/10 hover:bg-black/20 rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold shrink-0"
+              aria-label="Toggle sidebar"
+            >
+              {sidebarOpen ? '‹' : '›'}
+            </button>
+          </div>
+
+          <nav className="mt-4 px-3 space-y-2 overflow-y-auto flex-1">
+            {navItems.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setActiveSection(item.key)}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition ${activeSection === item.key ? 'bg-black text-yellow-400 shadow-md' : 'hover:bg-yellow-300'}`}
+              >
+                <div className="w-8 h-8 rounded-lg bg-black/10 flex items-center justify-center shrink-0">{item.emoji}</div>
+                {sidebarOpen && <div className="font-medium text-left">{item.label}</div>}
+              </button>
+            ))}
+          </nav>
+
+          <div className="mt-auto p-3 border-t border-black/10">
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              className={`w-full flex items-center justify-center gap-2 rounded-xl bg-black text-white py-3 font-semibold hover:bg-gray-900 disabled:opacity-60 ${!sidebarOpen ? 'px-2' : ''}`}
+            >
+              <span>{sidebarOpen ? (loggingOut ? 'Logging out...' : 'Logout') : '⎋'}</span>
+            </button>
           </div>
         </aside>
 
-        {/* Main content */}
         <main className="flex-1 p-8 overflow-auto">
           <header className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-2xl font-bold">Dashboard</h1>
-              <p className="text-sm text-gray-600">Welcome back, Admin!</p>
+              <p className="text-sm uppercase tracking-[0.2em] text-gray-500">Operations Overview</p>
+              <h1 className="text-3xl font-black text-gray-900">{activeSection === 'dashboard' ? 'Dashboard' : activeSection.charAt(0).toUpperCase() + activeSection.slice(1)}</h1>
             </div>
+
             <div className="flex items-center gap-4">
               <div className="relative">
-                <button className="p-2 bg-white rounded-full shadow">🔔</button>
-                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full text-xs w-5 h-5 flex items-center justify-center">4</span>
+                <button className="p-3 bg-white rounded-full shadow-sm">🔔</button>
+                <span className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full text-[10px] w-5 h-5 flex items-center justify-center font-bold">{data?.recentBookings?.length || 0}</span>
               </div>
+
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => setMenuOpen((prev) => !prev)}
                   className="flex items-center gap-3 rounded-full bg-white px-3 py-2 shadow-sm hover:bg-gray-100"
                 >
-                  <img src="/avatar.png" alt="admin" className="w-10 h-10 rounded-full" onError={(e)=>{(e.target as HTMLImageElement).src = 'https://via.placeholder.com/40'}}/>
-                  <div className="text-right">
-                    <div className="font-medium">Admin</div>
+                  <div className="w-10 h-10 rounded-full bg-black text-yellow-400 flex items-center justify-center font-bold">A</div>
+                  <div className="text-left">
+                    <div className="font-semibold">Admin</div>
                     <div className="text-xs text-gray-500">Administrator</div>
                   </div>
                 </button>
@@ -130,127 +197,143 @@ export default function AdminPage(){
             </div>
           </header>
 
-          {/* Top stats */}
-          <section className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">Total Inquiries</div>
-              <div className="text-2xl font-bold">12</div>
-              <div className="text-xs text-green-500">↗ 20% from last month</div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">Total Bookings</div>
-              <div className="text-2xl font-bold">8</div>
-              <div className="text-xs text-green-500">↗ 14% from last month</div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">Total Projects</div>
-              <div className="text-2xl font-bold">15</div>
-              <div className="text-xs text-green-500">↗ 25% from last month</div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow">
-              <div className="text-sm text-gray-500">Technicians</div>
-              <div className="text-2xl font-bold">6</div>
-              <div className="text-xs text-gray-500">↗ 0% from last month</div>
-            </div>
+          <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+            {[
+              { label: 'Total Bookings', value: stats?.totalBookings ?? 0, delta: 'Live data' },
+              { label: 'Pending', value: stats?.pending ?? 0, delta: 'Awaiting review' },
+              { label: 'Inventory Total', value: stats?.totalInventory ?? 0, delta: 'Units' },
+              { label: 'Low Stock', value: stats?.lowStock ?? 0, delta: 'Needs restock' }
+            ].map((card) => (
+              <div key={card.label} className="bg-white rounded-2xl p-5 shadow-md border border-slate-200">
+                <div className="text-sm text-slate-500">{card.label}</div>
+                <div className="text-3xl font-black mt-2">{card.value}</div>
+                <div className="text-xs mt-2 text-emerald-600">{card.delta}</div>
+              </div>
+            ))}
           </section>
 
-          <section className="grid grid-cols-3 gap-4">
-            <div className="col-span-2 bg-white p-6 rounded-lg shadow">
-              <h3 className="font-semibold mb-4">Project Status Overview</h3>
-              <div className="flex items-center gap-6">
-                <svg width="180" height="180" viewBox="0 0 42 42" className="w-44 h-44">
-                  <circle r="15.9155" cx="21" cy="21" fill="transparent" stroke="#fde68a" strokeWidth="10" strokeDasharray="37 63" strokeLinecap="round" transform="rotate(-90 21 21)" />
-                  <circle r="15.9155" cx="21" cy="21" fill="transparent" stroke="#f59e0b" strokeWidth="10" strokeDasharray="25 75" strokeLinecap="round" transform="rotate(-90 21 21)" />
-                  <circle r="15.9155" cx="21" cy="21" fill="transparent" stroke="#f97316" strokeWidth="10" strokeDasharray="15 85" strokeLinecap="round" transform="rotate(-90 21 21)" />
-                </svg>
-                <div>
-                  <div className="flex items-center gap-4 mb-2"><span className="w-3 h-3 bg-yellow-400 rounded-full"/> <span>Completed <b>60% (9)</b></span></div>
-                  <div className="flex items-center gap-4 mb-2"><span className="w-3 h-3 bg-amber-500 rounded-full"/> <span>Ongoing <b>25% (4)</b></span></div>
-                  <div className="flex items-center gap-4"><span className="w-3 h-3 bg-orange-400 rounded-full"/> <span>Pending <b>15% (2)</b></span></div>
+          <section className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
+            <div className="xl:col-span-2 bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+              <div className="flex items-center justify-between mb-5">
+                <h3 className="text-lg font-bold text-slate-800">Bookings status overview</h3>
+                <span className="text-xs text-slate-500">Updated live</span>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="relative w-52 h-52">
+                  <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+                    <circle cx="60" cy="60" r="42" fill="none" stroke="#e2e8f0" strokeWidth="16" />
+                    {chartSegments.map((segment) => (
+                      <circle
+                        key={segment.status}
+                        cx="60"
+                        cy="60"
+                        r="42"
+                        fill="none"
+                        stroke={segment.color}
+                        strokeWidth="16"
+                        strokeDasharray={`${(segment.end - segment.start) * 2.64} ${100 - (segment.end - segment.start) * 2.64}`}
+                        strokeLinecap="round"
+                        strokeDashoffset={-segment.start * 2.64}
+                      />
+                    ))}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <div className="text-3xl font-black text-slate-900">{stats?.totalBookings ?? 0}</div>
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">Bookings</div>
+                  </div>
+                </div>
+
+                <div className="w-full space-y-3">
+                  {chartSegments.map((segment) => (
+                    <div key={segment.status} className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: segment.color }} />
+                        <span className="text-sm text-slate-700 uppercase tracking-wide">{segment.status}</span>
+                      </div>
+                      <div className="font-semibold text-slate-800">{segment.value}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
+            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold">Recent Inquiries</h3>
-                <a className="text-sm text-gray-500">View All</a>
+                <h3 className="text-lg font-bold text-slate-800">Recent bookings</h3>
+                <span className="text-xs text-slate-500">Last 5</span>
               </div>
+
               <ul className="space-y-3">
-                {[
-                  ['Wiring Installation','Juan Dela Cruz','May 24, 2024'],
-                  ['Electrical Repair','Maria Santos','May 24, 2024'],
-                  ['Maintenance Service','ABC Company','May 23, 2024'],
-                  ['Outlet Installation','Robert Garcia','May 22, 2024']
-                ].map((r)=> (
-                  <li key={r[0]} className="flex items-center justify-between">
+                {(data?.recentBookings ?? []).map((booking) => (
+                  <li key={booking.id} className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
                     <div>
-                      <div className="font-medium">{r[0]}</div>
-                      <div className="text-xs text-gray-500">{r[1]}</div>
+                      <div className="font-medium text-slate-800">{booking.title}</div>
+                      <div className="text-xs text-slate-500">{booking.clientName}</div>
                     </div>
-                    <div className="text-xs text-yellow-400 bg-yellow-50 px-3 py-1 rounded-full">Pending</div>
+                    <span className="text-[10px] px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 font-semibold uppercase tracking-wide">{booking.status}</span>
                   </li>
                 ))}
               </ul>
             </div>
+          </section>
 
-            <div className="col-span-3 grid grid-cols-3 gap-4 mt-4">
-              <div className="col-span-2 bg-white p-6 rounded-lg shadow">
-                <h3 className="font-semibold mb-4">Ongoing Projects</h3>
+          <section className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200 xl:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Inventory overview</h3>
+                <span className="text-xs text-slate-500">{stats?.totalInventory ?? 0} total units</span>
+              </div>
+
+              <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="text-left text-gray-500">
-                    <tr><th>Project ID</th><th>Client</th><th>Technician</th><th>Progress</th><th>Status</th></tr>
+                  <thead className="text-left text-slate-500">
+                    <tr>
+                      <th className="pb-3">Item</th>
+                      <th className="pb-3">SKU</th>
+                      <th className="pb-3">Qty</th>
+                      <th className="pb-3">Status</th>
+                    </tr>
                   </thead>
-                  <tbody className="align-top">
-                    {[
-                      ['P-001','Juan Dela Cruz','John Smith','70%','Ongoing'],
-                      ['P-002','ABC Company','Mark Santos','40%','Ongoing'],
-                      ['P-003','Maria Santos','Pedro Cruz','20%','Ongoing'],
-                      ['P-004','Robert Garcia','John Smith','80%','Ongoing']
-                    ].map(r=> (
-                      <tr key={r[0]} className="border-t">
-                        <td className="py-3">{r[0]}</td>
-                        <td>{r[1]}</td>
-                        <td>{r[2]}</td>
-                        <td>
-                          <div className="w-48 bg-gray-100 rounded h-3 overflow-hidden">
-                            <div style={{width: r[3]}} className="h-3 bg-yellow-400"></div>
-                          </div>
-                        </td>
-                        <td><span className="text-xs bg-yellow-50 text-yellow-400 px-2 py-1 rounded-full">{r[4]}</span></td>
-                      </tr>
-                    ))}
+                  <tbody>
+                    {(data?.inventory ?? []).slice(0, 5).map((item) => {
+                      const isLow = Number(item.quantity || 0) <= 10
+                      return (
+                        <tr key={item.id} className="border-t border-slate-100">
+                          <td className="py-3 font-medium text-slate-700">{item.name}</td>
+                          <td className="py-3 text-slate-500">{item.sku || 'N/A'}</td>
+                          <td className="py-3 font-semibold text-slate-800">{item.quantity}</td>
+                          <td className="py-3">
+                            <span className={`px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide ${isLow ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                              {isLow ? 'Low stock' : 'Healthy'}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
+            </div>
 
-              <div className="bg-white p-6 rounded-lg shadow">
-                <h3 className="font-semibold mb-4">Calendar (Today)</h3>
-                <ul className="space-y-4 text-sm">
-                  <li><div className="text-xs text-gray-400">08:00 AM</div><div>Electrical Installation — Juan Dela Cruz</div></li>
-                  <li><div className="text-xs text-gray-400">10:00 AM</div><div>Maintenance Service — ABC Company</div></li>
-                  <li><div className="text-xs text-gray-400">01:00 PM</div><div>Wiring Repair — Maria Santos</div></li>
-                  <li><div className="text-xs text-gray-400">03:00 PM</div><div>Outlet Installation — Robert Garcia</div></li>
-                </ul>
+            <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-slate-800">Stock alerts</h3>
+                <span className="text-xs text-amber-600">{stats?.lowStock ?? 0} items</span>
               </div>
 
-              <div className="col-span-1 bg-white p-6 rounded-lg shadow">
-                <h3 className="font-semibold mb-4">Low Stock Alert</h3>
-                <ul className="space-y-4 text-sm">
-                  <li>
-                    <div className="font-medium">THHN Wire 2.0mm</div>
-                    <div className="text-xs text-gray-500">Stock: 15m • Min: 50m</div>
-                    <div className="w-full bg-gray-100 h-2 rounded mt-2"><div className="h-2 bg-yellow-400" style={{width:'30%'}}/></div>
-                  </li>
-                  <li>
-                    <div className="font-medium">Circuit Breaker 20A</div>
-                    <div className="text-xs text-gray-500">Stock: 10 pcs • Min: 20 pcs</div>
-                    <div className="w-full bg-gray-100 h-2 rounded mt-2"><div className="h-2 bg-yellow-400" style={{width:'50%'}}/></div>
-                  </li>
-                </ul>
-                <div className="mt-4">
-                  <button className="w-full py-2 rounded border border-yellow-400 text-yellow-400">View Inventory</button>
-                </div>
+              <div className="space-y-4">
+                {(data?.inventoryAlerts ?? []).length === 0 ? (
+                  <div className="text-sm text-slate-500">No low stock alerts right now.</div>
+                ) : (
+                  (data?.inventoryAlerts ?? []).map((item) => (
+                    <div key={item.id} className="rounded-xl bg-amber-50 border border-amber-200 p-3">
+                      <div className="font-semibold text-slate-800">{item.name}</div>
+                      <div className="text-xs text-slate-500">SKU: {item.sku || 'N/A'}</div>
+                      <div className="mt-2 text-xs text-amber-700 font-semibold">Qty left: {item.quantity}</div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </section>
