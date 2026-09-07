@@ -76,108 +76,26 @@ const emptyForm = {
   imageData: ''
 } satisfies InventoryForm
 
-function generateAiRecommendations(query: string): AiRecommendation[] {
-  const q = (query || '').toLowerCase()
-  const catalog: Record<string, AiRecommendation> = {
-    bulb: {
-      id: 'bulb',
-      title: 'LED Bulb 12W',
-      category: 'Lighting',
-      brand: 'Philips',
-      model: 'LED-12W-220V',
-      description: 'Energy-saving LED lamp with warm white light, suitable for home and commercial lighting.',
-      image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80',
-      quantity: 20,
-      unit: 'pcs'
-    },
-    wire: {
-      id: 'wire',
-      title: 'Electrical Wire',
-      category: 'Cable',
-      brand: 'SAB',
-      model: 'THHN-2.5MM',
-      description: 'Copper conductor electrical cable for power distribution and wiring installation.',
-      image: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?auto=format&fit=crop&w=900&q=80',
-      quantity: 50,
-      unit: 'meters'
-    },
-    breaker: {
-      id: 'breaker',
-      title: 'Circuit Breaker',
-      category: 'Protection',
-      brand: 'Schneider',
-      model: 'MCB-20A',
-      description: 'Miniature circuit breaker for overload and short-circuit protection in electrical systems.',
-      image: 'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=900&q=80',
-      quantity: 12,
-      unit: 'pcs'
-    },
-    pipe: {
-      id: 'pipe',
-      title: 'PVC Conduit Pipe',
-      category: 'Piping',
-      brand: 'Royal',
-      model: 'PVC-25MM',
-      description: 'Durable conduit pipe used for protecting and routing electrical cables in walls and ceilings.',
-      image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=900&q=80',
-      quantity: 30,
-      unit: 'pcs'
-    },
-    socket: {
-      id: 'socket',
-      title: 'Electrical Socket',
-      category: 'Accessories',
-      brand: 'Legrand',
-      model: 'SW-13A',
-      description: 'Wall socket for electrical appliance connection with durable construction and safety design.',
-      image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80',
-      quantity: 8,
-      unit: 'pcs'
-    },
-    switch: {
-      id: 'switch',
-      title: 'Light Switch',
-      category: 'Control',
-      brand: 'MK',
-      model: 'LS-1WAY',
-      description: 'One-way toggle switch for lighting systems in residential and commercial spaces.',
-      image: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=900&q=80',
-      quantity: 10,
-      unit: 'pcs'
-    },
-    panel: {
-      id: 'panel',
-      title: 'Distribution Panel',
-      category: 'Panel Board',
-      brand: 'ABB',
-      model: 'DB-12WAY',
-      description: 'Main distribution board for branching and protection of electrical circuits.',
-      image: 'https://images.unsplash.com/photo-1592833186502-28a8c76dc109?auto=format&fit=crop&w=900&q=80',
-      quantity: 3,
-      unit: 'pcs'
-    },
-    motor: {
-      id: 'motor',
-      title: 'Electric Motor',
-      category: 'Machinery',
-      brand: 'Siemens',
-      model: 'Motor-1HP',
-      description: 'Compact electric motor for pumps, fans, and industrial equipment applications.',
-      image: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=900&q=80',
-      quantity: 4,
-      unit: 'pcs'
+async function fetchAiRecommendations(query: string, imageData?: string): Promise<AiRecommendation[]> {
+  try {
+    const res = await fetch('/api/ai/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query || '', imageData: imageData || undefined })
+    })
+
+    if (!res.ok) {
+      return []
     }
+
+    const json = await res.json()
+    // ensure the shape matches AiRecommendation[]
+    if (Array.isArray(json)) return json as AiRecommendation[]
+    return []
+  } catch (e) {
+    console.error('AI recommendation fetch failed', e)
+    return []
   }
-
-  const matched = Object.values(catalog).filter((item) => {
-    if (!q) return false
-    return q.includes(item.title.toLowerCase()) || q.includes(item.category.toLowerCase()) || q.includes(item.model.toLowerCase()) || item.title.toLowerCase().includes(q)
-  })
-
-  if (matched.length) return matched
-
-  const fallback = Object.values(catalog).slice(0, 3).map((item) => ({ ...item, id: `${item.id}-fallback-${Math.random()}` }))
-  return fallback
 }
 
 export default function AdminPage() {
@@ -294,7 +212,10 @@ export default function AdminPage() {
       setAiSuggestions([])
       return
     }
-    setAiSuggestions(generateAiRecommendations(value))
+    // call server-side AI recommendation endpoint (falls back to local catalog when no API key)
+    fetchAiRecommendations(value).then((items) => {
+      setAiSuggestions(items || [])
+    }).catch(() => setAiSuggestions([]))
   }
 
   async function handleImageUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -305,6 +226,10 @@ export default function AdminPage() {
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : ''
       setInventoryForm((prev) => ({ ...prev, imageData: result, imageUrl: result }))
+      // analyze uploaded image using AI recommendations
+      fetchAiRecommendations('', result).then((items) => {
+        setAiSuggestions(items || [])
+      }).catch(() => {})
     }
     reader.readAsDataURL(file)
   }
