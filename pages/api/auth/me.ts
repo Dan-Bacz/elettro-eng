@@ -20,6 +20,10 @@ export default async function handler(req, res){
     const user = await prisma.user.findUnique({ where: { id: payload.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
 
+    if (user.role === 'TECH') {
+      return res.status(403).json({ error: 'Technician accounts can only sign in through the Elettro Android app.' })
+    }
+
     return res.json({ ok: true, user: { id: user.id, email: user.email, role: user.role } })
   }catch(err){
     console.error(err)

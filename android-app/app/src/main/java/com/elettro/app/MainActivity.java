@@ -88,6 +88,7 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject payload = new JSONObject();
                 payload.put("email", email);
                 payload.put("password", password);
+                payload.put("client", "app");
 
                 String response = ApiClient.post("/auth/login", payload.toString());
                 JSONObject json = new JSONObject(response);

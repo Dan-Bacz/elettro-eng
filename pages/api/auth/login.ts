@@ -8,7 +8,7 @@ const prisma = new PrismaClient()
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { email, password } = req.body || {}
+  const { email, password, client } = req.body || {}
   if (!email || !password) return res.status(400).json({ error: 'Missing credentials' })
 
   try {
@@ -23,6 +23,10 @@ export default async function handler(req, res) {
 
     if (u.role === 'TECH' && !u.approved) {
       return res.status(403).json({ error: 'Your account is pending admin approval. Please wait for an administrator to approve your registration before logging in.' })
+    }
+
+    if (u.role === 'TECH' && client !== 'app') {
+      return res.status(403).json({ error: 'Technician accounts can only sign in through the Elettro Android app.' })
     }
 
     const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
