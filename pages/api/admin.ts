@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { sendTechnicianApprovalNotification } from '../../lib/email'
 
 const prisma = new PrismaClient()
 
@@ -92,6 +93,7 @@ export default async function handler(req: any, res: any) {
           data: { approved: true },
           select: { id: true, name: true, email: true, role: true, approved: true }
         })
+        await sendTechnicianApprovalNotification({ name: user.name, email: user.email })
         return res.json({ success: true, user })
       }
 
