@@ -1,14 +1,52 @@
 import nodemailer from 'nodemailer'
+import dns from 'dns/promises'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'lanzaderasjezamae959@gmail.com'
+const SMTP_HOST = 'smtp.gmail.com'
+const ADMIN_NOTIFICATION_MAX_ATTEMPTS = 2
 
-function getTransporter() {
+let cachedIpv4: string | null = null
+let cachedIpv4At = 0
+
+async function getIpv4Host() {
+  const cacheMs = 5 * 60 * 1000
+  if (cachedIpv4 && Date.now() - cachedIpv4At < cacheMs) return cachedIpv4
+  try {
+    const addresses = await dns.resolve4(SMTP_HOST)
+    cachedIpv4 = addresses[0]
+    cachedIpv4At = Date.now()
+  } catch {
+    cachedIpv4 = SMTP_HOST
+  }
+  return cachedIpv4 ?? SMTP_HOST
+}
+
+async function getTransporter() {
+  const host = await getIpv4Host()
   return nodemailer.createTransport({
-    service: 'gmail',
+    host,
+    port: 465,
+    secure: true,
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,
+    socketTimeout: 30000,
+    tls: {
+      servername: SMTP_HOST
+    },
     auth: {
       user: process.env.GMAIL_USER,
       pass: process.env.GMAIL_APP_PASSWORD
     }
+  })
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Email send timed out')), ms)
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value) },
+      (err) => { clearTimeout(timer); reject(err) }
+    )
   })
 }
 
@@ -17,13 +55,14 @@ function getAppUrl() {
 }
 
 export async function sendAdminRegistrationNotification(user: { name: string; email: string; phone?: string | null }) {
-  try {
-    const transporter = getTransporter()
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER || 'noreply@elettro.com',
-      to: ADMIN_EMAIL,
-      subject: 'New Technician Registration Pending Approval - Elettro',
-      html: `
+  for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
+    try {
+      const transporter = await getTransporter()
+      await withTimeout(transporter.sendMail({
+        from: `${process.env.GMAIL_USER || 'Elettro Engineering'} <${process.env.GMAIL_USER || 'noreply@elettro.com'}>`,
+        to: ADMIN_EMAIL,
+        subject: 'New Technician Registration Pending Approval - Elettro',
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #0B0F10; padding: 20px; text-align: center;">
             <h1 style="color: #F5C400; margin: 0; font-size: 24px;">ELETTRO</h1>
@@ -48,20 +87,26 @@ export async function sendAdminRegistrationNotification(user: { name: string; em
           </div>
         </div>
       `
-    })
-  } catch (error) {
-    console.error('Failed to send admin registration notification email:', error)
+      }), 25000)
+      return
+    } catch (error: any) {
+      cachedIpv4 = null
+      if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
+        console.error(`Failed to send admin registration notification email (attempt ${attempt}):`, error)
+      }
+    }
   }
 }
 
 export async function sendTechnicianApprovalNotification(user: { name: string; email: string }) {
-  try {
-    const transporter = getTransporter()
-    await transporter.sendMail({
-      from: process.env.GMAIL_USER || 'noreply@elettro.com',
-      to: user.email,
-      subject: 'Your Elettro Technician Account Has Been Approved',
-      html: `
+  for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
+    try {
+      const transporter = await getTransporter()
+      await withTimeout(transporter.sendMail({
+        from: `${process.env.GMAIL_USER || 'Elettro Engineering'} <${process.env.GMAIL_USER || 'noreply@elettro.com'}>`,
+        to: user.email,
+        subject: 'Your Elettro Technician Account Has Been Approved',
+        html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #0B0F10; padding: 20px; text-align: center;">
             <h1 style="color: #F5C400; margin: 0; font-size: 24px;">ELETTRO</h1>
@@ -77,7 +122,7 @@ export async function sendTechnicianApprovalNotification(user: { name: string; e
             </div>
             <p style="color: #555; font-size: 14px;">You may now log in to the Elettro app using the email and password you registered with.</p>
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${getAppUrl()}/admin/login" style="background-color: #F5C400; color: #111; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Login to Your Account</a>
+              <a href="${getAppUrl()}/login" style="background-color: #F5C400; color: #111; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Login to Your Account</a>
             </div>
           </div>
           <div style="background-color: #0B0F10; padding: 15px; text-align: center;">
@@ -85,8 +130,13 @@ export async function sendTechnicianApprovalNotification(user: { name: string; e
           </div>
         </div>
       `
-    })
-  } catch (error) {
-    console.error('Failed to send technician approval notification email:', error)
+      }), 25000)
+      return
+    } catch (error: any) {
+      cachedIpv4 = null
+      if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
+        console.error(`Failed to send technician approval notification email (attempt ${attempt}):`, error)
+      }
+    }
   }
 }
