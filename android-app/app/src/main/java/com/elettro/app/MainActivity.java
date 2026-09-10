@@ -46,6 +46,8 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(this, R.string.forgot_password_message, Toast.LENGTH_SHORT).show());
         findViewById(R.id.guest_button).setOnClickListener(v ->
                 Toast.makeText(this, R.string.guest_message, Toast.LENGTH_SHORT).show());
+        findViewById(R.id.signup_link).setOnClickListener(v ->
+                startActivity(new Intent(this, SignupActivity.class)));
     }
 
     private void restoreRememberedCredentials() {

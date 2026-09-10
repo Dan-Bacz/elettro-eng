@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.user.findMany({
         where: { role: { in: ['ADMIN', 'TECH', 'CLIENT'] } },
-        select: { id: true, name: true, email: true, role: true }
+        select: { id: true, name: true, email: true, role: true, phone: true, approved: true, createdAt: true }
       })
     ])
 
@@ -43,7 +43,8 @@ export default async function handler(req, res) {
       completed: bookings.filter((b) => b.status === 'COMPLETED').length,
       totalInventory: inventory.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
       lowStock: inventory.filter((item) => Number(item.quantity || 0) <= 10).length,
-      technicians: users.filter((user) => user.role === 'TECH').length,
+      technicians: users.filter((user) => user.role === 'TECH' && (user as any).approved).length,
+      pendingRegistrations: users.filter((user) => user.role === 'TECH' && !(user as any).approved).length,
       clients: users.filter((user) => user.role === 'CLIENT').length,
       admins: users.filter((user) => user.role === 'ADMIN').length,
     }
@@ -85,7 +86,8 @@ export default async function handler(req, res) {
       inventoryAlerts,
       bookings,
       inventory,
-      technicians: users.filter((u) => u.role === 'TECH'),
+      technicians: users.filter((u) => u.role === 'TECH' && (u as any).approved),
+      pendingUsers: users.filter((u) => u.role === 'TECH' && !(u as any).approved),
       clients: users.filter((u) => u.role === 'CLIENT'),
       admins: users.filter((u) => u.role === 'ADMIN')
     })

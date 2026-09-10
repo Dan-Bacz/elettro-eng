@@ -4,11 +4,23 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 export default async function handler(req: any, res: any) {
+  if (req.method === 'GET') {
+    try {
+      const pendingUsers = await prisma.user.findMany({
+        where: { role: 'TECH', approved: false },
+        select: { id: true, name: true, email: true, phone: true, role: true, approved: true, createdAt: true },
+        orderBy: { createdAt: 'desc' }
+      })
+      return res.json({ pendingUsers })
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message || 'Internal server error' })
+    }
+  }
+
   if (req.method === 'POST') {
     try {
-      const { action, bookingId, assignToId, status, startDate, endDate, name, email, password, role, userId } = req.body
+      const { action, bookingId, assignToId, status, startDate, endDate, name, email, password, role, userId, userId: targetUserId } = req.body
 
-      // Approve booking request
       if (action === 'approve') {
         const b = await prisma.booking.update({
           where: { id: bookingId },
@@ -18,7 +30,6 @@ export default async function handler(req: any, res: any) {
         return res.json(b)
       }
 
-      // Assign technician to project/booking
       if (action === 'assign') {
         const dataToUpdate: any = {
           assignedToId: assignToId || null,
@@ -35,7 +46,6 @@ export default async function handler(req: any, res: any) {
         return res.json(b)
       }
 
-      // Update booking status directly (e.g. IN_PROGRESS, COMPLETED, CANCELLED)
       if (action === 'update_status') {
         const b = await prisma.booking.update({
           where: { id: bookingId },
@@ -45,7 +55,6 @@ export default async function handler(req: any, res: any) {
         return res.json(b)
       }
 
-      // Delete booking
       if (action === 'delete_booking') {
         await prisma.technicianActivity.deleteMany({ where: { bookingId } })
         await prisma.report.deleteMany({ where: { bookingId } })
@@ -53,7 +62,6 @@ export default async function handler(req: any, res: any) {
         return res.json({ success: true, deletedId: bookingId })
       }
 
-      // Create new user (Technician, Client, or Admin)
       if (action === 'create_user') {
         if (!email || !name) {
           return res.status(400).json({ error: 'Name and email are required' })
@@ -69,13 +77,31 @@ export default async function handler(req: any, res: any) {
             name,
             email,
             password: hashedPassword,
-            role: role || 'TECH'
+            role: role || 'TECH',
+            approved: true
           }
         })
         return res.status(201).json(newUser)
       }
 
-      // Delete user
+      if (action === 'approve_user') {
+        const uid = req.body.userId
+        if (!uid) return res.status(400).json({ error: 'User ID is required' })
+        const user = await prisma.user.update({
+          where: { id: uid },
+          data: { approved: true },
+          select: { id: true, name: true, email: true, role: true, approved: true }
+        })
+        return res.json({ success: true, user })
+      }
+
+      if (action === 'reject_user') {
+        const uid = req.body.userId
+        if (!uid) return res.status(400).json({ error: 'User ID is required' })
+        await prisma.user.delete({ where: { id: uid } })
+        return res.json({ success: true, deletedUserId: uid })
+      }
+
       if (action === 'delete_user') {
         if (!userId) return res.status(400).json({ error: 'User ID is required' })
         await prisma.user.delete({ where: { id: userId } })

@@ -7,6 +7,8 @@ type UserObj = {
   name: string
   email: string
   role: 'ADMIN' | 'TECH' | 'CLIENT'
+  phone?: string
+  approved?: boolean
   createdAt?: string
 }
 
@@ -52,6 +54,7 @@ type DashboardData = {
     totalInventory: number
     lowStock: number
     technicians: number
+    pendingRegistrations: number
     clients: number
     admins: number
   }
@@ -61,6 +64,7 @@ type DashboardData = {
   bookings: BookingObj[]
   inventory: InventoryItemObj[]
   technicians: UserObj[]
+  pendingUsers: UserObj[]
   clients: UserObj[]
   admins: UserObj[]
 }
@@ -96,6 +100,7 @@ const navItems = [
   { key: 'dashboard', label: 'Dashboard', emoji: '▣' },
   { key: 'bookings', label: 'Bookings', emoji: '🧾' },
   { key: 'projects', label: 'Projects', emoji: '🛠️' },
+  { key: 'registrations', label: 'Registrations', emoji: '📋' },
   { key: 'inventory', label: 'Inventory', emoji: '📦' },
   { key: 'technicians', label: 'Technicians', emoji: '👷' },
   { key: 'clients', label: 'Clients', emoji: '👥' },
@@ -291,6 +296,34 @@ export default function AdminPage() {
       }
     } catch (e) {
       alert('Failed to create technician')
+    }
+  }
+
+  // Registration Approval / Rejection
+  async function handleApproveUser(userId: string) {
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve_user', userId })
+      })
+      if (res.ok) await loadDashboard()
+    } catch (e) {
+      alert('Failed to approve registration')
+    }
+  }
+
+  async function handleRejectUser(userId: string) {
+    if (!window.confirm('Are you sure you want to reject this technician registration?')) return
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject_user', userId })
+      })
+      if (res.ok) await loadDashboard()
+    } catch (e) {
+      alert('Failed to reject registration')
     }
   }
 
@@ -540,9 +573,9 @@ export default function AdminPage() {
               title="Notifications"
             >
               <span>🔔</span>
-              {((stats?.pending || 0) + (stats?.lowStock || 0)) > 0 && (
+              {((stats?.pending || 0) + (stats?.lowStock || 0) + (stats?.pendingRegistrations || 0)) > 0 && (
                 <span className="absolute -top-1 -right-1 bg-yellow-400 text-black rounded-full text-[10px] w-5 h-5 flex items-center justify-center font-bold animate-pulse">
-                  {(stats?.pending || 0) + (stats?.lowStock || 0)}
+                  {(stats?.pending || 0) + (stats?.lowStock || 0) + (stats?.pendingRegistrations || 0)}
                 </span>
               )}
             </button>
@@ -596,6 +629,7 @@ export default function AdminPage() {
                 { label: 'Approved', value: stats?.approved ?? 0, color: 'border-blue-400', icon: '✅' },
                 { label: 'Assigned / Active', value: (stats?.assigned ?? 0) + (stats?.inProgress ?? 0), color: 'border-purple-400', icon: '🛠️' },
                 { label: 'Low Stock Alert', value: stats?.lowStock ?? 0, color: 'border-red-400', icon: '⚠️' },
+                { label: 'Pending Regs', value: stats?.pendingRegistrations ?? 0, color: 'border-purple-400', icon: '📋' },
                 { label: 'Technicians', value: stats?.technicians ?? 0, color: 'border-emerald-400', icon: '👷' }
               ].map((card) => (
                 <div key={card.label} className={`bg-white rounded-2xl p-4 shadow-sm border-l-4 ${card.color} border-slate-200`}>
@@ -696,6 +730,17 @@ export default function AdminPage() {
                       <div>
                         <div>Manage Inventory Stock</div>
                         <div className="text-[11px] font-normal text-emerald-700">Add material / camera photo scan</div>
+                      </div>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveSection('registrations')}
+                      className="w-full text-left p-3 rounded-xl bg-purple-50 border border-purple-200 text-purple-900 hover:bg-purple-100 transition font-semibold text-sm flex items-center gap-3"
+                    >
+                      <span>📋</span>
+                      <div>
+                        <div>Review Registrations</div>
+                        <div className="text-[11px] font-normal text-purple-700">{(data?.pendingUsers || []).length} technician signups pending</div>
                       </div>
                     </button>
 
@@ -946,7 +991,76 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* SECTION 4: INVENTORY MANAGEMENT */}
+        {/* SECTION 4: REGISTRATIONS */}
+        {activeSection === 'registrations' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div>
+                <h3 className="font-bold text-slate-900">Pending Technician Registrations</h3>
+                <p className="text-xs text-slate-500">Review and approve technician account registration requests</p>
+              </div>
+              <span className="px-3 py-1.5 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">
+                {(data?.pendingUsers || []).length} pending
+              </span>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-bold">
+                    <tr>
+                      <th className="p-4">Applicant Name</th>
+                      <th className="p-4">Email Address</th>
+                      <th className="p-4">Phone Number</th>
+                      <th className="p-4">Applied On</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {(data?.pendingUsers || []).length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-slate-500">
+                          No pending registrations at the moment. New technician signups will appear here.
+                        </td>
+                      </tr>
+                    ) : (
+                      (data?.pendingUsers || []).map((u) => (
+                        <tr key={u.id} className="hover:bg-slate-50/80 transition">
+                          <td className="p-4">
+                            <div className="font-bold text-slate-900">{u.name}</div>
+                          </td>
+                          <td className="p-4 text-slate-600">{u.email}</td>
+                          <td className="p-4 text-slate-600">{u.phone || 'N/A'}</td>
+                          <td className="p-4 text-xs text-slate-500">
+                            {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => handleApproveUser(u.id)}
+                                className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold hover:bg-emerald-100"
+                              >
+                                ✅ Approve
+                              </button>
+                              <button
+                                onClick={() => handleRejectUser(u.id)}
+                                className="px-3 py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 text-xs font-bold hover:bg-red-100"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 5: INVENTORY MANAGEMENT */}
         {activeSection === 'inventory' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -1285,6 +1399,21 @@ export default function AdminPage() {
                     className="px-3 py-1.5 bg-amber-400 text-black text-xs font-bold rounded-xl shadow-sm"
                   >
                     Verify Inquiry
+                  </button>
+                </div>
+              ))}
+
+              {(data?.pendingUsers || []).map((u) => (
+                <div key={u.id} className="bg-purple-50 border border-purple-200 p-4 rounded-2xl flex items-center justify-between">
+                  <div>
+                    <div className="font-bold text-purple-900 text-sm">📋 New Technician Registration Pending</div>
+                    <div className="text-xs text-purple-700 mt-1">{u.name} ({u.email}) is requesting a technician account</div>
+                  </div>
+                  <button
+                    onClick={() => setActiveSection('registrations')}
+                    className="px-3 py-1.5 bg-purple-500 text-white text-xs font-bold rounded-xl shadow-sm shrink-0"
+                  >
+                    Review
                   </button>
                 </div>
               ))}

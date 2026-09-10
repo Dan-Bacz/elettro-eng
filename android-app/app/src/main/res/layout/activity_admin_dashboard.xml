@@ -3,17 +3,19 @@
     android:id="@+id/admin_drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F7F8">
+    android:background="#F4F7F8">
 
+    <!-- Main Container -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="#F5F7F8">
+        android:background="#F4F7F8">
 
+        <!-- Top Header Bar -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="58dp"
+            android:layout_height="60dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingStart="14dp"
@@ -22,38 +24,39 @@
 
             <ImageButton
                 android:id="@+id/menu_button"
-                android:layout_width="34dp"
-                android:layout_height="34dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
                 android:background="@android:color/transparent"
                 android:src="@android:drawable/ic_menu_sort_by_size"
-                android:contentDescription="Open menu"
-                android:tint="#FFFFFF" />
+                android:contentDescription="Open sidebar"
+                android:tint="#F5C400" />
 
             <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
                 android:layout_marginStart="8dp"
                 android:src="@drawable/ic_bolt_yellow"
-                android:contentDescription="Elettro logo" />
+                android:contentDescription="Logo" />
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
+                android:layout_marginStart="8dp"
                 android:orientation="vertical">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ELETTRO"
                     android:textColor="#FFFFFF"
-                    android:textSize="13sp"
+                    android:textSize="14sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ENGINEERING ENTERPRISES"
                     android:textColor="#9EA8AC"
-                    android:textSize="5sp" />
+                    android:textSize="7sp"
+                    android:letterSpacing="0.08" />
             </LinearLayout>
 
             <Space
@@ -61,14 +64,25 @@
                 android:layout_height="1dp"
                 android:layout_weight="1" />
 
-            <ImageView
-                android:layout_width="24dp"
-                android:layout_height="24dp"
-                android:src="@android:drawable/ic_lock_idle_alarm"
+            <ImageButton
+                android:id="@+id/btn_refresh"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="@android:color/transparent"
+                android:src="@android:drawable/stat_notify_sync"
                 android:tint="#FFFFFF"
-                android:contentDescription="Notifications" />
+                android:contentDescription="Refresh" />
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginStart="8dp"
+                android:src="@drawable/ic_person"
+                android:tint="#F5C400"
+                android:contentDescription="Admin" />
         </LinearLayout>
 
+        <!-- Main Scrollable Section Container -->
         <ScrollView
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -82,138 +96,348 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
+                <!-- Dynamic Title & Subtitle -->
                 <TextView
+                    android:id="@+id/section_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Hello, Admin"
+                    android:text="Dashboard Overview"
                     android:textColor="#101416"
                     android:textSize="22sp"
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/section_subtitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Here's your business overview."
+                    android:text="Operations and real-time database metrics"
                     android:textColor="#68747A"
                     android:textSize="12sp" />
 
-                <GridLayout
+                <!-- SECTION 1: DASHBOARD -->
+                <LinearLayout
+                    android:id="@+id/view_dashboard_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:columnCount="2"
-                    android:rowCount="2"
-                    android:useDefaultMargins="false">
+                    android:orientation="vertical"
+                    android:visibility="visible">
 
+                    <GridLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:columnCount="2"
+                        android:rowCount="3">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="96dp"
+                            android:layout_columnWeight="1"
+                            android:layout_marginEnd="4dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_dashboard_card"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Bookings" android:textColor="#4B575C" android:textSize="11sp" />
+                            <TextView android:id="@+id/total_bookings_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0" android:textColor="#101416" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Live Inquiries" android:textColor="#22A66F" android:textSize="9sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="96dp"
+                            android:layout_columnWeight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_dashboard_card"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Pending Review" android:textColor="#4B575C" android:textSize="11sp" />
+                            <TextView android:id="@+id/pending_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0" android:textColor="#D97706" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Needs Action" android:textColor="#D97706" android:textSize="9sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="96dp"
+                            android:layout_columnWeight="1"
+                            android:layout_marginEnd="4dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_dashboard_card"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Total Inventory" android:textColor="#4B575C" android:textSize="11sp" />
+                            <TextView android:id="@+id/total_inventory_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0" android:textColor="#101416" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Stock Units" android:textColor="#22A66F" android:textSize="9sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="96dp"
+                            android:layout_columnWeight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginBottom="8dp"
+                            android:background="@drawable/bg_dashboard_card"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Low Stock Items" android:textColor="#4B575C" android:textSize="11sp" />
+                            <TextView android:id="@+id/low_stock_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0" android:textColor="#DC2626" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Restock Alert" android:textColor="#DC2626" android:textSize="9sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="96dp"
+                            android:layout_columnWeight="1"
+                            android:layout_marginEnd="4dp"
+                            android:background="@drawable/bg_dashboard_card"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Technicians" android:textColor="#4B575C" android:textSize="11sp" />
+                            <TextView android:id="@+id/technicians_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0" android:textColor="#101416" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Field Personnel" android:textColor="#22A66F" android:textSize="9sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="96dp"
+                            android:layout_columnWeight="1"
+                            android:layout_marginStart="4dp"
+                            android:background="@drawable/bg_dashboard_card"
+                            android:orientation="vertical"
+                            android:padding="12dp">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Clients" android:textColor="#4B575C" android:textSize="11sp" />
+                            <TextView android:id="@+id/clients_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="0" android:textColor="#101416" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Registered Users" android:textColor="#22A66F" android:textSize="9sp" />
+                        </LinearLayout>
+                    </GridLayout>
+
+                    <!-- Recent Bookings Feed -->
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="104dp"
-                        android:layout_columnWeight="1"
-                        android:layout_marginEnd="6dp"
-                        android:layout_marginBottom="8dp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:background="@drawable/bg_dashboard_card"
                         android:orientation="vertical"
-                        android:padding="12dp"
-                        android:background="@drawable/bg_dashboard_card">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Services" android:textColor="#4B575C" android:textSize="11sp" />
-                        <TextView android:id="@+id/technicians_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="0" android:textColor="#101416" android:textSize="22sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Live data" android:textColor="#22A66F" android:textSize="9sp" />
-                    </LinearLayout>
+                        android:padding="14dp">
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="104dp"
-                        android:layout_columnWeight="1"
-                        android:layout_marginStart="6dp"
-                        android:layout_marginBottom="8dp"
-                        android:orientation="vertical"
-                        android:padding="12dp"
-                        android:background="@drawable/bg_dashboard_card">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Products" android:textColor="#4B575C" android:textSize="11sp" />
-                        <TextView android:id="@+id/total_inventory_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="0" android:textColor="#101416" android:textSize="22sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Live data" android:textColor="#22A66F" android:textSize="9sp" />
-                    </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+                            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Recent Inquiries &amp; Status" android:textColor="#101416" android:textSize="15sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/btn_goto_bookings" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Manage All  >" android:textColor="#F5C400" android:textSize="11sp" android:textStyle="bold" />
+                        </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="104dp"
-                        android:layout_columnWeight="1"
-                        android:layout_marginEnd="6dp"
-                        android:orientation="vertical"
-                        android:padding="12dp"
-                        android:background="@drawable/bg_dashboard_card">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bookings" android:textColor="#4B575C" android:textSize="11sp" />
-                        <TextView android:id="@+id/total_bookings_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="0" android:textColor="#101416" android:textSize="22sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Live data" android:textColor="#22A66F" android:textSize="9sp" />
+                        <LinearLayout
+                            android:id="@+id/recent_bookings_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:orientation="vertical" />
                     </LinearLayout>
+                </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="104dp"
-                        android:layout_columnWeight="1"
-                        android:layout_marginStart="6dp"
-                        android:orientation="vertical"
-                        android:padding="12dp"
-                        android:background="@drawable/bg_dashboard_card">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Orders" android:textColor="#4B575C" android:textSize="11sp" />
-                        <TextView android:id="@+id/low_stock_value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:text="0" android:textColor="#101416" android:textSize="22sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:text="Needs attention" android:textColor="#22A66F" android:textSize="9sp" />
-                    </LinearLayout>
-                </GridLayout>
-
+                <!-- SECTION 2: BOOKINGS -->
                 <LinearLayout
+                    android:id="@+id/view_bookings_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="14dp"
                     android:orientation="vertical"
-                    android:padding="12dp"
-                    android:background="@drawable/bg_dashboard_card">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
-                        <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Recent Bookings" android:textColor="#101416" android:textSize="16sp" android:textStyle="bold" />
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="View All  >" android:textColor="#2E9270" android:textSize="10sp" />
-                    </LinearLayout>
-                    <TextView
-                        android:id="@+id/recent_bookings_value"
+                    android:visibility="gone">
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:scrollbars="none">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                            <Button android:id="@+id/filter_all" android:layout_width="wrap_content" android:layout_height="36dp" android:text="ALL" android:textSize="10sp" android:layout_marginEnd="4dp" />
+                            <Button android:id="@+id/filter_pending" android:layout_width="wrap_content" android:layout_height="36dp" android:text="PENDING" android:textSize="10sp" android:layout_marginEnd="4dp" />
+                            <Button android:id="@+id/filter_approved" android:layout_width="wrap_content" android:layout_height="36dp" android:text="APPROVED" android:textSize="10sp" android:layout_marginEnd="4dp" />
+                            <Button android:id="@+id/filter_assigned" android:layout_width="wrap_content" android:layout_height="36dp" android:text="ASSIGNED" android:textSize="10sp" android:layout_marginEnd="4dp" />
+                            <Button android:id="@+id/filter_completed" android:layout_width="wrap_content" android:layout_height="36dp" android:text="COMPLETED" android:textSize="10sp" />
+                        </LinearLayout>
+                    </HorizontalScrollView>
+
+                    <LinearLayout
+                        android:id="@+id/bookings_list_container"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
-                        android:lineSpacingExtra="4dp"
-                        android:text="Loading live bookings..."
-                        android:textColor="#273238"
-                        android:textSize="11sp" />
+                        android:orientation="vertical" />
                 </LinearLayout>
 
+                <!-- SECTION 3: PROJECTS -->
                 <LinearLayout
+                    android:id="@+id/view_projects_section"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="vertical">
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Quick Actions" android:textColor="#101416" android:textSize="16sp" android:textStyle="bold" />
-                    <GridLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:columnCount="2">
-                        <TextView android:layout_width="0dp" android:layout_height="58dp" android:layout_columnWeight="1" android:layout_marginEnd="5dp" android:gravity="center_vertical" android:padding="12dp" android:text="Add Service     >" android:textColor="#111111" android:textSize="11sp" android:textStyle="bold" android:background="@drawable/bg_action_yellow" />
-                        <TextView android:layout_width="0dp" android:layout_height="58dp" android:layout_columnWeight="1" android:layout_marginStart="5dp" android:gravity="center_vertical" android:padding="12dp" android:text="Add Product     >" android:textColor="#273238" android:textSize="11sp" android:background="@drawable/bg_dashboard_card" />
-                        <TextView android:layout_width="0dp" android:layout_height="58dp" android:layout_columnWeight="1" android:layout_marginTop="8dp" android:layout_marginEnd="5dp" android:gravity="center_vertical" android:padding="12dp" android:text="View Bookings     >" android:textColor="#273238" android:textSize="11sp" android:background="@drawable/bg_dashboard_card" />
-                        <TextView android:layout_width="0dp" android:layout_height="58dp" android:layout_columnWeight="1" android:layout_marginStart="5dp" android:layout_marginTop="8dp" android:gravity="center_vertical" android:padding="12dp" android:text="View Orders     >" android:textColor="#273238" android:textSize="11sp" android:background="@drawable/bg_dashboard_card" />
-                    </GridLayout>
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/projects_list_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- SECTION 4: REGISTRATIONS -->
+                <LinearLayout
+                    android:id="@+id/view_registrations_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/registrations_list_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- SECTION 5: INVENTORY -->
+                <LinearLayout
+                    android:id="@+id/view_inventory_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <Button
+                        android:id="@+id/btn_add_inventory_item"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_action_yellow"
+                        android:text="+ Add Stock Item"
+                        android:textColor="#0B0F10"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/inventory_list_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- SECTION 5: TECHNICIANS -->
+                <LinearLayout
+                    android:id="@+id/view_technicians_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <Button
+                        android:id="@+id/btn_add_technician"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_action_yellow"
+                        android:text="+ Add New Technician"
+                        android:textColor="#0B0F10"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:id="@+id/technicians_list_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- SECTION 6: CLIENTS -->
+                <LinearLayout
+                    android:id="@+id/view_clients_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/clients_list_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- SECTION 7: REPORTS -->
+                <LinearLayout
+                    android:id="@+id/view_reports_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/reports_list_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- SECTION 8: NOTIFICATIONS -->
+                <LinearLayout
+                    android:id="@+id/view_notifications_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/notifications_list_container"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+
+                <!-- SECTION 9: SETTINGS -->
+                <LinearLayout
+                    android:id="@+id/view_settings_section"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical"
+                    android:visibility="gone"
+                    android:background="@drawable/bg_dashboard_card"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="System Preferences"
+                        android:textColor="#101416"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="Organization: Elettro Engineering Enterprises\nBackend API: Connected (Database Synced)\nLow Stock Threshold: 10 units"
+                        android:textColor="#4B575C"
+                        android:textSize="12sp"
+                        android:lineSpacingExtra="4dp" />
                 </LinearLayout>
             </LinearLayout>
         </ScrollView>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="62dp"
-            android:orientation="horizontal"
-            android:gravity="center"
-            android:background="#FFFFFF"
-            android:elevation="8dp">
-            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="Home" android:textColor="#F5C400" android:textSize="10sp" android:textStyle="bold" />
-            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="Services" android:textColor="#7A858A" android:textSize="10sp" />
-            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="Products" android:textColor="#7A858A" android:textSize="10sp" />
-            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="Orders" android:textColor="#7A858A" android:textSize="10sp" />
-            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="More" android:textColor="#7A858A" android:textSize="10sp" />
-        </LinearLayout>
     </LinearLayout>
 
+    <!-- Side Navigation Drawer -->
     <LinearLayout
         android:id="@+id/admin_sidebar"
         android:layout_width="270dp"
@@ -222,18 +446,55 @@
         android:orientation="vertical"
         android:padding="20dp"
         android:background="#0B0F10">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ELETTRO" android:textColor="#F5C400" android:textSize="24sp" android:textStyle="bold" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="ENGINEERING ENTERPRISES" android:textColor="#9EA8AC" android:textSize="9sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="34dp" android:padding="14dp" android:text="Dashboard" android:textColor="#0B0F10" android:textStyle="bold" android:background="@drawable/bg_action_yellow" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Bookings" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Inventory" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Projects" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Technicians" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Clients" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Reports" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Notifications" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="14dp" android:text="Settings" android:textColor="#FFFFFF" android:textSize="14sp" />
-        <Space android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
-        <Button android:id="@+id/logout_button" android:layout_width="match_parent" android:layout_height="48dp" android:background="@drawable/bg_action_yellow" android:text="Logout" android:textColor="#0B0F10" android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="ELETTRO"
+            android:textColor="#F5C400"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="ENGINEERING ENTERPRISES"
+            android:textColor="#9EA8AC"
+            android:textSize="9sp" />
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView android:id="@+id/nav_dashboard" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Dashboard" android:textColor="#F5C400" android:textStyle="bold" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_bookings" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Bookings" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_projects" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Projects" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_registrations" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Registrations" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_inventory" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Inventory" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_technicians" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Technicians" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_clients" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Clients" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_reports" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Reports" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_notifications" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Notifications" android:textColor="#FFFFFF" android:textSize="14sp" />
+                <TextView android:id="@+id/nav_settings" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="12dp" android:text="Settings" android:textColor="#FFFFFF" android:textSize="14sp" />
+            </LinearLayout>
+        </ScrollView>
+
+        <Button
+            android:id="@+id/logout_button"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_action_yellow"
+            android:text="Logout"
+            android:textColor="#0B0F10"
+            android:textStyle="bold" />
     </LinearLayout>
 </androidx.drawerlayout.widget.DrawerLayout>

@@ -24,6 +24,11 @@
             android:theme="@style/Theme.Elettro.Login"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".SignupActivity"
+            android:theme="@style/Theme.Elettro.Login"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity android:name=".AdminDashboardActivity" />
         <activity android:name=".TechnicianDashboardActivity" />
         <activity android:name=".AdminActivity" />

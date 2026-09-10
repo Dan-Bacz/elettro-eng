@@ -15,21 +15,23 @@ export default async function handler(req, res) {
     const user = await prisma.user.findUnique({ where: { email } })
     if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
-    // Cast to any because Prisma generated types may be out-of-sync in some environments
     const u: any = user
     if (!u.password) return res.status(401).json({ error: 'Invalid credentials' })
 
     const ok = await bcrypt.compare(password, u.password)
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
 
-    // Authentication success. Create JWT and set as HttpOnly cookie
+    if (u.role === 'TECH' && !u.approved) {
+      return res.status(403).json({ error: 'Your account is pending admin approval. Please wait for an administrator to approve your registration before logging in.' })
+    }
+
     const token = jwt.sign({ userId: user.id, role: user.role }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
     const cookie = serialize('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
+      maxAge: 60 * 60 * 24 * 7
     })
     res.setHeader('Set-Cookie', cookie)
 
@@ -37,7 +39,5 @@ export default async function handler(req, res) {
   } catch (err) {
     console.error(err)
     return res.status(500).json({ error: 'Server error' })
-  } finally {
-    // do not disconnect prisma here for reuse across requests
   }
 }

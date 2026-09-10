@@ -13,6 +13,8 @@ model User {
   email     String   @unique
   password  String?
   role      Role     @default(CLIENT)
+  phone     String?
+  approved  Boolean  @default(false)
   createdAt DateTime @default(now())
   bookings  Booking[]
   reports   Report[]

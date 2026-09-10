@@ -16,6 +16,16 @@
     <string name="guest_footer">You can also browse services and products without an account.</string>
     <string name="forgot_password_message">Password reset is not available yet. Contact your administrator.</string>
     <string name="guest_message">Guest browsing is not available in the app yet.</string>
+    <string name="signup_link">Don\'t have an account? Sign up</string>
+    <string name="signup_title">Create Account</string>
+    <string name="signup_subtitle">Register as a technician to get started</string>
+    <string name="full_name">Full Name</string>
+    <string name="phone_number">Phone Number</string>
+    <string name="confirm_password">Confirm Password</string>
+    <string name="signup_button">Submit Registration</string>
+    <string name="already_have_account">Already have an account?</string>
+    <string name="signup_pending_title">Registration Submitted</string>
+    <string name="signup_pending_message">Your technician registration has been submitted successfully. An administrator will review your account and you will receive approval soon. You will be able to log in once your account is approved.</string>
     <string name="api_base_url">https://your-backend.example.com/api</string>
     <string name="admin_email">admin@elettro.com</string>
     <string name="admin_password">admin123</string>
