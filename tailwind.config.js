@@ -2,6 +2,9 @@ module.exports = {
   content: ["./app/**/*.{js,ts,jsx,tsx}", "./pages/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      screens: {
+        xs: "430px",
+      },
       colors: {
         brand: {
           50: '#fffdf7',
