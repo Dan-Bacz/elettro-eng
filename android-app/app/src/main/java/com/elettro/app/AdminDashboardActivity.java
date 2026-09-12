@@ -611,7 +611,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             LinearLayout itemLayout = new LinearLayout(this);
             itemLayout.setOrientation(LinearLayout.HORIZONTAL);
-            itemLayout.setGravity(Gravity.CENTER_VERTICAL);;
+            itemLayout.setGravity(Gravity.CENTER_VERTICAL);
             itemLayout.setPadding(14, 14, 14, 14);
             itemLayout.setBackgroundResource(R.drawable.bg_dashboard_card);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
