@@ -1,7 +1,6 @@
 "use client"
-import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 const SERVICES = [
   { title: 'Electrical Installation', desc: 'Complete electrical installation for residential, commercial, and industrial buildings.' },
@@ -10,12 +9,19 @@ const SERVICES = [
   { title: 'Emergency Services', desc: '24/7 emergency electrical services for urgent issues and power interruptions.' },
 ]
 
-const PRODUCTS = [
-  { title: 'THHN Wire', price: '₱1,250.00', img: 'https://images.unsplash.com/photo-1591696205602-8d6b6b0d5f4a?q=80&w=400&auto=format&fit=crop' },
-  { title: 'Circuit Breaker', price: '₱350.00', img: 'https://images.unsplash.com/photo-1581091215367-6a3b6f8b1b4b?q=80&w=400&auto=format&fit=crop' },
-  { title: 'Distribution Board', price: '₱1,800.00', img: 'https://images.unsplash.com/photo-1600195077078-4f8b9f9c1b4b?q=80&w=400&auto=format&fit=crop' },
-  { title: 'LED Bulb', price: '₱120.00', img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?q=80&w=400&auto=format&fit=crop' },
-]
+type InventoryProduct = {
+  id: string
+  name: string
+  sku?: string
+  category?: string
+  brand?: string
+  model?: string
+  description?: string
+  quantity: number
+  unit?: string
+  imageUrl?: string
+  imageData?: string
+}
 
 export default function Home(){
   const [fullName, setFullName] = useState('')
@@ -27,6 +33,14 @@ export default function Home(){
   const [details, setDetails] = useState('')
   const [sending, setSending] = useState(false)
   const [msg, setMsg] = useState('')
+  const [products, setProducts] = useState<InventoryProduct[]>([])
+
+  useEffect(() => {
+    fetch('/api/inventory')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((items: InventoryProduct[]) => setProducts(items))
+      .catch(() => setProducts([]))
+  }, [])
 
   async function submitRequest(e){
     e.preventDefault()
@@ -194,24 +208,34 @@ export default function Home(){
             </div>
 
             <div className="mt-6 grid grid-cols-2 gap-4">
-              {PRODUCTS.map(p => (
-                <div key={p.title} className="p-4 border rounded flex flex-col">
+              {products.length === 0 && (
+                <div className="col-span-2 text-sm text-gray-500 border border-dashed rounded-lg p-6 text-center">
+                  No products available yet. Check back soon.
+                </div>
+              )}
+              {products.slice(0, 6).map(p => (
+                <div key={p.id} className="p-4 border rounded flex flex-col">
                   <div className="w-full h-28 bg-gray-100 rounded overflow-hidden mb-3">
-                    <img src={p.img} alt={p.title} className="w-full h-full object-cover" />
+                    {p.imageUrl || p.imageData ? (
+                      <img src={p.imageUrl || p.imageData} alt={p.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-3xl text-gray-400">📦</div>
+                    )}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{p.title}</div>
-                      <div className="text-sm text-gray-600">{p.price}</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="font-medium truncate">{p.name}</div>
+                      <div className="text-sm text-gray-600">{p.category || 'General'}</div>
+                      <div className="text-xs text-gray-500">{p.quantity} {p.unit || 'pcs'} in stock</div>
                     </div>
-                    <button className="px-3 py-2 bg-yellow-400 text-black rounded">Add</button>
+                    <button className="px-3 py-2 bg-yellow-400 text-black rounded shrink-0">Add</button>
                   </div>
                 </div>
               ))}
             </div>
 
             <div className="mt-6">
-              <button className="px-5 py-3 bg-yellow-400 text-black rounded">View All Products</button>
+              <Link href="/client" className="px-5 py-3 bg-yellow-400 text-black rounded inline-block">View All Products</Link>
             </div>
           </div>
         </div>

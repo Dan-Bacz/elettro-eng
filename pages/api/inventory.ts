@@ -15,6 +15,21 @@ function parseCloudinaryUrl(url: string | undefined) {
   }
 }
 
+async function cloudinaryUpload(cloudName: string, formData: FormData) {
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: 'POST',
+    body: formData as any
+  })
+
+  if (!res.ok) {
+    const txt = await res.text().catch(() => '')
+    console.error('Cloudinary upload failed status', res.status, txt)
+    return null
+  }
+  const json = await res.json()
+  return json.secure_url || json.url || null
+}
+
 async function uploadToCloudinary(dataUrl: string) {
   // If CLOUDINARY_URL present, use authenticated upload (signed)
   const parsed = parseCloudinaryUrl(process.env.CLOUDINARY_URL)
@@ -24,34 +39,33 @@ async function uploadToCloudinary(dataUrl: string) {
 
   if (!cloudName) return null
 
+  const timestamp = Math.floor(Date.now() / 1000)
+  const folder = 'elettro-inventory'
+
   try {
-    const timestamp = Math.floor(Date.now() / 1000)
-    let signature: string | undefined = undefined
-
+    // 1) Try a signed upload (falls back to unsigned if signature is not allowed)
     if (apiKey && apiSecret) {
-      // sign only the timestamp for a simple signed upload
-      const toSign = `timestamp=${timestamp}${apiSecret}`
-      signature = crypto.createHash('sha1').update(toSign).digest('hex')
+      const toSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`
+      const signature = crypto.createHash('sha1').update(toSign).digest('hex')
+
+      const formData = new FormData()
+      formData.append('folder', folder)
+      formData.append('file', dataUrl)
+      formData.append('api_key', apiKey)
+      formData.append('timestamp', String(timestamp))
+      formData.append('signature', signature)
+
+      const url = await cloudinaryUpload(cloudName, formData)
+      if (url) return url
     }
 
+    // 2) Try an unsigned upload as a fallback
     const formData = new FormData()
+    formData.append('folder', folder)
     formData.append('file', dataUrl)
-    if (apiKey) formData.append('api_key', apiKey)
     formData.append('timestamp', String(timestamp))
-    if (signature) formData.append('signature', signature)
 
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: 'POST',
-      body: formData as any
-    })
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => '')
-      console.error('Cloudinary upload failed status', res.status, txt)
-      return null
-    }
-    const json = await res.json()
-    return json.secure_url || json.url || null
+    return await cloudinaryUpload(cloudName, formData)
   } catch (e) {
     console.error('Cloudinary upload failed', e)
     return null

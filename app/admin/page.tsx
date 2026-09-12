@@ -149,6 +149,7 @@ export default function AdminPage() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState('')
 
@@ -375,6 +376,13 @@ export default function AdminPage() {
       if (response.ok) {
         setInventoryForm(emptyForm)
         await loadDashboard()
+      } else {
+        let reason = 'Unable to save inventory item.'
+        try {
+          const err = await response.json()
+          if (err?.error) reason = err.error
+        } catch {}
+        alert(reason)
       }
     } catch (error) {
       alert('Unable to save inventory item.')
@@ -441,9 +449,21 @@ export default function AdminPage() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-    const dataUrl = canvas.toDataURL('image/jpeg')
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
     setInventoryForm((prev) => ({ ...prev, imageData: dataUrl, imageUrl: dataUrl }))
     stopCamera()
+  }
+
+  function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '')
+      setInventoryForm((prev) => ({ ...prev, imageData: dataUrl, imageUrl: dataUrl }))
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
   }
 
   // Filtered Bookings Memo
@@ -1180,6 +1200,19 @@ export default function AdminPage() {
                       >
                         📷 Use Camera
                       </button>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50"
+                      >
+                        🖼️ Upload Photo
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelected}
+                      />
                     </div>
 
                     {cameraError && <div className="text-xs text-red-600">{cameraError}</div>}
@@ -1219,8 +1252,21 @@ export default function AdminPage() {
                       return (
                         <tr key={item.id} className="hover:bg-slate-50">
                           <td className="p-3">
-                            <div className="font-bold text-slate-900">{item.name}</div>
-                            <div className="text-xs text-slate-400">SKU: {item.sku || 'N/A'}</div>
+                            <div className="flex items-center gap-3">
+                              {item.imageUrl || item.imageData ? (
+                                <img
+                                  src={item.imageUrl || item.imageData}
+                                  alt={item.name}
+                                  className="w-12 h-12 rounded-lg object-cover border border-slate-200 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 shrink-0">📦</div>
+                              )}
+                              <div>
+                                <div className="font-bold text-slate-900">{item.name}</div>
+                                <div className="text-xs text-slate-400">SKU: {item.sku || 'N/A'}</div>
+                              </div>
+                            </div>
                           </td>
                           <td className="p-3 text-slate-600 text-xs font-medium">{item.category || 'General'}</td>
                           <td className="p-3 text-slate-600 text-xs">{item.brand || 'N/A'}</td>

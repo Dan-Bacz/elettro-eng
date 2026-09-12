@@ -1,26 +1,42 @@
 package com.elettro.app;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.view.Gravity;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
+import android.util.Base64;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.drawerlayout.widget.DrawerLayout;
 
+import com.bumptech.glide.Glide;
 import com.elettro.app.network.ApiClient;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -68,6 +84,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private Button btnAddInventoryItem;
     private Button btnAddTechnician;
     private TextView btnGotoBookings;
+
+    // Camera capture
+    private static final int REQ_CAMERA = 1001;
+    private static final int REQ_CAMERA_PERMISSION = 1002;
+    private Uri capturedImageUri;
+    private String capturedImageBase64;
+    private ImageView inventoryPhotoPreview;
+    private TextView inventoryPhotoStatus;
 
     // Nav TextViews
     private TextView navDashboard;
@@ -586,7 +610,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (inv == null) continue;
 
             LinearLayout itemLayout = new LinearLayout(this);
-            itemLayout.setOrientation(LinearLayout.VERTICAL);
+            itemLayout.setOrientation(LinearLayout.HORIZONTAL);
+            itemLayout.setGravity(Gravity.CENTER_VERTICAL);;
             itemLayout.setPadding(14, 14, 14, 14);
             itemLayout.setBackgroundResource(R.drawable.bg_dashboard_card);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -594,18 +619,39 @@ public class AdminDashboardActivity extends AppCompatActivity {
             params.setMargins(0, 0, 0, 10);
             itemLayout.setLayoutParams(params);
 
+            ImageView iv = new ImageView(this);
+            int size = (int) (64 * getResources().getDisplayMetrics().density);
+            LinearLayout.LayoutParams ivParams = new LinearLayout.LayoutParams(size, size);
+            ivParams.setMarginEnd(12);
+            iv.setLayoutParams(ivParams);
+            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            iv.setBackgroundResource(R.drawable.bg_dashboard_card);
+            itemLayout.addView(iv);
+
+            String image = inv.optString("imageUrl");
+            if (image == null || image.isEmpty()) image = inv.optString("imageData");
+            if (image != null && !image.isEmpty()) {
+                Glide.with(this).load(image).centerCrop().into(iv);
+            } else {
+                iv.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
+
+            LinearLayout textCol = new LinearLayout(this);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+
             TextView tvName = new TextView(this);
             tvName.setText(inv.optString("name"));
             tvName.setTextColor(Color.parseColor("#101416"));
             tvName.setTypeface(null, Typeface.BOLD);
-            itemLayout.addView(tvName);
+            textCol.addView(tvName);
 
             TextView tvDetail = new TextView(this);
             tvDetail.setText("Category: " + inv.optString("category", "General") + " • Quantity: " + inv.optInt("quantity") + " " + inv.optString("unit", "pcs"));
             tvDetail.setTextColor(Color.parseColor("#68747A"));
             tvDetail.setTextSize(12);
-            itemLayout.addView(tvDetail);
+            textCol.addView(tvDetail);
 
+            itemLayout.addView(textCol);
             inventoryListContainer.addView(itemLayout);
         }
     }
@@ -826,34 +872,164 @@ public class AdminDashboardActivity extends AppCompatActivity {
         etQty.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
         layout.addView(etQty);
 
+        final EditText etUnit = new EditText(this);
+        etUnit.setHint("Unit (pcs / meters / rolls)");
+        layout.addView(etUnit);
+
+        Button btnCapture = new Button(this);
+        btnCapture.setText("📷 Capture Product Photo");
+        btnCapture.setTextSize(12);
+        btnCapture.setBackgroundResource(R.drawable.bg_action_yellow);
+        btnCapture.setTextColor(Color.parseColor("#0B0F10"));
+        LinearLayout.LayoutParams paramsBtn = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        paramsBtn.setMargins(0, 14, 0, 4);
+        btnCapture.setLayoutParams(paramsBtn);
+        layout.addView(btnCapture);
+
+        final TextView photoStatus = new TextView(this);
+        photoStatus.setText(capturedImageBase64 == null ? "No photo captured yet" : "Photo captured — will upload to Cloudinary");
+        photoStatus.setTextColor(Color.GRAY);
+        photoStatus.setTextSize(12);
+        layout.addView(photoStatus);
+
+        final ImageView preview = new ImageView(this);
+        LinearLayout.LayoutParams paramsPreview = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 220);
+        paramsPreview.setMargins(0, 8, 0, 0);
+        preview.setLayoutParams(paramsPreview);
+        preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        preview.setBackgroundResource(R.drawable.bg_dashboard_card);
+        layout.addView(preview);
+
+        inventoryPhotoPreview = preview;
+        inventoryPhotoStatus = photoStatus;
+
+        btnCapture.setOnClickListener(v -> openCamera());
+
+        if (capturedImageBase64 != null) {
+            try {
+                byte[] raw = Base64.decode(capturedImageBase64.split(",")[1], Base64.DEFAULT);
+                Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
+                if (bmp != null) preview.setImageBitmap(bmp);
+            } catch (Exception ignored) {}
+        }
+
         new AlertDialog.Builder(this)
                 .setTitle("Add Stock Item")
                 .setView(layout)
                 .setPositiveButton("Save Item", (dialog, which) -> {
                     String name = etName.getText().toString().trim();
                     String cat = etCategory.getText().toString().trim();
+                    String unit = etUnit.getText().toString().trim();
                     int qty = 1;
                     try { qty = Integer.parseInt(etQty.getText().toString().trim()); } catch (Exception ignored) {}
 
                     if (!name.isEmpty()) {
-                        saveInventoryItem(name, cat, qty);
+                        saveInventoryItem(name, cat, qty, unit.isEmpty() ? "pcs" : unit);
                     }
                 })
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton("Cancel", (dialog, which) -> {})
                 .show();
     }
 
-    private void saveInventoryItem(String name, String category, int qty) {
+    private void openCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQ_CAMERA_PERMISSION);
+            return;
+        }
+        dispatchTakePictureIntent();
+    }
+
+    private void dispatchTakePictureIntent() {
+        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePicture.resolveActivity(getPackageManager()) == null) {
+            Toast.makeText(this, "No camera app found on this device", Toast.LENGTH_LONG).show();
+            return;
+        }
+        try {
+            File imageRoot = new File(getCacheDir(), "images");
+            if (!imageRoot.exists()) imageRoot.mkdirs();
+            File photoFile = new File(imageRoot, "elettro_inventory_" + System.currentTimeMillis() + ".jpg");
+            Uri photoUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photoFile);
+            capturedImageUri = photoUri;
+            takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+            startActivityForResult(takePicture, REQ_CAMERA);
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to open camera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void processCapturedImage(Uri uri) {
+        try {
+            InputStream is = getContentResolver().openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(is);
+            if (is != null) is.close();
+            if (bitmap == null) return;
+
+            int maxDim = 1200;
+            int w = bitmap.getWidth();
+            int h = bitmap.getHeight();
+            if (Math.max(w, h) > maxDim) {
+                float scale = (float) maxDim / Math.max(w, h);
+                bitmap = Bitmap.createScaledBitmap(bitmap, (int) (w * scale), (int) (h * scale), true);
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            byte[] bytes = baos.toByteArray();
+            capturedImageBase64 = "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
+
+            if (inventoryPhotoPreview != null) inventoryPhotoPreview.setImageBitmap(bitmap);
+            if (inventoryPhotoStatus != null) {
+                inventoryPhotoStatus.setText("Photo captured (" + Math.round(bytes.length / 1024f) + " KB) — will upload to Cloudinary");
+                inventoryPhotoStatus.setTextColor(Color.parseColor("#22A66F"));
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to process captured photo", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_CAMERA_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                dispatchTakePictureIntent();
+            } else {
+                Toast.makeText(this, "Camera permission is required to capture product photos", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_CAMERA && resultCode == RESULT_OK) {
+            if (capturedImageUri != null) {
+                processCapturedImage(capturedImageUri);
+            } else if (data != null && data.getData() != null) {
+                processCapturedImage(data.getData());
+            }
+        }
+    }
+
+    private void saveInventoryItem(String name, String category, int qty, String unit) {
         new Thread(() -> {
             try {
                 JSONObject json = new JSONObject();
                 json.put("name", name);
                 json.put("category", category);
                 json.put("quantity", qty);
-                json.put("unit", "pcs");
+                json.put("unit", unit);
+                if (capturedImageBase64 != null && !capturedImageBase64.isEmpty()) {
+                    json.put("imageData", capturedImageBase64);
+                }
                 ApiClient.post("/inventory", json.toString());
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Item Saved to Inventory", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Item Saved to Inventory" + (capturedImageBase64 != null ? " (photo uploaded)" : ""), Toast.LENGTH_SHORT).show();
+                    capturedImageBase64 = null;
+                    capturedImageUri = null;
                     loadDashboardData();
                 });
             } catch (Exception e) {

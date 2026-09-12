@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 const SERVICE_OPTIONS = [
   "Electrical Installation",
@@ -7,6 +7,20 @@ const SERVICE_OPTIONS = [
   "System Upgrades",
   "Emergency Services",
 ]
+
+type InventoryProduct = {
+  id: string
+  name: string
+  sku?: string
+  category?: string
+  brand?: string
+  model?: string
+  description?: string
+  quantity: number
+  unit?: string
+  imageUrl?: string
+  imageData?: string
+}
 
 export default function ClientPage(){
   const [fullName, setFullName] = useState("")
@@ -18,6 +32,14 @@ export default function ClientPage(){
   const [services, setServices] = useState([{ id: Date.now(), name: SERVICE_OPTIONS[0], qty: 1 }])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
+  const [products, setProducts] = useState<InventoryProduct[]>([])
+
+  useEffect(() => {
+    fetch('/api/inventory')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((items: InventoryProduct[]) => setProducts(items))
+      .catch(() => setProducts([]))
+  }, [])
 
   function addService(){
     setServices(s => [...s, { id: Date.now() + Math.random(), name: SERVICE_OPTIONS[0], qty: 1 }])
@@ -83,6 +105,28 @@ export default function ClientPage(){
       </div>
 
       <p className="mt-2">No login required — fill the form below to submit a booking or order. Admins can sign in from the link above.</p>
+
+      <h3 className="mt-8 text-lg font-semibold">Products & Materials</h3>
+      {products.length === 0 ? (
+        <p className="mt-2 text-sm text-gray-500">No products available yet. Check back soon.</p>
+      ) : (
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-4">
+          {products.map(p => (
+            <div key={p.id} className="border rounded-lg p-3 flex flex-col">
+              <div className="w-full h-28 bg-gray-100 rounded overflow-hidden mb-3">
+                {p.imageUrl || p.imageData ? (
+                  <img src={p.imageUrl || p.imageData} alt={p.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-3xl text-gray-400">📦</div>
+                )}
+              </div>
+              <div className="font-medium text-sm truncate">{p.name}</div>
+              <div className="text-xs text-gray-500">{p.category || 'General'}</div>
+              <div className="text-xs text-gray-500 mt-1">{p.quantity} {p.unit || 'pcs'} in stock</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
