@@ -99,4 +99,28 @@ public class ApiClient {
             return resp.body() != null ? resp.body().string() : null;
         }
     }
+
+    public static String patch(String path, String json) throws IOException {
+        String url = getActiveUrl(path);
+        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+        Request req = authenticated(new Request.Builder()
+                .url(url)
+                .addHeader("Content-Type", "application/json")
+        ).patch(body).build();
+        try (Response resp = client.newCall(req).execute()) {
+            return resp.body() != null ? resp.body().string() : null;
+        }
+    }
+
+    public static String put(String path, String json) throws IOException {
+        String url = getActiveUrl(path);
+        RequestBody body = RequestBody.create(json, MediaType.get("application/json; charset=utf-8"));
+        Request req = authenticated(new Request.Builder()
+                .url(url)
+                .addHeader("Content-Type", "application/json")
+        ).put(body).build();
+        try (Response resp = client.newCall(req).execute()) {
+            return resp.body() != null ? resp.body().string() : null;
+        }
+    }
 }

@@ -3,14 +3,50 @@
     <style name="Theme.Elettro" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/brand_500</item>
         <item name="colorPrimaryVariant">@color/brand_700</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="android:statusBarColor">@android:color/black</item>
-        <item name="android:navigationBarColor">@android:color/black</item>
+        <item name="colorOnPrimary">@color/el_ink</item>
+        <item name="colorSecondary">@color/brand_500</item>
+        <item name="colorOnSecondary">@color/el_ink</item>
+        <item name="android:statusBarColor">@color/el_ink</item>
+        <item name="android:navigationBarColor">@color/nav_bg</item>
+        <item name="android:windowBackground">@color/el_surface</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_muted</item>
     </style>
 
     <style name="Theme.Elettro.Login" parent="Theme.Elettro">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/white</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+    </style>
+
+    <!-- App-level text styles -->
+    <style name="Text.Header" parent="TextAppearance.MaterialComponents.Headline6">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="Text.Section" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/text_muted</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Bottom navigation bar appearance -->
+    <style name="Widget.BottomNav" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="itemIconTint">@color/bottom_nav_item_tint</item>
+        <item name="itemTextColor">@color/bottom_nav_item_tint</item>
+        <item name="itemIconSize">22dp</item>
+        <item name="android:background">@color/nav_bg</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
+
+    <!-- Filter chip style -->
+    <style name="Widget.Chip" parent="Widget.MaterialComponents.Button.UnelevatedButton">
+        <item name="android:layout_height">36dp</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:ellipsize">none</item>
+        <item name="android:maxWidth">120dp</item>
     </style>
 </resources>

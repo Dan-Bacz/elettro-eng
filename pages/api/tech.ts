@@ -39,7 +39,8 @@ export default async function handler(req: any, res: any) {
               orderBy: { createdAt: 'desc' },
               include: { tech: { select: { id: true, name: true } } }
             },
-            reports: { orderBy: { createdAt: 'desc' }, include: { author: { select: { id: true, name: true } } } }
+            reports: { orderBy: { createdAt: 'desc' }, include: { author: { select: { id: true, name: true } } } },
+            materialRequests: { orderBy: { createdAt: 'desc' } }
           }
         })
       ])

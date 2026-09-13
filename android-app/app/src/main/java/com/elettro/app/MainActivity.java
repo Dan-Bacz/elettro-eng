@@ -82,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         loginBtn.setEnabled(false);
+        loginBtn.setText(getString(R.string.login_loading));
 
         new Thread(() -> {
             try {
@@ -95,19 +96,35 @@ public class MainActivity extends AppCompatActivity {
                 boolean ok = json.optBoolean("ok", false);
                 JSONObject user = json.optJSONObject("user");
                 String role = user != null ? user.optString("role", "") : "";
+                String status = user != null ? user.optString("status", "") : "";
+                String serverError = json.optString("error", "");
+
+                final String message;
+                if (!ok || user == null) {
+                    if (!TextUtils.isEmpty(serverError)) {
+                        message = serverError;
+                    } else if ("TECH".equalsIgnoreCase(role) && "PENDING".equalsIgnoreCase(status)) {
+                        message = getString(R.string.status_pending_login);
+                    } else {
+                        message = "Invalid email or password";
+                    }
+                } else {
+                    message = null;
+                }
 
                 runOnUiThread(() -> {
                     loginBtn.setEnabled(true);
-                    if (!ok || user == null) {
-                        Toast.makeText(this, "Invalid credentials", Toast.LENGTH_SHORT).show();
+                    loginBtn.setText(getString(R.string.login));
+                    if (message != null) {
+                        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
                         return;
                     }
 
                     saveRememberedCredentials(email, password);
-                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
+                    getSharedPreferences(PREFS_NAME, MODE_PRIVATE).edit()
                             .putString(KEY_TOKEN, json.optString("token", ""))
                             .apply();
-                        ApiClient.setAuthToken(json.optString("token", ""));
+                    ApiClient.setAuthToken(json.optString("token", ""));
 
                     String normalizedRole = role.toUpperCase(Locale.US);
                     if ("ADMIN".equals(normalizedRole)) {
@@ -127,7 +144,8 @@ public class MainActivity extends AppCompatActivity {
             } catch (Exception e) {
                 runOnUiThread(() -> {
                     loginBtn.setEnabled(true);
-                    Toast.makeText(this, "Unable to connect to server. Check your internet and backend URL.", Toast.LENGTH_LONG).show();
+                    loginBtn.setText(getString(R.string.login));
+                    Toast.makeText(this, R.string.network_error, Toast.LENGTH_LONG).show();
                 });
             }
         }).start();

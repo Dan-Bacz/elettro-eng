@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Brand (ELETTRO yellow) -->
     <color name="brand_50">#fffdf7</color>
     <color name="brand_100">#fff8e6</color>
     <color name="brand_200">#fff0c2</color>
@@ -10,5 +11,39 @@
     <color name="brand_700">#b37700</color>
     <color name="brand_800">#7f4f00</color>
     <color name="brand_900">#4c2700</color>
+
     <color name="white">#FFFFFF</color>
+
+    <!-- Core neutrals -->
+    <color name="el_ink">#0B0F10</color>
+    <color name="el_ink_soft">#141A1C</color>
+    <color name="el_surface">#F4F7F8</color>
+    <color name="el_card_border">#E4E9EA</color>
+    <color name="text_primary">#101416</color>
+    <color name="text_secondary">#4B575C</color>
+    <color name="text_muted">#68747A</color>
+    <color name="text_faint">#9EA8AC</color>
+
+    <!-- Status -->
+    <color name="status_pending">#D97706</color>
+    <color name="status_pending_bg">#FDF3E7</color>
+    <color name="status_approved">#B37700</color>
+    <color name="status_approved_bg">#FFF6E0</color>
+    <color name="status_active">#22A66F</color>
+    <color name="status_active_bg">#E7F6EF</color>
+    <color name="status_in_progress">#2563EB</color>
+    <color name="status_in_progress_bg">#E8F0FD</color>
+    <color name="status_completed">#2563EB</color>
+    <color name="status_completed_bg">#E8F0FD</color>
+    <color name="status_rejected">#DC2626</color>
+    <color name="status_rejected_bg">#FDECEC</color>
+    <color name="status_suspended">#6B7280</color>
+    <color name="status_suspended_bg">#F0F1F3</color>
+    <color name="status_cancelled">#6B7280</color>
+    <color name="status_cancelled_bg">#F0F1F3</color>
+
+    <!-- Bottom nav -->
+    <color name="nav_bg">#101416</color>
+    <color name="nav_inactive">#8A9499</color>
+    <color name="nav_active">#F5C400</color>
 </resources>

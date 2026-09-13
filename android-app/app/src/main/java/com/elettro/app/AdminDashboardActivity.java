@@ -6,18 +6,20 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
-import android.view.Gravity;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,10 +28,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.elettro.app.network.ApiClient;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -41,51 +44,46 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class AdminDashboardActivity extends AppCompatActivity {
-    private DrawerLayout drawerLayout;
-    private ImageButton menuButton;
-    private ImageButton btnRefresh;
-    private Button logoutButton;
 
-    // Titles
+    // Header & Nav
+    private BottomNavigationView bottomNav;
     private TextView sectionTitle;
     private TextView sectionSubtitle;
+    private ImageButton btnRefresh;
+    private SwipeRefreshLayout swipeRefresh;
 
-    // Stats Views
-    private TextView totalBookingsVal;
-    private TextView pendingVal;
-    private TextView totalInventoryVal;
-    private TextView lowStockVal;
-    private TextView techniciansVal;
-    private TextView clientsVal;
+    // Stat views
+    private TextView statTotalBookings, statPending, statInventory, statLowStock, statTechnicians, statClients;
 
-    // Containers
-    private View viewDashboard;
-    private View viewBookings;
-    private View viewProjects;
-    private View viewRegistrations;
-    private View viewInventory;
-    private View viewTechnicians;
-    private View viewClients;
-    private View viewReports;
-    private View viewNotifications;
-    private View viewSettings;
+    // Section containers
+    private View viewDashboard, viewBookings, viewProjects, viewNotifications, viewMore;
+    // More sub-sections
+    private View subRegistrations, subInventory, subTechnicians, subClients, subReports, subSettings;
+    // More grid cards
+    private LinearLayout moreRegistrations, moreInventory, moreTechnicians, moreClients, moreReports, moreSettings;
+    // List containers
+    private LinearLayout recentBookingsContainer, bookingsListContainer, projectsListContainer;
+    private LinearLayout registrationsListContainer, inventoryListContainer, techniciansListContainer;
+    private LinearLayout clientsListContainer, reportsListContainer, notificationsListContainer;
+    // Settings fields
+    private EditText settingsOrgName, settingsSupportEmail;
+    // Notifications
+    private Button btnMarkAllRead;
+    private TextView regBadge;
 
-    private LinearLayout recentBookingsContainer;
-    private LinearLayout bookingsListContainer;
-    private LinearLayout projectsListContainer;
-    private LinearLayout registrationsListContainer;
-    private LinearLayout inventoryListContainer;
-    private LinearLayout techniciansListContainer;
-    private LinearLayout clientsListContainer;
-    private LinearLayout reportsListContainer;
-    private LinearLayout notificationsListContainer;
-
-    // Action Buttons
-    private Button btnAddInventoryItem;
-    private Button btnAddTechnician;
+    // Action buttons
+    private Button btnAddInventoryItem, btnAddTechnician;
     private TextView btnGotoBookings;
+    private Button btnSaveSettings;
 
-    // Camera capture
+    // Filter chips
+    private Button filterAll, filterPending, filterApproved, filterAssigned, filterCompleted;
+    private String currentBookingFilter = "ALL";
+
+    // Back buttons for MORE sub-sections
+    private Button btnBackRegistrations, btnBackInventory, btnBackTechnicians, btnBackClients, btnBackReports, btnBackSettings;
+
+    // Camera
     private static final int REQ_CAMERA = 1001;
     private static final int REQ_CAMERA_PERMISSION = 1002;
     private Uri capturedImageUri;
@@ -93,23 +91,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private ImageView inventoryPhotoPreview;
     private TextView inventoryPhotoStatus;
 
-    // Nav TextViews
-    private TextView navDashboard;
-    private TextView navBookings;
-    private TextView navProjects;
-    private TextView navRegistrations;
-    private TextView navInventory;
-    private TextView navTechnicians;
-    private TextView navClients;
-    private TextView navReports;
-    private TextView navNotifications;
-    private TextView navSettings;
-
-    // Filter Buttons
-    private Button filterAll, filterPending, filterApproved, filterAssigned, filterCompleted;
-    private String currentBookingFilter = "ALL";
-
-    // Cached Data
+    // Cached data
     private JSONObject dashboardData;
     private JSONArray bookingsArray;
     private JSONArray inventoryArray;
@@ -117,61 +99,69 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private JSONArray clientsArray;
     private JSONArray reportsArray;
     private JSONArray pendingUsersArray;
+    private JSONArray notificationsArray;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_dashboard);
 
-        bindViews();
-        setupSidebarNavigation();
-        setupActionButtons();
-
-        switchSection("dashboard", "Dashboard Overview", "Operations and real-time database metrics");
-
         String token = getSharedPreferences("elettro_login", MODE_PRIVATE).getString(MainActivity.KEY_TOKEN, "");
         ApiClient.setAuthToken(token);
 
+        bindViews();
+        setupBottomNav();
+        setupSwipeRefresh();
+        setupActionButtons();
+        setupMoreNavigation();
+
+        showSection("home");
         loadDashboardData();
     }
 
-    private void bindViews() {
-        drawerLayout = findViewById(R.id.admin_drawer_layout);
-        menuButton = findViewById(R.id.menu_button);
-        btnRefresh = findViewById(R.id.btn_refresh);
-        logoutButton = findViewById(R.id.logout_button);
+    @Override
+    protected void onResume() {
+        super.onResume();
+        String currentTitle = sectionTitle.getText().toString();
+        if (getString(R.string.notifications_title).equals(currentTitle) || "Alerts & Notifications".equals(currentTitle)) {
+            loadNotifications();
+        }
+    }
 
+    private void bindViews() {
+        bottomNav = findViewById(R.id.bottom_nav);
         sectionTitle = findViewById(R.id.section_title);
         sectionSubtitle = findViewById(R.id.section_subtitle);
+        btnRefresh = findViewById(R.id.btn_refresh);
+        swipeRefresh = findViewById(R.id.swipe_refresh);
 
-        totalBookingsVal = findViewById(R.id.total_bookings_value);
-        pendingVal = findViewById(R.id.pending_value);
-        totalInventoryVal = findViewById(R.id.total_inventory_value);
-        lowStockVal = findViewById(R.id.low_stock_value);
-        techniciansVal = findViewById(R.id.technicians_value);
-        clientsVal = findViewById(R.id.clients_value);
+        statTotalBookings = findViewById(R.id.stat_total_bookings);
+        statPending = findViewById(R.id.stat_pending);
+        statInventory = findViewById(R.id.stat_inventory);
+        statLowStock = findViewById(R.id.stat_low_stock);
+        statTechnicians = findViewById(R.id.stat_technicians);
+        statClients = findViewById(R.id.stat_clients);
 
         viewDashboard = findViewById(R.id.view_dashboard_section);
         viewBookings = findViewById(R.id.view_bookings_section);
         viewProjects = findViewById(R.id.view_projects_section);
-        viewRegistrations = findViewById(R.id.view_registrations_section);
-        viewInventory = findViewById(R.id.view_inventory_section);
-        viewTechnicians = findViewById(R.id.view_technicians_section);
-        viewClients = findViewById(R.id.view_clients_section);
-        viewReports = findViewById(R.id.view_reports_section);
         viewNotifications = findViewById(R.id.view_notifications_section);
-        viewSettings = findViewById(R.id.view_settings_section);
+        viewMore = findViewById(R.id.view_more_section);
 
-        navDashboard = findViewById(R.id.nav_dashboard);
-        navBookings = findViewById(R.id.nav_bookings);
-        navProjects = findViewById(R.id.nav_projects);
-        navRegistrations = findViewById(R.id.nav_registrations);
-        navInventory = findViewById(R.id.nav_inventory);
-        navTechnicians = findViewById(R.id.nav_technicians);
-        navClients = findViewById(R.id.nav_clients);
-        navReports = findViewById(R.id.nav_reports);
-        navNotifications = findViewById(R.id.nav_notifications);
-        navSettings = findViewById(R.id.nav_settings);
+        subRegistrations = findViewById(R.id.sub_registrations);
+        subInventory = findViewById(R.id.sub_inventory);
+        subTechnicians = findViewById(R.id.sub_technicians);
+        subClients = findViewById(R.id.sub_clients);
+        subReports = findViewById(R.id.sub_reports);
+        subSettings = findViewById(R.id.sub_settings);
+
+        moreRegistrations = findViewById(R.id.more_registrations);
+        moreInventory = findViewById(R.id.more_inventory);
+        moreTechnicians = findViewById(R.id.more_technicians);
+        moreClients = findViewById(R.id.more_clients);
+        moreReports = findViewById(R.id.more_reports);
+        moreSettings = findViewById(R.id.more_settings);
+        regBadge = findViewById(R.id.more_reg_badge);
 
         recentBookingsContainer = findViewById(R.id.recent_bookings_container);
         bookingsListContainer = findViewById(R.id.bookings_list_container);
@@ -183,7 +173,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
         reportsListContainer = findViewById(R.id.reports_list_container);
         notificationsListContainer = findViewById(R.id.notifications_list_container);
 
-        btnAddInventoryItem = findViewById(R.id.btn_add_inventory_item);
+        settingsOrgName = findViewById(R.id.settings_org_name);
+        settingsSupportEmail = findViewById(R.id.settings_support_email);
+        btnSaveSettings = findViewById(R.id.btn_save_settings);
+        btnMarkAllRead = findViewById(R.id.btn_mark_all_read);
+
+        btnAddInventoryItem = findViewById(R.id.btn_add_inventory);
         btnAddTechnician = findViewById(R.id.btn_add_technician);
         btnGotoBookings = findViewById(R.id.btn_goto_bookings);
 
@@ -192,102 +187,148 @@ public class AdminDashboardActivity extends AppCompatActivity {
         filterApproved = findViewById(R.id.filter_approved);
         filterAssigned = findViewById(R.id.filter_assigned);
         filterCompleted = findViewById(R.id.filter_completed);
+
+        btnBackRegistrations = findViewById(R.id.btn_back_registrations);
+        btnBackInventory = findViewById(R.id.btn_back_inventory);
+        btnBackTechnicians = findViewById(R.id.btn_back_technicians);
+        btnBackClients = findViewById(R.id.btn_back_clients);
+        btnBackReports = findViewById(R.id.btn_back_reports);
+        btnBackSettings = findViewById(R.id.btn_back_settings);
     }
 
-    private void setupSidebarNavigation() {
-        menuButton.setOnClickListener(v -> {
-            View sidebar = findViewById(R.id.admin_sidebar);
-            if (drawerLayout.isDrawerOpen(sidebar)) {
-                drawerLayout.closeDrawer(sidebar);
-            } else {
-                drawerLayout.openDrawer(sidebar);
-            }
+    private void setupSwipeRefresh() {
+        swipeRefresh.setOnRefreshListener(() -> {
+            loadDashboardData();
+            swipeRefresh.setRefreshing(false);
         });
-
         btnRefresh.setOnClickListener(v -> {
-            Toast.makeText(this, "Refreshing database data...", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.refresh, Toast.LENGTH_SHORT).show();
             loadDashboardData();
         });
+    }
 
-        logoutButton.setOnClickListener(v -> {
-            getSharedPreferences("elettro_login", MODE_PRIVATE).edit().remove(MainActivity.KEY_TOKEN).apply();
-            ApiClient.setAuthToken("");
-            Toast.makeText(this, "Signed Out", Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(this, MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            finish();
+    private void setupBottomNav() {
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) { showSection("home"); return true; }
+            if (id == R.id.nav_bookings) { showSection("bookings"); return true; }
+            if (id == R.id.nav_projects) { showSection("projects"); return true; }
+            if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
+            if (id == R.id.nav_more) { showSection("more"); return true; }
+            return false;
         });
-
-        navDashboard.setOnClickListener(v -> switchSection("dashboard", "Dashboard Overview", "Operations and real-time database metrics"));
-        navBookings.setOnClickListener(v -> switchSection("bookings", "Inquiry & Bookings", "Verify client requests and manage booking lifecycle"));
-        navProjects.setOnClickListener(v -> switchSection("projects", "Active Projects", "Assigned electrical installation & maintenance jobs"));
-        navRegistrations.setOnClickListener(v -> switchSection("registrations", "Pending Registrations", "Review technician account registration requests"));
-        navInventory.setOnClickListener(v -> switchSection("inventory", "Inventory & Materials", "Monitor equipment stock and material catalog"));
-        navTechnicians.setOnClickListener(v -> switchSection("technicians", "Technician Personnel", "Manage field engineers and job assignments"));
-        navClients.setOnClickListener(v -> switchSection("clients", "Client Directory", "Client profiles and booking histories"));
-        navReports.setOnClickListener(v -> switchSection("reports", "Diagnostic Reports", "Field inspection findings & job completion logs"));
-        navNotifications.setOnClickListener(v -> switchSection("notifications", "Alerts & Notifications", "Pending inquiries and inventory warnings"));
-        navSettings.setOnClickListener(v -> switchSection("settings", "System Settings", "Organization configuration & preferences"));
     }
 
-    private void updateNavHighlight(TextView navItem, boolean isActive) {
-        if (navItem == null) return;
-        if (isActive) {
-            navItem.setBackgroundResource(R.drawable.bg_action_yellow);
-            navItem.setTextColor(Color.parseColor("#0B0F10"));
-            navItem.setTypeface(null, Typeface.BOLD);
-        } else {
-            navItem.setBackgroundResource(0);
-            navItem.setTextColor(Color.parseColor("#FFFFFF"));
-            navItem.setTypeface(null, Typeface.NORMAL);
+    private void showSection(String key) {
+        viewDashboard.setVisibility("home".equals(key) ? View.VISIBLE : View.GONE);
+        viewBookings.setVisibility("bookings".equals(key) ? View.VISIBLE : View.GONE);
+        viewProjects.setVisibility("projects".equals(key) ? View.VISIBLE : View.GONE);
+        viewNotifications.setVisibility("notifications".equals(key) ? View.VISIBLE : View.GONE);
+        viewMore.setVisibility("more".equals(key) ? View.VISIBLE : View.GONE);
+
+        hideMoreSubs();
+
+        switch (key) {
+            case "home":
+                sectionTitle.setText(R.string.admin_title_dashboard);
+                sectionSubtitle.setText(R.string.admin_subtitle_dashboard);
+                break;
+            case "bookings":
+                sectionTitle.setText(R.string.bookings_title);
+                sectionSubtitle.setText(R.string.bookings_subtitle);
+                break;
+            case "projects":
+                sectionTitle.setText(R.string.projects_title);
+                sectionSubtitle.setText(R.string.projects_subtitle);
+                break;
+            case "notifications":
+                sectionTitle.setText(R.string.notifications_title);
+                sectionSubtitle.setText(R.string.notifications_subtitle);
+                loadNotifications();
+                break;
+            case "more":
+                sectionTitle.setText(R.string.more_title);
+                sectionSubtitle.setText(R.string.more_subtitle);
+                break;
         }
     }
 
-    private void switchSection(String sectionKey, String title, String subtitle) {
-        sectionTitle.setText(title);
-        sectionSubtitle.setText(subtitle);
+    private void hideMoreSubs() {
+        subRegistrations.setVisibility(View.GONE);
+        subInventory.setVisibility(View.GONE);
+        subTechnicians.setVisibility(View.GONE);
+        subClients.setVisibility(View.GONE);
+        subReports.setVisibility(View.GONE);
+        subSettings.setVisibility(View.GONE);
+        moreRegistrations.setVisibility(View.VISIBLE);
+        moreInventory.setVisibility(View.VISIBLE);
+        moreTechnicians.setVisibility(View.VISIBLE);
+        moreClients.setVisibility(View.VISIBLE);
+        moreReports.setVisibility(View.VISIBLE);
+        moreSettings.setVisibility(View.VISIBLE);
+    }
 
-        viewDashboard.setVisibility("dashboard".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewBookings.setVisibility("bookings".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewProjects.setVisibility("projects".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewRegistrations.setVisibility("registrations".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewInventory.setVisibility("inventory".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewTechnicians.setVisibility("technicians".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewClients.setVisibility("clients".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewReports.setVisibility("reports".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewNotifications.setVisibility("notifications".equals(sectionKey) ? View.VISIBLE : View.GONE);
-        viewSettings.setVisibility("settings".equals(sectionKey) ? View.VISIBLE : View.GONE);
+    private void showMoreSub(View sub) {
+        moreRegistrations.setVisibility(View.GONE);
+        moreInventory.setVisibility(View.GONE);
+        moreTechnicians.setVisibility(View.GONE);
+        moreClients.setVisibility(View.GONE);
+        moreReports.setVisibility(View.GONE);
+        moreSettings.setVisibility(View.GONE);
+        sub.setVisibility(View.VISIBLE);
+    }
 
-        updateNavHighlight(navDashboard, "dashboard".equals(sectionKey));
-        updateNavHighlight(navBookings, "bookings".equals(sectionKey));
-        updateNavHighlight(navProjects, "projects".equals(sectionKey));
-        updateNavHighlight(navRegistrations, "registrations".equals(sectionKey));
-        updateNavHighlight(navInventory, "inventory".equals(sectionKey));
-        updateNavHighlight(navTechnicians, "technicians".equals(sectionKey));
-        updateNavHighlight(navClients, "clients".equals(sectionKey));
-        updateNavHighlight(navReports, "reports".equals(sectionKey));
-        updateNavHighlight(navNotifications, "notifications".equals(sectionKey));
-        updateNavHighlight(navSettings, "settings".equals(sectionKey));
+    private void setupMoreNavigation() {
+        moreRegistrations.setOnClickListener(v -> { loadRegistrations(); showMoreSub(subRegistrations); });
+        moreInventory.setOnClickListener(v -> { showMoreSub(subInventory); });
+        moreTechnicians.setOnClickListener(v -> { showMoreSub(subTechnicians); });
+        moreClients.setOnClickListener(v -> { showMoreSub(subClients); });
+        moreReports.setOnClickListener(v -> { loadReports(); showMoreSub(subReports); });
+        moreSettings.setOnClickListener(v -> { loadSettings(); showMoreSub(subSettings); });
 
-        View sidebar = findViewById(R.id.admin_sidebar);
-        if (drawerLayout.isDrawerOpen(sidebar)) {
-            drawerLayout.closeDrawer(sidebar);
-        }
+        btnBackRegistrations.setOnClickListener(v -> showSection("more"));
+        btnBackInventory.setOnClickListener(v -> showSection("more"));
+        btnBackTechnicians.setOnClickListener(v -> showSection("more"));
+        btnBackClients.setOnClickListener(v -> showSection("more"));
+        btnBackReports.setOnClickListener(v -> showSection("more"));
+        btnBackSettings.setOnClickListener(v -> showSection("more"));
     }
 
     private void setupActionButtons() {
-        btnGotoBookings.setOnClickListener(v -> switchSection("bookings", "Inquiry & Bookings", "Verify client requests and manage booking lifecycle"));
-
+        btnGotoBookings.setOnClickListener(v -> { bottomNav.setSelectedItemId(R.id.nav_bookings); });
         btnAddInventoryItem.setOnClickListener(v -> showAddInventoryDialog());
         btnAddTechnician.setOnClickListener(v -> showAddTechnicianDialog());
+        btnSaveSettings.setOnClickListener(v -> saveSettings());
+        btnMarkAllRead.setOnClickListener(v -> markAllNotificationsRead());
 
-        filterAll.setOnClickListener(v -> { currentBookingFilter = "ALL"; renderBookingsList(); });
-        filterPending.setOnClickListener(v -> { currentBookingFilter = "PENDING"; renderBookingsList(); });
-        filterApproved.setOnClickListener(v -> { currentBookingFilter = "APPROVED"; renderBookingsList(); });
-        filterAssigned.setOnClickListener(v -> { currentBookingFilter = "ASSIGNED"; renderBookingsList(); });
-        filterCompleted.setOnClickListener(v -> { currentBookingFilter = "COMPLETED"; renderBookingsList(); });
+        filterAll.setOnClickListener(v -> { currentBookingFilter = "ALL"; updateFilterChips(); renderBookingsList(); });
+        filterPending.setOnClickListener(v -> { currentBookingFilter = "PENDING"; updateFilterChips(); renderBookingsList(); });
+        filterApproved.setOnClickListener(v -> { currentBookingFilter = "APPROVED"; updateFilterChips(); renderBookingsList(); });
+        filterAssigned.setOnClickListener(v -> { currentBookingFilter = "ASSIGNED"; updateFilterChips(); renderBookingsList(); });
+        filterCompleted.setOnClickListener(v -> { currentBookingFilter = "COMPLETED"; updateFilterChips(); renderBookingsList(); });
     }
+
+    private void updateFilterChips() {
+        int selectedColor = Color.parseColor("#0B0F10");
+        int defaultText = Color.parseColor("#68747A");
+
+        Button[] chips = {filterAll, filterPending, filterApproved, filterAssigned, filterCompleted};
+        String[] keys = {"ALL", "PENDING", "APPROVED", "ASSIGNED", "COMPLETED"};
+
+        for (int i = 0; i < chips.length; i++) {
+            if (keys[i].equals(currentBookingFilter)) {
+                chips[i].setBackgroundResource(R.drawable.bg_chip_selected);
+                chips[i].setTextColor(selectedColor);
+                chips[i].setTypeface(null, Typeface.BOLD);
+            } else {
+                chips[i].setBackgroundResource(R.drawable.bg_chip_unselected);
+                chips[i].setTextColor(defaultText);
+                chips[i].setTypeface(null, Typeface.NORMAL);
+            }
+        }
+    }
+
+    // === DATA LOADING ===
 
     private void loadDashboardData() {
         new Thread(() -> {
@@ -311,22 +352,25 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 runOnUiThread(this::renderAllSections);
             } catch (Exception e) {
                 e.printStackTrace();
-                runOnUiThread(() -> Toast.makeText(this, "Unable to load database data", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(this, R.string.network_error, Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
 
     private void renderAllSections() {
-        if (dashboardData == null) return;
+        if (dashboardData == null) {
+            sectionSubtitle.setText(R.string.network_error);
+            return;
+        }
 
         JSONObject stats = dashboardData.optJSONObject("stats");
         if (stats != null) {
-            totalBookingsVal.setText(String.valueOf(stats.optInt("totalBookings")));
-            pendingVal.setText(String.valueOf(stats.optInt("pending")));
-            totalInventoryVal.setText(String.valueOf(stats.optInt("totalInventory")));
-            lowStockVal.setText(String.valueOf(stats.optInt("lowStock")));
-            techniciansVal.setText(String.valueOf(stats.optInt("technicians")));
-            clientsVal.setText(String.valueOf(stats.optInt("clients")));
+            statTotalBookings.setText(String.valueOf(stats.optInt("totalBookings")));
+            statPending.setText(String.valueOf(stats.optInt("pending")));
+            statInventory.setText(String.valueOf(stats.optInt("totalInventory")));
+            statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
+            statTechnicians.setText(String.valueOf(stats.optInt("technicians")));
+            statClients.setText(String.valueOf(stats.optInt("clients")));
         }
 
         renderRecentBookings();
@@ -336,42 +380,225 @@ public class AdminDashboardActivity extends AppCompatActivity {
         renderInventoryList();
         renderTechniciansList();
         renderClientsList();
-        renderReportsList();
-        renderNotificationsList();
+
+        if (pendingUsersArray != null && pendingUsersArray.length() > 0) {
+            regBadge.setText(pendingUsersArray.length() + " pending");
+            regBadge.setVisibility(View.VISIBLE);
+        } else {
+            regBadge.setVisibility(View.GONE);
+        }
     }
+
+    // === NOTIFICATIONS ===
+
+    private void loadNotifications() {
+        notificationsListContainer.removeAllViews();
+        showLoadingSpinner(notificationsListContainer);
+
+        new Thread(() -> {
+            try {
+                String resp = ApiClient.get("/notifications");
+                if (resp != null) {
+                    JSONObject obj = new JSONObject(resp);
+                    notificationsArray = obj.optJSONArray("notifications");
+                }
+                runOnUiThread(this::renderNotifications);
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    notificationsListContainer.removeAllViews();
+                    showEmpty(notificationsListContainer, R.string.network_error);
+                });
+            }
+        }).start();
+    }
+
+    private void renderNotifications() {
+        notificationsListContainer.removeAllViews();
+        if (notificationsArray == null || notificationsArray.length() == 0) {
+            showEmpty(notificationsListContainer, R.string.no_notifications);
+            return;
+        }
+
+        for (int i = 0; i < notificationsArray.length(); i++) {
+            JSONObject n = notificationsArray.optJSONObject(i);
+            if (n == null) continue;
+
+            boolean read = n.optBoolean("read", false);
+            String title = n.optString("title", "Notification");
+            String message = n.optString("message", "");
+            String type = n.optString("type", "INFO");
+            String time = n.optString("createdAt", "");
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 8);
+            card.setLayoutParams(lp);
+            if (!read) card.setBackgroundColor(Color.parseColor("#FFFBEB"));
+
+            // Title + type badge row
+            LinearLayout titleRow = new LinearLayout(this);
+            titleRow.setOrientation(LinearLayout.HORIZONTAL);
+            titleRow.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView tvType = new TextView(this);
+            tvType.setText(type.replace("_", " "));
+            tvType.setTextColor(getTypeColor(type));
+            tvType.setTextSize(9);
+            tvType.setTypeface(null, Typeface.BOLD);
+            tvType.setPadding(6, 3, 6, 3);
+            tvType.setBackgroundResource(R.drawable.bg_pill);
+            tvType.getBackground().setTint(getTypeColor(type));
+            tvType.setTextColor(Color.WHITE);
+            titleRow.addView(tvType);
+
+            TextView tvTitle = new TextView(this);
+            tvTitle.setText(title);
+            tvTitle.setTextColor(Color.parseColor("#101416"));
+            tvTitle.setTextSize(13);
+            tvTitle.setTypeface(null, Typeface.BOLD);
+            LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            tp.setMarginStart(8);
+            tvTitle.setLayoutParams(tp);
+            titleRow.addView(tvTitle);
+
+            card.addView(titleRow);
+
+            if (!message.isEmpty()) {
+                TextView tvMsg = new TextView(this);
+                tvMsg.setText(message);
+                tvMsg.setTextColor(Color.parseColor("#68747A"));
+                tvMsg.setTextSize(12);
+                tvMsg.setPadding(0, 6, 0, 0);
+                card.addView(tvMsg);
+            }
+
+            if (!read) {
+                card.setOnClickListener(v -> markNotificationRead(n.optString("id")));
+            }
+
+            notificationsListContainer.addView(card);
+        }
+    }
+
+    private int getTypeColor(String type) {
+        if (type == null) return Color.parseColor("#6B7280");
+        switch (type.toUpperCase()) {
+            case "MATERIAL_REQUEST": return Color.parseColor("#2563EB");
+            case "REPORT": return Color.parseColor("#22A66F");
+            case "BOOKING": return Color.parseColor("#D97706");
+            case "REGISTRATION": return Color.parseColor("#7C3AED");
+            case "STATUS_CHANGE": return Color.parseColor("#2563EB");
+            default: return Color.parseColor("#6B7280");
+        }
+    }
+
+    private void markNotificationRead(String id) {
+        new Thread(() -> {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("id", id);
+                ApiClient.patch("/notifications", obj.toString());
+                runOnUiThread(this::loadNotifications);
+            } catch (Exception ignored) {}
+        }).start();
+    }
+
+    private void markAllNotificationsRead() {
+        new Thread(() -> {
+            try {
+                JSONObject obj = new JSONObject();
+                obj.put("markAll", true);
+                ApiClient.patch("/notifications", obj.toString());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "All notifications marked read", Toast.LENGTH_SHORT).show();
+                    loadNotifications();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    // === RECENT BOOKINGS ===
 
     private void renderRecentBookings() {
         recentBookingsContainer.removeAllViews();
         if (bookingsArray == null || bookingsArray.length() == 0) {
-            TextView tv = new TextView(this);
-            tv.setText("No recent inquiries recorded.");
-            tv.setTextColor(Color.GRAY);
-            recentBookingsContainer.addView(tv);
+            showEmpty(recentBookingsContainer, R.string.no_recent_bookings);
             return;
         }
-
         int count = Math.min(5, bookingsArray.length());
         for (int i = 0; i < count; i++) {
             JSONObject b = bookingsArray.optJSONObject(i);
             if (b == null) continue;
 
-            TextView tv = new TextView(this);
-            tv.setText(b.optString("title", "Service Request") + " • " + b.optString("status", "PENDING"));
-            tv.setTextColor(Color.parseColor("#101416"));
-            tv.setTypeface(null, Typeface.BOLD);
-            tv.setTextSize(13);
-            tv.setPadding(0, 12, 0, 12);
-            recentBookingsContainer.addView(tv);
+            String title = b.optString("title", "Service Request");
+            String status = b.optString("status", "PENDING");
+            String id = b.optString("id", "");
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(0, 10, 0, 10);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMarginStart(0);
+            row.setLayoutParams(lp);
+
+            View dot = new View(this);
+            LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(8, 8);
+            dotLp.setMarginEnd(10);
+            dot.setLayoutParams(dotLp);
+            dot.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getStatusColor(status)));
+            row.addView(dot);
+
+            TextView tvTitle = new TextView(this);
+            tvTitle.setText(title);
+            tvTitle.setTextColor(Color.parseColor("#101416"));
+            tvTitle.setTextSize(13);
+            tvTitle.setTypeface(null, Typeface.BOLD);
+            LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+            tvTitle.setLayoutParams(tLp);
+            row.addView(tvTitle);
+
+            TextView tvStatus = new TextView(this);
+            tvStatus.setText(status);
+            tvStatus.setTextColor(getStatusColor(status));
+            tvStatus.setTextSize(10);
+            tvStatus.setTypeface(null, Typeface.BOLD);
+            tvStatus.setPadding(8, 3, 8, 3);
+            tvStatus.setBackgroundResource(R.drawable.bg_pill);
+            tvStatus.getBackground().setTint(getStatusColor(status) & 0x11FFFFFF);
+            row.addView(tvStatus);
+
+            recentBookingsContainer.addView(row);
         }
     }
+
+    private int getStatusColor(String status) {
+        if (status == null) return Color.parseColor("#6B7280");
+        switch (status) {
+            case "PENDING": return Color.parseColor("#D97706");
+            case "APPROVED": return Color.parseColor("#B37700");
+            case "ASSIGNED": return Color.parseColor("#2563EB");
+            case "IN_PROGRESS": return Color.parseColor("#2563EB");
+            case "COMPLETED": return Color.parseColor("#22A66F");
+            case "CANCELLED": return Color.parseColor("#6B7280");
+            default: return Color.parseColor("#6B7280");
+        }
+    }
+
+    // === BOOKINGS ===
 
     private void renderBookingsList() {
         bookingsListContainer.removeAllViews();
         if (bookingsArray == null || bookingsArray.length() == 0) {
-            TextView tv = new TextView(this);
-            tv.setText("No bookings found.");
-            tv.setTextColor(Color.GRAY);
-            bookingsListContainer.addView(tv);
+            showEmpty(bookingsListContainer, R.string.no_bookings);
             return;
         }
 
@@ -380,33 +607,32 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (b == null) continue;
 
             String status = b.optString("status", "PENDING");
-            if (!"ALL".equals(currentBookingFilter) && !status.equalsIgnoreCase(currentBookingFilter)) {
-                continue;
-            }
+            if (!"ALL".equals(currentBookingFilter) && !status.equalsIgnoreCase(currentBookingFilter)) continue;
 
             String bookingId = b.optString("id");
             String title = b.optString("title", "Booking Request");
 
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(16, 16, 16, 16);
-            card.setBackgroundResource(R.drawable.bg_dashboard_card);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 0, 14);
-            card.setLayoutParams(params);
+            lp.setMargins(0, 0, 0, 8);
+            card.setLayoutParams(lp);
 
             TextView tvTitle = new TextView(this);
             tvTitle.setText(title);
             tvTitle.setTextColor(Color.parseColor("#101416"));
-            tvTitle.setTextSize(15);
+            tvTitle.setTextSize(14);
             tvTitle.setTypeface(null, Typeface.BOLD);
             card.addView(tvTitle);
 
             TextView tvStatus = new TextView(this);
-            tvStatus.setText("Status: " + status);
-            tvStatus.setTextColor("PENDING".equals(status) ? Color.parseColor("#D97706") : Color.parseColor("#2563EB"));
-            tvStatus.setTextSize(12);
+            tvStatus.setText(status);
+            tvStatus.setTextColor(getStatusColor(status));
+            tvStatus.setTextSize(11);
+            tvStatus.setTypeface(null, Typeface.BOLD);
             tvStatus.setPadding(0, 4, 0, 10);
             card.addView(tvStatus);
 
@@ -414,23 +640,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
             actionRow.setOrientation(LinearLayout.HORIZONTAL);
 
             if ("PENDING".equals(status)) {
-                Button btnApprove = new Button(this);
-                btnApprove.setText("Verify & Approve");
-                btnApprove.setTextSize(11);
-                btnApprove.setBackgroundResource(R.drawable.bg_action_yellow);
-                btnApprove.setTextColor(Color.parseColor("#0B0F10"));
+                Button btnApprove = createYellowSmallButton("Approve");
                 btnApprove.setOnClickListener(v -> approveBooking(bookingId));
                 actionRow.addView(btnApprove);
             }
 
-            Button btnAssign = new Button(this);
-            btnAssign.setText("Assign Tech");
-            btnAssign.setTextSize(11);
-            btnAssign.setBackgroundResource(R.drawable.bg_action_yellow);
-            btnAssign.setTextColor(Color.parseColor("#0B0F10"));
+            Button btnAssign = createYellowSmallButton("Assign Tech");
             LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            p.setMarginStart(12);
+            p.setMarginStart(8);
             btnAssign.setLayoutParams(p);
             btnAssign.setOnClickListener(v -> showAssignTechDialog(bookingId, title));
             actionRow.addView(btnAssign);
@@ -440,55 +658,73 @@ public class AdminDashboardActivity extends AppCompatActivity {
         }
     }
 
+    // === PROJECTS ===
+
     private void renderProjectsList() {
         projectsListContainer.removeAllViews();
         if (bookingsArray == null) return;
 
+        boolean hasProjects = false;
         for (int i = 0; i < bookingsArray.length(); i++) {
             JSONObject b = bookingsArray.optJSONObject(i);
             if (b == null) continue;
-
             String status = b.optString("status", "");
-            if ("ASSIGNED".equals(status) || "IN_PROGRESS".equals(status) || "COMPLETED".equals(status)) {
-                LinearLayout card = new LinearLayout(this);
-                card.setOrientation(LinearLayout.VERTICAL);
-                card.setPadding(16, 16, 16, 16);
-                card.setBackgroundResource(R.drawable.bg_dashboard_card);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                params.setMargins(0, 0, 0, 12);
-                card.setLayoutParams(params);
+            if (!("ASSIGNED".equals(status) || "IN_PROGRESS".equals(status) || "COMPLETED".equals(status))) continue;
+            hasProjects = true;
 
-                TextView tvTitle = new TextView(this);
-                tvTitle.setText(b.optString("title"));
-                tvTitle.setTextColor(Color.parseColor("#101416"));
-                tvTitle.setTextSize(15);
-                tvTitle.setTypeface(null, Typeface.BOLD);
-                card.addView(tvTitle);
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 8);
+            card.setLayoutParams(lp);
 
-                JSONObject techObj = b.optJSONObject("assignedTo");
-                String techName = techObj != null ? techObj.optString("name", "Assigned Tech") : "Lead Technician";
+            TextView tvTitle = new TextView(this);
+            tvTitle.setText(b.optString("title", "Project"));
+            tvTitle.setTextColor(Color.parseColor("#101416"));
+            tvTitle.setTextSize(14);
+            tvTitle.setTypeface(null, Typeface.BOLD);
+            card.addView(tvTitle);
 
-                TextView tvInfo = new TextView(this);
-                tvInfo.setText("Lead Tech: " + techName + " • " + status);
-                tvInfo.setTextColor(Color.parseColor("#68747A"));
-                tvInfo.setTextSize(12);
-                tvInfo.setPadding(0, 4, 0, 0);
-                card.addView(tvInfo);
+            JSONObject techObj = b.optJSONObject("assignedTo");
+            String techName = techObj != null ? techObj.optString("name", "Unassigned") : "Unassigned";
 
-                projectsListContainer.addView(card);
+            TextView tvInfo = new TextView(this);
+            tvInfo.setText("Tech: " + techName + " • " + status);
+            tvInfo.setTextColor(getStatusColor(status));
+            tvInfo.setTextSize(11);
+            tvInfo.setTypeface(null, Typeface.BOLD);
+            tvInfo.setPadding(0, 4, 0, 0);
+            card.addView(tvInfo);
+
+            JSONObject clientObj = b.optJSONObject("client");
+            if (clientObj != null) {
+                TextView tvClient = new TextView(this);
+                tvClient.setText("Client: " + clientObj.optString("name", ""));
+                tvClient.setTextColor(Color.parseColor("#68747A"));
+                tvClient.setTextSize(12);
+                tvClient.setPadding(0, 4, 0, 0);
+                card.addView(tvClient);
             }
+
+            projectsListContainer.addView(card);
+        }
+
+        if (!hasProjects) {
+            showEmpty(projectsListContainer, R.string.empty);
         }
     }
+
+    // === REGISTRATIONS ===
+
+    private void loadRegistrations() { renderRegistrationsList(); }
 
     private void renderRegistrationsList() {
         registrationsListContainer.removeAllViews();
         if (pendingUsersArray == null || pendingUsersArray.length() == 0) {
-            TextView tv = new TextView(this);
-            tv.setText("No pending technician registrations.");
-            tv.setTextColor(Color.GRAY);
-            tv.setPadding(0, 12, 0, 12);
-            registrationsListContainer.addView(tv);
+            showEmpty(registrationsListContainer, R.string.empty);
             return;
         }
 
@@ -503,17 +739,17 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(16, 16, 16, 16);
-            card.setBackgroundResource(R.drawable.bg_dashboard_card);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 0, 14);
-            card.setLayoutParams(params);
+            lp.setMargins(0, 0, 0, 8);
+            card.setLayoutParams(lp);
 
             TextView tvName = new TextView(this);
             tvName.setText(name);
             tvName.setTextColor(Color.parseColor("#101416"));
-            tvName.setTextSize(15);
+            tvName.setTextSize(14);
             tvName.setTypeface(null, Typeface.BOLD);
             card.addView(tvName);
 
@@ -521,25 +757,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
             tvEmail.setText(email + (phone.isEmpty() ? "" : " • " + phone));
             tvEmail.setTextColor(Color.parseColor("#68747A"));
             tvEmail.setTextSize(12);
-            tvEmail.setPadding(0, 4, 0, 8);
+            tvEmail.setPadding(0, 3, 0, 8);
             card.addView(tvEmail);
-
-            TextView tvPending = new TextView(this);
-            tvPending.setText("Status: PENDING APPROVAL");
-            tvPending.setTextColor(Color.parseColor("#D97706"));
-            tvPending.setTextSize(11);
-            tvPending.setTypeface(null, Typeface.BOLD);
-            tvPending.setPadding(0, 0, 0, 10);
-            card.addView(tvPending);
 
             LinearLayout actionRow = new LinearLayout(this);
             actionRow.setOrientation(LinearLayout.HORIZONTAL);
 
-            Button btnApprove = new Button(this);
-            btnApprove.setText("Approve");
-            btnApprove.setTextSize(11);
-            btnApprove.setBackgroundResource(R.drawable.bg_action_yellow);
-            btnApprove.setTextColor(Color.parseColor("#0B0F10"));
+            Button btnApprove = createYellowSmallButton("Approve");
             btnApprove.setOnClickListener(v -> approveUser(userId));
             actionRow.addView(btnApprove);
 
@@ -548,16 +772,322 @@ public class AdminDashboardActivity extends AppCompatActivity {
             btnReject.setTextSize(11);
             btnReject.setBackgroundResource(R.drawable.bg_action_red);
             btnReject.setTextColor(Color.WHITE);
-            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+            btnReject.setTypeface(null, Typeface.BOLD);
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            p.setMarginStart(12);
-            btnReject.setLayoutParams(p);
+            rp.setMarginStart(8);
+            btnReject.setLayoutParams(rp);
             btnReject.setOnClickListener(v -> rejectUser(userId));
             actionRow.addView(btnReject);
 
             card.addView(actionRow);
             registrationsListContainer.addView(card);
         }
+    }
+
+    // === INVENTORY ===
+
+    private void renderInventoryList() {
+        inventoryListContainer.removeAllViews();
+        if (inventoryArray == null || inventoryArray.length() == 0) {
+            showEmpty(inventoryListContainer, R.string.empty);
+            return;
+        }
+
+        for (int i = 0; i < inventoryArray.length(); i++) {
+            JSONObject inv = inventoryArray.optJSONObject(i);
+            if (inv == null) continue;
+
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.HORIZONTAL);
+            item.setGravity(Gravity.CENTER_VERTICAL);
+            item.setPadding(12, 12, 12, 12);
+            item.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 6);
+            item.setLayoutParams(lp);
+
+            ImageView iv = new ImageView(this);
+            int size = (int) (48 * getResources().getDisplayMetrics().density);
+            LinearLayout.LayoutParams ivLp = new LinearLayout.LayoutParams(size, size);
+            ivLp.setMarginEnd(12);
+            iv.setLayoutParams(ivLp);
+            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            iv.setBackgroundResource(R.drawable.bg_icon_circle);
+            item.addView(iv);
+
+            String image = inv.optString("imageUrl");
+            if (image == null || image.isEmpty()) image = inv.optString("imageData");
+            if (image != null && !image.isEmpty()) {
+                Glide.with(this).load(image).centerCrop().into(iv);
+            } else {
+                iv.setImageResource(android.R.drawable.ic_menu_gallery);
+            }
+
+            LinearLayout textCol = new LinearLayout(this);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+
+            TextView tvName = new TextView(this);
+            tvName.setText(inv.optString("name", "Item"));
+            tvName.setTextColor(Color.parseColor("#101416"));
+            tvName.setTypeface(null, Typeface.BOLD);
+            tvName.setTextSize(13);
+            textCol.addView(tvName);
+
+            int qty = inv.optInt("quantity");
+            String unit = inv.optString("unit", "pcs");
+            String category = inv.optString("category", "General");
+            int reorderLevel = inv.optInt("reorderLevel", 10);
+
+            TextView tvDetail = new TextView(this);
+            tvDetail.setText(category + " • " + qty + " " + unit);
+            tvDetail.setTextColor(qty <= reorderLevel ? Color.parseColor("#DC2626") : Color.parseColor("#68747A"));
+            tvDetail.setTextSize(12);
+            textCol.addView(tvDetail);
+
+            item.addView(textCol);
+            inventoryListContainer.addView(item);
+        }
+    }
+
+    // === TECHNICIANS ===
+
+    private void renderTechniciansList() {
+        techniciansListContainer.removeAllViews();
+        if (techniciansArray == null || techniciansArray.length() == 0) {
+            showEmpty(techniciansListContainer, R.string.empty);
+            return;
+        }
+
+        for (int i = 0; i < techniciansArray.length(); i++) {
+            JSONObject tech = techniciansArray.optJSONObject(i);
+            if (tech == null) continue;
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 6);
+            card.setLayoutParams(lp);
+
+            TextView tvName = new TextView(this);
+            tvName.setText(tech.optString("name", "Tech"));
+            tvName.setTextColor(Color.parseColor("#101416"));
+            tvName.setTypeface(null, Typeface.BOLD);
+            tvName.setTextSize(13);
+            card.addView(tvName);
+
+            TextView tvEmail = new TextView(this);
+            tvEmail.setText(tech.optString("email", ""));
+            tvEmail.setTextColor(Color.parseColor("#68747A"));
+            tvEmail.setTextSize(12);
+            card.addView(tvEmail);
+
+            techniciansListContainer.addView(card);
+        }
+    }
+
+    // === CLIENTS ===
+
+    private void renderClientsList() {
+        clientsListContainer.removeAllViews();
+        if (clientsArray == null || clientsArray.length() == 0) {
+            showEmpty(clientsListContainer, R.string.empty);
+            return;
+        }
+
+        for (int i = 0; i < clientsArray.length(); i++) {
+            JSONObject client = clientsArray.optJSONObject(i);
+            if (client == null) continue;
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 6);
+            card.setLayoutParams(lp);
+
+            TextView tvName = new TextView(this);
+            tvName.setText(client.optString("name", "Client"));
+            tvName.setTextColor(Color.parseColor("#101416"));
+            tvName.setTypeface(null, Typeface.BOLD);
+            tvName.setTextSize(13);
+            card.addView(tvName);
+
+            TextView tvEmail = new TextView(this);
+            tvEmail.setText(client.optString("email", ""));
+            tvEmail.setTextColor(Color.parseColor("#68747A"));
+            tvEmail.setTextSize(12);
+            card.addView(tvEmail);
+
+            clientsListContainer.addView(card);
+        }
+    }
+
+    // === REPORTS ===
+
+    private void loadReports() { renderReportsList(); }
+
+    private void renderReportsList() {
+        reportsListContainer.removeAllViews();
+        if (reportsArray == null || reportsArray.length() == 0) {
+            showEmpty(reportsListContainer, R.string.empty);
+            return;
+        }
+
+        for (int i = 0; i < reportsArray.length(); i++) {
+            JSONObject r = reportsArray.optJSONObject(i);
+            if (r == null) continue;
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 6);
+            card.setLayoutParams(lp);
+
+            JSONObject booking = r.optJSONObject("booking");
+            if (booking != null) {
+                TextView tvBooking = new TextView(this);
+                tvBooking.setText(booking.optString("title", "Booking"));
+                tvBooking.setTextColor(Color.parseColor("#101416"));
+                tvBooking.setTextSize(13);
+                tvBooking.setTypeface(null, Typeface.BOLD);
+                card.addView(tvBooking);
+            }
+
+            JSONObject author = r.optJSONObject("author");
+            if (author != null) {
+                TextView tvAuthor = new TextView(this);
+                tvAuthor.setText("By " + author.optString("name", "Unknown"));
+                tvAuthor.setTextColor(Color.parseColor("#68747A"));
+                tvAuthor.setTextSize(12);
+                card.addView(tvAuthor);
+            }
+
+            TextView tvContent = new TextView(this);
+            tvContent.setText(r.optString("content", ""));
+            tvContent.setTextColor(Color.parseColor("#4B575C"));
+            tvContent.setTextSize(12);
+            tvContent.setPadding(0, 4, 0, 0);
+            card.addView(tvContent);
+
+            reportsListContainer.addView(card);
+        }
+    }
+
+    // === SETTINGS ===
+
+    private void loadSettings() {
+        new Thread(() -> {
+            try {
+                String resp = ApiClient.get("/settings");
+                if (resp != null) {
+                    JSONObject obj = new JSONObject(resp);
+                    JSONObject settings = obj.optJSONObject("settings");
+                    if (settings != null) {
+                        final String orgName = settings.optString("orgName", "");
+                        final String supportEmail = settings.optString("supportEmail", "");
+                        runOnUiThread(() -> {
+                            settingsOrgName.setText(orgName);
+                            settingsSupportEmail.setText(supportEmail);
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    private void saveSettings() {
+        String orgName = settingsOrgName.getText().toString().trim();
+        String supportEmail = settingsSupportEmail.getText().toString().trim();
+
+        if (orgName.isEmpty() && supportEmail.isEmpty()) {
+            Toast.makeText(this, "Enter at least one setting to save", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                JSONObject settings = new JSONObject();
+                if (!orgName.isEmpty()) settings.put("orgName", orgName);
+                if (!supportEmail.isEmpty()) settings.put("supportEmail", supportEmail);
+
+                JSONObject payload = new JSONObject();
+                payload.put("settings", settings);
+                ApiClient.put("/settings", payload.toString());
+                runOnUiThread(() -> Toast.makeText(this, "Settings Saved", Toast.LENGTH_SHORT).show());
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Failed to save settings", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    // === ACTIONS ===
+
+    private void approveBooking(String bookingId) {
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("action", "approve");
+                json.put("bookingId", bookingId);
+                ApiClient.post("/admin", json.toString());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Booking Approved", Toast.LENGTH_SHORT).show();
+                    loadDashboardData();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Approval failed", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void showAssignTechDialog(String bookingId, String bookingTitle) {
+        if (techniciansArray == null || techniciansArray.length() == 0) {
+            Toast.makeText(this, "No technicians available", Toast.LENGTH_LONG).show();
+            return;
+        }
+        List<String> names = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (int i = 0; i < techniciansArray.length(); i++) {
+            JSONObject t = techniciansArray.optJSONObject(i);
+            if (t != null) {
+                names.add(t.optString("name") + " (" + t.optString("email") + ")");
+                ids.add(t.optString("id"));
+            }
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Assign Tech: " + bookingTitle)
+                .setItems(names.toArray(new String[0]), (dialog, which) -> assignTechToBooking(bookingId, ids.get(which)))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void assignTechToBooking(String bookingId, String techId) {
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("action", "assign");
+                json.put("bookingId", bookingId);
+                json.put("assignToId", techId);
+                ApiClient.post("/admin", json.toString());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Technician Assigned", Toast.LENGTH_SHORT).show();
+                    loadDashboardData();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Assignment failed", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
     }
 
     private void approveUser(String userId) {
@@ -568,7 +1098,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 json.put("userId", userId);
                 ApiClient.post("/admin", json.toString());
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Technician Registration Approved", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Registration Approved", Toast.LENGTH_SHORT).show();
                     loadDashboardData();
                 });
             } catch (Exception e) {
@@ -580,7 +1110,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private void rejectUser(String userId) {
         new AlertDialog.Builder(this)
                 .setTitle("Reject Registration")
-                .setMessage("Are you sure you want to reject this technician registration? The account will be removed.")
+                .setMessage("Are you sure? The account will be removed.")
                 .setPositiveButton("Reject", (dialog, which) -> {
                     new Thread(() -> {
                         try {
@@ -601,258 +1131,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void renderInventoryList() {
-        inventoryListContainer.removeAllViews();
-        if (inventoryArray == null || inventoryArray.length() == 0) return;
-
-        for (int i = 0; i < inventoryArray.length(); i++) {
-            JSONObject inv = inventoryArray.optJSONObject(i);
-            if (inv == null) continue;
-
-            LinearLayout itemLayout = new LinearLayout(this);
-            itemLayout.setOrientation(LinearLayout.HORIZONTAL);
-            itemLayout.setGravity(Gravity.CENTER_VERTICAL);
-            itemLayout.setPadding(14, 14, 14, 14);
-            itemLayout.setBackgroundResource(R.drawable.bg_dashboard_card);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 0, 10);
-            itemLayout.setLayoutParams(params);
-
-            ImageView iv = new ImageView(this);
-            int size = (int) (64 * getResources().getDisplayMetrics().density);
-            LinearLayout.LayoutParams ivParams = new LinearLayout.LayoutParams(size, size);
-            ivParams.setMarginEnd(12);
-            iv.setLayoutParams(ivParams);
-            iv.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            iv.setBackgroundResource(R.drawable.bg_dashboard_card);
-            itemLayout.addView(iv);
-
-            String image = inv.optString("imageUrl");
-            if (image == null || image.isEmpty()) image = inv.optString("imageData");
-            if (image != null && !image.isEmpty()) {
-                Glide.with(this).load(image).centerCrop().into(iv);
-            } else {
-                iv.setImageResource(android.R.drawable.ic_menu_gallery);
-            }
-
-            LinearLayout textCol = new LinearLayout(this);
-            textCol.setOrientation(LinearLayout.VERTICAL);
-
-            TextView tvName = new TextView(this);
-            tvName.setText(inv.optString("name"));
-            tvName.setTextColor(Color.parseColor("#101416"));
-            tvName.setTypeface(null, Typeface.BOLD);
-            textCol.addView(tvName);
-
-            TextView tvDetail = new TextView(this);
-            tvDetail.setText("Category: " + inv.optString("category", "General") + " • Quantity: " + inv.optInt("quantity") + " " + inv.optString("unit", "pcs"));
-            tvDetail.setTextColor(Color.parseColor("#68747A"));
-            tvDetail.setTextSize(12);
-            textCol.addView(tvDetail);
-
-            itemLayout.addView(textCol);
-            inventoryListContainer.addView(itemLayout);
-        }
-    }
-
-    private void renderTechniciansList() {
-        techniciansListContainer.removeAllViews();
-        if (techniciansArray == null || techniciansArray.length() == 0) return;
-
-        for (int i = 0; i < techniciansArray.length(); i++) {
-            JSONObject tech = techniciansArray.optJSONObject(i);
-            if (tech == null) continue;
-
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(14, 14, 14, 14);
-            card.setBackgroundResource(R.drawable.bg_dashboard_card);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 0, 10);
-            card.setLayoutParams(params);
-
-            TextView tvName = new TextView(this);
-            tvName.setText(tech.optString("name"));
-            tvName.setTextColor(Color.parseColor("#101416"));
-            tvName.setTypeface(null, Typeface.BOLD);
-            card.addView(tvName);
-
-            TextView tvEmail = new TextView(this);
-            tvEmail.setText(tech.optString("email"));
-            tvEmail.setTextColor(Color.parseColor("#68747A"));
-            tvEmail.setTextSize(12);
-            card.addView(tvEmail);
-
-            techniciansListContainer.addView(card);
-        }
-    }
-
-    private void renderClientsList() {
-        clientsListContainer.removeAllViews();
-        if (clientsArray == null || clientsArray.length() == 0) return;
-
-        for (int i = 0; i < clientsArray.length(); i++) {
-            JSONObject client = clientsArray.optJSONObject(i);
-            if (client == null) continue;
-
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(14, 14, 14, 14);
-            card.setBackgroundResource(R.drawable.bg_dashboard_card);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 0, 10);
-            card.setLayoutParams(params);
-
-            TextView tvName = new TextView(this);
-            tvName.setText(client.optString("name"));
-            tvName.setTextColor(Color.parseColor("#101416"));
-            tvName.setTypeface(null, Typeface.BOLD);
-            card.addView(tvName);
-
-            TextView tvEmail = new TextView(this);
-            tvEmail.setText(client.optString("email"));
-            tvEmail.setTextColor(Color.parseColor("#68747A"));
-            tvEmail.setTextSize(12);
-            card.addView(tvEmail);
-
-            clientsListContainer.addView(card);
-        }
-    }
-
-    private void renderReportsList() {
-        reportsListContainer.removeAllViews();
-        if (reportsArray == null || reportsArray.length() == 0) {
-            TextView tv = new TextView(this);
-            tv.setText("No diagnostic site reports recorded.");
-            tv.setTextColor(Color.GRAY);
-            reportsListContainer.addView(tv);
-            return;
-        }
-
-        for (int i = 0; i < reportsArray.length(); i++) {
-            JSONObject r = reportsArray.optJSONObject(i);
-            if (r == null) continue;
-
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(14, 14, 14, 14);
-            card.setBackgroundResource(R.drawable.bg_dashboard_card);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 0, 10);
-            card.setLayoutParams(params);
-
-            TextView tvContent = new TextView(this);
-            tvContent.setText(r.optString("content"));
-            tvContent.setTextColor(Color.parseColor("#101416"));
-            tvContent.setTextSize(13);
-            card.addView(tvContent);
-
-            reportsListContainer.addView(card);
-        }
-    }
-
-    private void renderNotificationsList() {
-        notificationsListContainer.removeAllViews();
-        if (dashboardData == null) return;
-
-        if (pendingUsersArray != null) {
-            for (int i = 0; i < pendingUsersArray.length(); i++) {
-                JSONObject u = pendingUsersArray.optJSONObject(i);
-                if (u == null) continue;
-
-                TextView tv = new TextView(this);
-                tv.setText("New Technician Registration: " + u.optString("name") + " (" + u.optString("email") + ") is pending approval.");
-                tv.setTextColor(Color.parseColor("#7C3AED"));
-                tv.setPadding(14, 14, 14, 14);
-                tv.setBackgroundResource(R.drawable.bg_dashboard_card);
-                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                params.setMargins(0, 0, 0, 10);
-                tv.setLayoutParams(params);
-                notificationsListContainer.addView(tv);
-            }
-        }
-
-        JSONArray alerts = dashboardData.optJSONArray("inventoryAlerts");
-        if (alerts != null) {
-            for (int i = 0; i < alerts.length(); i++) {
-                JSONObject inv = alerts.optJSONObject(i);
-                if (inv == null) continue;
-
-                TextView tv = new TextView(this);
-                tv.setText("Low Stock Alert: " + inv.optString("name") + " has only " + inv.optInt("quantity") + " units remaining.");
-                tv.setTextColor(Color.parseColor("#DC2626"));
-                tv.setPadding(14, 14, 14, 14);
-                tv.setBackgroundResource(R.drawable.bg_dashboard_card);
-                notificationsListContainer.addView(tv);
-            }
-        }
-    }
-
-    private void approveBooking(String bookingId) {
-        new Thread(() -> {
-            try {
-                JSONObject json = new JSONObject();
-                json.put("action", "approve");
-                json.put("bookingId", bookingId);
-                ApiClient.post("/admin", json.toString());
-                runOnUiThread(() -> {
-                    Toast.makeText(this, "Inquiry Verified & Approved", Toast.LENGTH_SHORT).show();
-                    loadDashboardData();
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "Approval failed", Toast.LENGTH_SHORT).show());
-            }
-        }).start();
-    }
-
-    private void showAssignTechDialog(String bookingId, String bookingTitle) {
-        if (techniciansArray == null || techniciansArray.length() == 0) {
-            Toast.makeText(this, "No technicians available to assign", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        List<String> names = new ArrayList<>();
-        List<String> ids = new ArrayList<>();
-        for (int i = 0; i < techniciansArray.length(); i++) {
-            JSONObject t = techniciansArray.optJSONObject(i);
-            if (t != null) {
-                names.add(t.optString("name") + " (" + t.optString("email") + ")");
-                ids.add(t.optString("id"));
-            }
-        }
-
-        new AlertDialog.Builder(this)
-                .setTitle("Assign Tech for: " + bookingTitle)
-                .setItems(names.toArray(new String[0]), (dialog, which) -> {
-                    String selectedTechId = ids.get(which);
-                    assignTechToBooking(bookingId, selectedTechId);
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
-    }
-
-    private void assignTechToBooking(String bookingId, String techId) {
-        new Thread(() -> {
-            try {
-                JSONObject json = new JSONObject();
-                json.put("action", "assign");
-                json.put("bookingId", bookingId);
-                json.put("assignToId", techId);
-                ApiClient.post("/admin", json.toString());
-                runOnUiThread(() -> {
-                    Toast.makeText(this, "Technician Assigned Successfully", Toast.LENGTH_SHORT).show();
-                    loadDashboardData();
-                });
-            } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "Assignment failed", Toast.LENGTH_SHORT).show());
-            }
-        }).start();
-    }
+    // === INVENTORY DIALOG ===
 
     private void showAddInventoryDialog() {
         LinearLayout layout = new LinearLayout(this);
@@ -877,7 +1156,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.addView(etUnit);
 
         Button btnCapture = new Button(this);
-        btnCapture.setText("📷 Capture Product Photo");
+        btnCapture.setText("📷 Capture Photo");
         btnCapture.setTextSize(12);
         btnCapture.setBackgroundResource(R.drawable.bg_action_yellow);
         btnCapture.setTextColor(Color.parseColor("#0B0F10"));
@@ -888,7 +1167,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.addView(btnCapture);
 
         final TextView photoStatus = new TextView(this);
-        photoStatus.setText(capturedImageBase64 == null ? "No photo captured yet" : "Photo captured — will upload to Cloudinary");
+        photoStatus.setText(capturedImageBase64 == null ? "No photo captured" : "Photo captured");
         photoStatus.setTextColor(Color.GRAY);
         photoStatus.setTextSize(12);
         layout.addView(photoStatus);
@@ -904,7 +1183,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         inventoryPhotoPreview = preview;
         inventoryPhotoStatus = photoStatus;
-
         btnCapture.setOnClickListener(v -> openCamera());
 
         if (capturedImageBase64 != null) {
@@ -924,94 +1202,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     String unit = etUnit.getText().toString().trim();
                     int qty = 1;
                     try { qty = Integer.parseInt(etQty.getText().toString().trim()); } catch (Exception ignored) {}
-
-                    if (!name.isEmpty()) {
-                        saveInventoryItem(name, cat, qty, unit.isEmpty() ? "pcs" : unit);
-                    }
+                    if (!name.isEmpty()) saveInventoryItem(name, cat, qty, unit.isEmpty() ? "pcs" : unit);
                 })
-                .setNegativeButton("Cancel", (dialog, which) -> {})
+                .setNegativeButton("Cancel", null)
                 .show();
-    }
-
-    private void openCamera() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQ_CAMERA_PERMISSION);
-            return;
-        }
-        dispatchTakePictureIntent();
-    }
-
-    private void dispatchTakePictureIntent() {
-        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        if (takePicture.resolveActivity(getPackageManager()) == null) {
-            Toast.makeText(this, "No camera app found on this device", Toast.LENGTH_LONG).show();
-            return;
-        }
-        try {
-            File imageRoot = new File(getCacheDir(), "images");
-            if (!imageRoot.exists()) imageRoot.mkdirs();
-            File photoFile = new File(imageRoot, "elettro_inventory_" + System.currentTimeMillis() + ".jpg");
-            Uri photoUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photoFile);
-            capturedImageUri = photoUri;
-            takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
-            startActivityForResult(takePicture, REQ_CAMERA);
-        } catch (Exception e) {
-            Toast.makeText(this, "Unable to open camera", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void processCapturedImage(Uri uri) {
-        try {
-            InputStream is = getContentResolver().openInputStream(uri);
-            Bitmap bitmap = BitmapFactory.decodeStream(is);
-            if (is != null) is.close();
-            if (bitmap == null) return;
-
-            int maxDim = 1200;
-            int w = bitmap.getWidth();
-            int h = bitmap.getHeight();
-            if (Math.max(w, h) > maxDim) {
-                float scale = (float) maxDim / Math.max(w, h);
-                bitmap = Bitmap.createScaledBitmap(bitmap, (int) (w * scale), (int) (h * scale), true);
-            }
-
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
-            byte[] bytes = baos.toByteArray();
-            capturedImageBase64 = "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
-
-            if (inventoryPhotoPreview != null) inventoryPhotoPreview.setImageBitmap(bitmap);
-            if (inventoryPhotoStatus != null) {
-                inventoryPhotoStatus.setText("Photo captured (" + Math.round(bytes.length / 1024f) + " KB) — will upload to Cloudinary");
-                inventoryPhotoStatus.setTextColor(Color.parseColor("#22A66F"));
-            }
-        } catch (Exception e) {
-            Toast.makeText(this, "Failed to process captured photo", Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQ_CAMERA_PERMISSION) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                dispatchTakePictureIntent();
-            } else {
-                Toast.makeText(this, "Camera permission is required to capture product photos", Toast.LENGTH_LONG).show();
-            }
-        }
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_CAMERA && resultCode == RESULT_OK) {
-            if (capturedImageUri != null) {
-                processCapturedImage(capturedImageUri);
-            } else if (data != null && data.getData() != null) {
-                processCapturedImage(data.getData());
-            }
-        }
     }
 
     private void saveInventoryItem(String name, String category, int qty, String unit) {
@@ -1027,7 +1221,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 }
                 ApiClient.post("/inventory", json.toString());
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Item Saved to Inventory" + (capturedImageBase64 != null ? " (photo uploaded)" : ""), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Item Saved to Inventory", Toast.LENGTH_SHORT).show();
                     capturedImageBase64 = null;
                     capturedImageUri = null;
                     loadDashboardData();
@@ -1037,6 +1231,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
             }
         }).start();
     }
+
+    // === TECHNICIAN DIALOG ===
 
     private void showAddTechnicianDialog() {
         LinearLayout layout = new LinearLayout(this);
@@ -1057,13 +1253,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.addView(etPass);
 
         new AlertDialog.Builder(this)
-                .setTitle("Add Field Technician Account")
+                .setTitle("Add Technician Account")
                 .setView(layout)
-                .setPositiveButton("Create Account", (dialog, which) -> {
+                .setPositiveButton("Create", (dialog, which) -> {
                     String name = etName.getText().toString().trim();
                     String email = etEmail.getText().toString().trim();
                     String pass = etPass.getText().toString().trim();
-
                     if (!name.isEmpty() && !email.isEmpty()) {
                         createTechnician(name, email, pass.isEmpty() ? "tech123" : pass);
                     }
@@ -1090,5 +1285,118 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 runOnUiThread(() -> Toast.makeText(this, "Failed to create technician", Toast.LENGTH_SHORT).show());
             }
         }).start();
+    }
+
+    // === CAMERA ===
+
+    private void openCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQ_CAMERA_PERMISSION);
+            return;
+        }
+        dispatchTakePictureIntent();
+    }
+
+    private void dispatchTakePictureIntent() {
+        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePicture.resolveActivity(getPackageManager()) == null) {
+            Toast.makeText(this, "No camera app found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            File imageRoot = new File(getCacheDir(), "images");
+            if (!imageRoot.exists()) imageRoot.mkdirs();
+            File photoFile = new File(imageRoot, "elettro_" + System.currentTimeMillis() + ".jpg");
+            Uri photoUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photoFile);
+            capturedImageUri = photoUri;
+            takePicture.putExtra(MediaStore.EXTRA_OUTPUT, photoUri);
+            startActivityForResult(takePicture, REQ_CAMERA);
+        } catch (Exception e) {
+            Toast.makeText(this, "Unable to open camera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void processCapturedImage(Uri uri) {
+        try {
+            InputStream is = getContentResolver().openInputStream(uri);
+            Bitmap bitmap = BitmapFactory.decodeStream(is);
+            if (is != null) is.close();
+            if (bitmap == null) return;
+
+            int maxDim = 1200;
+            int w = bitmap.getWidth();
+            int h = bitmap.getHeight();
+            if (Math.max(w, h) > maxDim) {
+                float scale = (float) maxDim / Math.max(w, h);
+                bitmap = Bitmap.createScaledBitmap(bitmap, (int)(w * scale), (int)(h * scale), true);
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            byte[] bytes = baos.toByteArray();
+            capturedImageBase64 = "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
+
+            if (inventoryPhotoPreview != null) inventoryPhotoPreview.setImageBitmap(bitmap);
+            if (inventoryPhotoStatus != null) {
+                inventoryPhotoStatus.setText("Photo captured (" + Math.round(bytes.length / 1024f) + " KB)");
+                inventoryPhotoStatus.setTextColor(Color.parseColor("#22A66F"));
+            }
+        } catch (Exception e) {
+            Toast.makeText(this, "Failed to process photo", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_CAMERA_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                dispatchTakePictureIntent();
+            } else {
+                Toast.makeText(this, "Camera permission required", Toast.LENGTH_LONG).show();
+            }
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQ_CAMERA && resultCode == RESULT_OK) {
+            if (capturedImageUri != null) processCapturedImage(capturedImageUri);
+            else if (data != null && data.getData() != null) processCapturedImage(data.getData());
+        }
+    }
+
+    // === HELPERS ===
+
+    private Button createYellowSmallButton(String text) {
+        Button btn = new Button(this);
+        btn.setText(text);
+        btn.setTextSize(11);
+        btn.setBackgroundResource(R.drawable.bg_action_yellow);
+        btn.setTextColor(Color.parseColor("#0B0F10"));
+        btn.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        p.setMarginEnd(4);
+        btn.setLayoutParams(p);
+        return btn;
+    }
+
+    private void showLoadingSpinner(LinearLayout container) {
+        TextView tv = new TextView(this);
+        tv.setText(R.string.loading);
+        tv.setTextColor(Color.GRAY);
+        tv.setPadding(0, 20, 0, 0);
+        container.addView(tv);
+    }
+
+    private void showEmpty(LinearLayout container, int stringRes) {
+        TextView tv = new TextView(this);
+        tv.setText(stringRes);
+        tv.setTextColor(Color.parseColor("#9EA8AC"));
+        tv.setPadding(0, 24, 0, 0);
+        tv.setTextSize(13);
+        container.addView(tv);
     }
 }
