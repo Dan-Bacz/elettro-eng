@@ -19,6 +19,7 @@ type InventoryProduct = {
   quantity: number
   unit?: string
   imageUrl?: string
+  imagePublicId?: string
   imageData?: string
 }
 

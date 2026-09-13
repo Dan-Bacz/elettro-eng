@@ -39,6 +39,7 @@ type InventoryItemObj = {
   quantity: number
   unit?: string
   imageUrl?: string
+  imagePublicId?: string
   imageData?: string
   createdAt?: string
 }

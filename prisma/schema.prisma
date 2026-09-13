@@ -59,6 +59,7 @@ model InventoryItem {
   quantity    Int      @default(0)
   unit        String?
   imageUrl    String?
+  imagePublicId String?
   imageData   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

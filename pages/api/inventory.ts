@@ -13,93 +13,95 @@ export const config = {
   },
 }
 
-function parseCloudinaryUrl(url: string | undefined) {
-  // expected format: cloudinary://<api_key>:<api_secret>@<cloud_name>
-  if (!url) return null
-  try {
-    const match = url.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/)
-    if (!match) return null
-    const [, api_key, api_secret, cloud_name] = match
-    return { api_key, api_secret, cloud_name }
-  } catch (e) {
-    return null
+const CLOUDINARY_FOLDER = 'elettro-inventory'
+
+// Credentials come only from environment variables (Vercel project env or local .env).
+// Do NOT hardcode them.
+function getCloudinaryCredentials() {
+  let cloudName = process.env.CLOUDINARY_CLOUD_NAME
+  let apiKey = process.env.CLOUDINARY_API_KEY
+  let apiSecret = process.env.CLOUDINARY_API_SECRET
+
+  // Fallback: allow the DSN form "cloudinary://key:secret@cloud_name"
+  const dsn = process.env.CLOUDINARY_URL
+  if (dsn) {
+    const match = dsn.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/)
+    if (match) {
+      cloudName = cloudName || match[3]
+      apiKey = apiKey || match[1]
+      apiSecret = apiSecret || match[2]
+    }
   }
+
+  if (!cloudName || !apiKey || !apiSecret) return null
+  return { cloudName, apiKey, apiSecret }
 }
 
-async function cloudinaryUpload(cloudName: string, formData: FormData) {
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-    method: 'POST',
-    body: formData as any
-  })
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => '')
-    console.error('Cloudinary upload failed status', res.status, txt)
-    return null
-  }
-  const json = await res.json()
-  return json.secure_url || json.url || null
-}
-
+// Server-side signed upload to Cloudinary.
+// Returns { secure_url, public_id } or null on failure.
 async function uploadToCloudinary(dataUrl: string) {
-  // If CLOUDINARY_URL present, use authenticated upload (signed)
-  const parsed = parseCloudinaryUrl(process.env.CLOUDINARY_URL)
-  const cloudName = parsed?.cloud_name || process.env.CLOUDINARY_CLOUD_NAME
-  const apiKey = parsed?.api_key || process.env.CLOUDINARY_API_KEY
-  const apiSecret = parsed?.api_secret || process.env.CLOUDINARY_API_SECRET
+  const creds = getCloudinaryCredentials()
+  if (!creds) {
+    console.error('Cloudinary credentials missing (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET)')
+    return null
+  }
 
-  if (!cloudName) return null
-
+  const { cloudName, apiKey, apiSecret } = creds
   const timestamp = Math.floor(Date.now() / 1000)
-  const folder = 'elettro-inventory'
 
   try {
-    // 1) Try a signed upload (falls back to unsigned if signature is not allowed)
-    if (apiKey && apiSecret) {
-      const toSign = `folder=${folder}&timestamp=${timestamp}${apiSecret}`
-      const signature = crypto.createHash('sha1').update(toSign).digest('hex')
+    // Signed upload: signature = SHA1 of sorted params + api_secret
+    const toSign = `folder=${CLOUDINARY_FOLDER}&timestamp=${timestamp}${apiSecret}`
+    const signature = crypto.createHash('sha1').update(toSign).digest('hex')
 
-      const formData = new FormData()
-      formData.append('folder', folder)
-      formData.append('file', dataUrl)
-      formData.append('api_key', apiKey)
-      formData.append('timestamp', String(timestamp))
-      formData.append('signature', signature)
+    const formData = new FormData()
+    formData.append('folder', CLOUDINARY_FOLDER)
+    formData.append('file', dataUrl)
+    formData.append('api_key', apiKey)
+    formData.append('timestamp', String(timestamp))
+    formData.append('signature', signature)
 
-      const url = await cloudinaryUpload(cloudName, formData)
-      if (url) return url
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData as any,
+    })
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '')
+      console.error('Cloudinary upload failed status', res.status, txt)
+      return null
     }
 
-    // 2) Try an unsigned upload as a fallback
-    const formData = new FormData()
-    formData.append('folder', folder)
-    formData.append('file', dataUrl)
-    formData.append('timestamp', String(timestamp))
-
-    return await cloudinaryUpload(cloudName, formData)
+    const json = await res.json()
+    if (!json.secure_url || !json.public_id) return null
+    return { secure_url: json.secure_url, public_id: json.public_id }
   } catch (e) {
     console.error('Cloudinary upload failed', e)
     return null
   }
 }
 
-// Upload data-URL images to Cloudinary and return the final { imageUrl, imageData } to store.
-// Empty/absent values become undefined so Prisma stores NULL.
-async function resolveImage(body: any) {
+enum ImageAction {
+  NONE = 'NONE',
+  UPLOAD = 'UPLOAD',
+  SET_URL = 'SET_URL',
+  CLEAR = 'CLEAR',
+}
+
+// Decide what to do with the image payload from the client.
+// Never falls back to storing base64 in the database.
+function planImage(body: any): { action: ImageAction; imageUrl?: string; imagePublicId?: string; dataUrl?: string } {
   const rawUrl = body.imageUrl ? String(body.imageUrl).trim() : ''
   const rawData = body.imageData ? String(body.imageData).trim() : ''
 
-  // If the payload carries a local base64 image, upload it to Cloudinary
-  if (rawData.startsWith('data:')) {
-    const uploaded = await uploadToCloudinary(rawData)
-    if (uploaded) {
-      return { imageUrl: uploaded, imageData: null }
-    }
-    // Cloudinary upload failed — keep the raw data as a last resort
-    return { imageUrl: rawUrl || null, imageData: rawData }
-  }
+  // A locally-captured/selected image must be uploaded to Cloudinary server-side
+  if (rawData.startsWith('data:')) return { action: ImageAction.UPLOAD, dataUrl: rawData }
 
-  return { imageUrl: rawUrl || null, imageData: rawData || null }
+  // A remote http(s) URL can be stored directly
+  if (rawUrl) return { action: ImageAction.SET_URL, imageUrl: rawUrl }
+
+  // No image supplied -> clear
+  return { action: ImageAction.CLEAR }
 }
 
 export default async function handler(req, res) {
@@ -115,7 +117,22 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Item name is required' })
       }
 
-      const { imageUrl, imageData } = await resolveImage(body)
+      const plan = planImage(body)
+
+      let imageUrl: string | null = null
+      let imagePublicId: string | null = null
+      let imageData: string | null = null
+
+      if (plan.action === ImageAction.UPLOAD) {
+        const uploaded = await uploadToCloudinary(plan.dataUrl!)
+        if (!uploaded) {
+          return res.status(500).json({ error: 'Image upload to Cloudinary failed. Please try again.' })
+        }
+        imageUrl = uploaded.secure_url
+        imagePublicId = uploaded.public_id
+      } else if (plan.action === ImageAction.SET_URL) {
+        imageUrl = plan.imageUrl!
+      }
 
       const item = await prisma.inventoryItem.create({
         data: {
@@ -128,6 +145,7 @@ export default async function handler(req, res) {
           unit: body.unit ? String(body.unit).trim() : 'pcs',
           quantity: Math.max(0, Math.round(Number(body.quantity) || 0)),
           imageUrl: imageUrl ?? undefined,
+          imagePublicId: imagePublicId ?? undefined,
           imageData: imageData ?? undefined
         }
       })
@@ -156,10 +174,33 @@ export default async function handler(req, res) {
         }
       }
 
-      // Handle image: upload data-URL images to Cloudinary, allow clearing
-      const { imageUrl, imageData } = await resolveImage(body)
-      if (typeof body.imageUrl !== 'undefined') data.imageUrl = imageUrl
-      if (typeof body.imageData !== 'undefined') data.imageData = imageData
+      // Handle image changes (only when the client actually sent image fields).
+      // Stock +/- quick adjustments send only { id, quantity } and must not touch images.
+      if (typeof body.imageUrl !== 'undefined' || typeof body.imageData !== 'undefined') {
+        const plan = planImage(body)
+
+        if (plan.action === ImageAction.UPLOAD) {
+          const uploaded = await uploadToCloudinary(plan.dataUrl!)
+          if (!uploaded) {
+            return res.status(500).json({ error: 'Image upload to Cloudinary failed. Please try again.' })
+          }
+          data.imageUrl = uploaded.secure_url
+          data.imagePublicId = uploaded.public_id
+          data.imageData = null
+        } else if (plan.action === ImageAction.SET_URL) {
+          const existing = await prisma.inventoryItem.findUnique({ where: { id: String(id) } })
+          if (!existing || existing.imageUrl !== plan.imageUrl) {
+            data.imageUrl = plan.imageUrl
+            data.imagePublicId = null
+          }
+          data.imageData = null
+        } else {
+          // user removed the image
+          data.imageUrl = null
+          data.imagePublicId = null
+          data.imageData = null
+        }
+      }
 
       const item = await prisma.inventoryItem.update({
         where: { id: String(id) },
