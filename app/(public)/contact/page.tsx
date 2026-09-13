@@ -83,7 +83,7 @@ export default function ContactPage() {
   return (
     <>
       {/* Page header */}
-      <section className="relative bg-[#0b0f10] text-white overflow-hidden">
+      <section className="relative page-hero-bg bg-[#0b0f10] text-white overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(245,196,0,0.12),transparent_55%)]" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-400 text-xs font-bold uppercase tracking-widest">

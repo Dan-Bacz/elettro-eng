@@ -25,7 +25,7 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
   return (
     <>
       {/* Breadcrumb + header */}
-      <section className="bg-[#0b0f10] text-white relative overflow-hidden">
+      <section className="page-hero-bg bg-[#0b0f10] text-white relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(245,196,0,0.12),transparent_55%)]" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
           <nav className="text-sm text-gray-400 mb-6">

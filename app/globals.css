@@ -23,6 +23,14 @@ body {
   @apply px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600;
 }
 
+/* web background image for dark hero sections */
+.page-hero-bg {
+  background-image: url('/bgweb.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
 /* no horizontal overflow anywhere */
 html,
 body {

@@ -130,7 +130,7 @@ export default function HomePage() {
       </section>
 
       {/* About preview */}
-      <section className="bg-[#0b0f10] text-white overflow-hidden relative">
+      <section className="page-hero-bg bg-[#0b0f10] text-white overflow-hidden relative">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(245,196,0,0.12),transparent_55%)]" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>

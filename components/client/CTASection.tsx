@@ -18,7 +18,7 @@ export default function CTASection({
   secondaryHref = "/contact",
 }: CTAProps) {
   return (
-    <section className="relative bg-[#0b0f10] text-white overflow-hidden">
+    <section className="relative page-hero-bg bg-[#0b0f10] text-white overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(245,196,0,0.15),transparent_60%)]" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight">{heading}</h2>

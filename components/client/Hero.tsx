@@ -15,7 +15,7 @@ export default function Hero({
   primaryHref = "/services",
   secondaryLabel,
   secondaryHref = "/contact",
-  backgroundImage,
+  backgroundImage = "/bgweb.png",
 }: HeroProps) {
   return (
     <section className="relative bg-[#0b0f10] text-white overflow-hidden">
