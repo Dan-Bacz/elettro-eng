@@ -1,13 +1,13 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { parse } from 'cookie'
+import { getTokenFromRequest } from '../../../lib/auth'
 
 const prisma = new PrismaClient()
 
 export default async function handler(req, res){
   try{
-    const cookies = parse(req.headers.cookie || '')
-    const token = cookies.token
+    const token = getTokenFromRequest(req)
     if (!token) return res.status(401).json({ error: 'Not authenticated' })
 
     let payload: any
@@ -20,11 +20,23 @@ export default async function handler(req, res){
     const user = await prisma.user.findUnique({ where: { id: payload.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
 
-    if (user.role === 'TECH') {
-      return res.status(403).json({ error: 'Technician accounts can only sign in through the Elettro Android app.' })
-    }
-
-    return res.json({ ok: true, user: { id: user.id, email: user.email, role: user.role } })
+    return res.json({
+      ok: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        phone: user.phone,
+        approved: user.approved,
+        status: user.status,
+        address: user.address,
+        specialization: user.specialization,
+        yearsOfExperience: user.yearsOfExperience,
+        skills: user.skills,
+        profileImageUrl: user.profileImageUrl
+      }
+    })
   }catch(err){
     console.error(err)
     return res.status(500).json({ error: 'Server error' })

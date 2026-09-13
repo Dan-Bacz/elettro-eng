@@ -8,18 +8,26 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   name      String
-  email     String   @unique
+  email     String      @unique
   password  String?
-  role      Role     @default(CLIENT)
+  role      Role        @default(CLIENT)
   phone     String?
-  approved  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  approved  Boolean     @default(false)
+  status    UserStatus  @default(ACTIVE)
+  address   String?
+  specialization String?
+  yearsOfExperience Int?
+  skills    String?
+  profileImageUrl String?
+  rejectionReason String?
+  createdAt DateTime    @default(now())
   bookings  Booking[]
   reports   Report[]
   assignedBookings Booking[] @relation("AssignedBookings")
   technicianActivities TechnicianActivity[]
+  notifications Notification[]
 }
 
 model Booking {
@@ -33,6 +41,7 @@ model Booking {
   assignedTo   User?    @relation("AssignedBookings", fields: [assignedToId], references: [id])
   startDate    DateTime?
   endDate      DateTime?
+  budget       Float?
   createdAt    DateTime @default(now())
   technicianActivities TechnicianActivity[]
   reports   Report[]
@@ -58,6 +67,9 @@ model InventoryItem {
   description String?
   quantity    Int      @default(0)
   unit        String?
+  buyPrice    Float?
+  sellPrice   Float?
+  reorderLevel Int     @default(10)
   imageUrl    String?
   imagePublicId String?
   imageData   String?
@@ -75,10 +87,35 @@ model Report {
   createdAt DateTime @default(now())
 }
 
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   @default("INFO")
+  title     String
+  message   String?
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key       String   @id
+  value     String?
+  updatedAt DateTime @updatedAt
+}
+
 enum Role {
   ADMIN
   TECH
   CLIENT
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+  SUSPENDED
 }
 
 enum BookingStatus {

@@ -30,9 +30,15 @@ export default async function handler(req, res) {
       prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.user.findMany({
         where: { role: { in: ['ADMIN', 'TECH', 'CLIENT'] } },
-        select: { id: true, name: true, email: true, role: true, phone: true, approved: true, createdAt: true }
+        select: { id: true, name: true, email: true, role: true, phone: true, approved: true, status: true, createdAt: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
       })
     ])
+
+    const techUsers = users.filter((user) => user.role === 'TECH')
+    const activeTechs = techUsers.filter((user) => user.status === 'ACTIVE' || (user as any).approved)
+    const pendingRegs = techUsers.filter((user) => user.status === 'PENDING' || (!(user as any).approved && user.status !== 'REJECTED' && user.status !== 'SUSPENDED'))
+    const suspendedTechs = techUsers.filter((user) => user.status === 'SUSPENDED')
+    const rejectedTechs = techUsers.filter((user) => user.status === 'REJECTED')
 
     const stats = {
       totalBookings: bookings.length,
@@ -43,8 +49,10 @@ export default async function handler(req, res) {
       completed: bookings.filter((b) => b.status === 'COMPLETED').length,
       totalInventory: inventory.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
       lowStock: inventory.filter((item) => Number(item.quantity || 0) <= 10).length,
-      technicians: users.filter((user) => user.role === 'TECH' && (user as any).approved).length,
-      pendingRegistrations: users.filter((user) => user.role === 'TECH' && !(user as any).approved).length,
+      technicians: activeTechs.length,
+      pendingRegistrations: pendingRegs.length,
+      suspendedTechnicians: suspendedTechs.length,
+      rejectedTechnicians: rejectedTechs.length,
       clients: users.filter((user) => user.role === 'CLIENT').length,
       admins: users.filter((user) => user.role === 'ADMIN').length,
     }
@@ -86,8 +94,10 @@ export default async function handler(req, res) {
       inventoryAlerts,
       bookings,
       inventory,
-      technicians: users.filter((u) => u.role === 'TECH' && (u as any).approved),
-      pendingUsers: users.filter((u) => u.role === 'TECH' && !(u as any).approved),
+      technicians: activeTechs,
+      pendingUsers: pendingRegs,
+      suspendedUsers: suspendedTechs,
+      rejectedUsers: rejectedTechs,
       clients: users.filter((u) => u.role === 'CLIENT'),
       admins: users.filter((u) => u.role === 'ADMIN')
     })

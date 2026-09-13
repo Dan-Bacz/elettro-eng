@@ -163,6 +163,11 @@ export default function AdminPage() {
         router.push('/admin/login')
         return
       }
+      const me = await res.json().catch(() => null)
+      if (me && me.user && me.user.role === 'TECH') {
+        router.push('/technician/dashboard')
+        return
+      }
 
       const dashboardRes = await fetch('/api/dashboard')
       if (dashboardRes.ok) {

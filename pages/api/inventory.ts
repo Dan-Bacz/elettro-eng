@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import crypto from 'crypto'
+import { uploadToCloudinary } from '../../lib/cloudinary'
 
 const prisma = new PrismaClient()
 
@@ -13,72 +13,8 @@ export const config = {
   },
 }
 
-const CLOUDINARY_FOLDER = 'elettro-inventory'
-
-// Credentials come only from environment variables (Vercel project env or local .env).
-// Do NOT hardcode them.
-function getCloudinaryCredentials() {
-  let cloudName = process.env.CLOUDINARY_CLOUD_NAME
-  let apiKey = process.env.CLOUDINARY_API_KEY
-  let apiSecret = process.env.CLOUDINARY_API_SECRET
-
-  // Fallback: allow the DSN form "cloudinary://key:secret@cloud_name"
-  const dsn = process.env.CLOUDINARY_URL
-  if (dsn) {
-    const match = dsn.match(/^cloudinary:\/\/([^:]+):([^@]+)@(.+)$/)
-    if (match) {
-      cloudName = cloudName || match[3]
-      apiKey = apiKey || match[1]
-      apiSecret = apiSecret || match[2]
-    }
-  }
-
-  if (!cloudName || !apiKey || !apiSecret) return null
-  return { cloudName, apiKey, apiSecret }
-}
-
-// Server-side signed upload to Cloudinary.
-// Returns { secure_url, public_id } or null on failure.
-async function uploadToCloudinary(dataUrl: string) {
-  const creds = getCloudinaryCredentials()
-  if (!creds) {
-    console.error('Cloudinary credentials missing (CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET)')
-    return null
-  }
-
-  const { cloudName, apiKey, apiSecret } = creds
-  const timestamp = Math.floor(Date.now() / 1000)
-
-  try {
-    // Signed upload: signature = SHA1 of sorted params + api_secret
-    const toSign = `folder=${CLOUDINARY_FOLDER}&timestamp=${timestamp}${apiSecret}`
-    const signature = crypto.createHash('sha1').update(toSign).digest('hex')
-
-    const formData = new FormData()
-    formData.append('folder', CLOUDINARY_FOLDER)
-    formData.append('file', dataUrl)
-    formData.append('api_key', apiKey)
-    formData.append('timestamp', String(timestamp))
-    formData.append('signature', signature)
-
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-      method: 'POST',
-      body: formData as any,
-    })
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => '')
-      console.error('Cloudinary upload failed status', res.status, txt)
-      return null
-    }
-
-    const json = await res.json()
-    if (!json.secure_url || !json.public_id) return null
-    return { secure_url: json.secure_url, public_id: json.public_id }
-  } catch (e) {
-    console.error('Cloudinary upload failed', e)
-    return null
-  }
+function toNullable(str: string | undefined | null) {
+  return str ? String(str).trim() : null
 }
 
 enum ImageAction {
@@ -144,6 +80,9 @@ export default async function handler(req, res) {
           description: body.description ? String(body.description).trim() : undefined,
           unit: body.unit ? String(body.unit).trim() : 'pcs',
           quantity: Math.max(0, Math.round(Number(body.quantity) || 0)),
+          buyPrice: typeof body.buyPrice !== 'undefined' && body.buyPrice !== '' ? Number(body.buyPrice) : null,
+          sellPrice: typeof body.sellPrice !== 'undefined' && body.sellPrice !== '' ? Number(body.sellPrice) : null,
+          reorderLevel: typeof body.reorderLevel !== 'undefined' ? Math.max(0, Math.round(Number(body.reorderLevel) || 0)) : 10,
           imageUrl: imageUrl ?? undefined,
           imagePublicId: imagePublicId ?? undefined,
           imageData: imageData ?? undefined
@@ -172,6 +111,16 @@ export default async function handler(req, res) {
         if (typeof body[key] !== 'undefined') {
           data[key] = body[key] ? String(body[key]).trim() : null
         }
+      }
+
+      if (typeof body.buyPrice !== 'undefined') {
+        data.buyPrice = body.buyPrice === '' || body.buyPrice === null ? null : Number(body.buyPrice)
+      }
+      if (typeof body.sellPrice !== 'undefined') {
+        data.sellPrice = body.sellPrice === '' || body.sellPrice === null ? null : Number(body.sellPrice)
+      }
+      if (typeof body.reorderLevel !== 'undefined') {
+        data.reorderLevel = Math.max(0, Math.round(Number(body.reorderLevel) || 0))
       }
 
       // Handle image changes (only when the client actually sent image fields).

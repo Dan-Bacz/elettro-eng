@@ -1,34 +1,42 @@
-"use client"
+'use client'
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function AdminLoginPage(){
+export default function TechnicianLoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
 
-  async function handleSubmit(e){
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setLoading(true); setError('')
-    try{
-      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
       if (!res.ok) {
-        const j = await res.json().catch(()=>({error: 'Login failed'}))
+        const j = await res.json().catch(() => ({}))
         setError(j.error || 'Login failed')
         setLoading(false)
         return
       }
       const data = await res.json().catch(() => ({}))
       const role = data?.user?.role
-      if (role === 'TECH') router.push('/technician/dashboard')
-      else router.push('/admin/dashboard')
-    }catch(err){
+      if (role === 'ADMIN') router.push('/admin/dashboard')
+      else router.push('/technician/dashboard')
+    } catch (err) {
       setError('Network error')
       console.error(err)
-    }finally{ setLoading(false) }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -45,37 +53,33 @@ export default function AdminLoginPage(){
           </div>
           <h1 className="mt-4 text-2xl font-black tracking-wide text-white">ELETTRO</h1>
           <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-semibold mt-1">
-            Engineering Enterprises
+            Technician Portal
           </p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8">
-          <h2 className="text-lg font-bold text-white">Admin Sign In</h2>
-          <p className="mt-1 text-sm text-gray-400">Sign in with your admin account to access the dashboard.</p>
+          <h2 className="text-lg font-bold text-white">Technician Sign In</h2>
+          <p className="mt-1 text-sm text-gray-400">Sign in to view your assigned jobs and update progress.</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-1.5" htmlFor="admin-email">
-                Email
-              </label>
+              <label className="block text-sm font-semibold text-gray-300 mb-1.5" htmlFor="tech-email">Email</label>
               <input
-                id="admin-email"
+                id="tech-email"
                 value={email}
-                onChange={e=>setEmail(e.target.value)}
-                placeholder="admin@elettro.com"
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
                 className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-semibold text-gray-300 mb-1.5" htmlFor="admin-password">
-                Password
-              </label>
+              <label className="block text-sm font-semibold text-gray-300 mb-1.5" htmlFor="tech-password">Password</label>
               <input
-                id="admin-password"
+                id="tech-password"
                 type="password"
                 value={password}
-                onChange={e=>setPassword(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/15 text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                 required
@@ -83,7 +87,7 @@ export default function AdminLoginPage(){
             </div>
 
             {error && (
-              <div className="rounded-lg p-3 text-sm font-medium bg-red-500/10 text-red-400 border border-red-500/20">
+              <div className="rounded-lg p-3 text-sm font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
                 {error}
               </div>
             )}
@@ -98,11 +102,11 @@ export default function AdminLoginPage(){
           </form>
         </div>
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 flex flex-col items-center gap-2 text-center">
+          <Link href="/technician/register" className="inline-flex items-center gap-1.5 text-sm font-bold text-yellow-400 hover:text-yellow-300 transition-colors">
+            Apply to become a technician →
+          </Link>
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-yellow-400 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
             Back to Website
           </Link>
         </div>
