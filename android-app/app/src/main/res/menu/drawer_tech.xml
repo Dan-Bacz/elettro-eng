@@ -1,22 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:id="@+id/group_tech_nav">
+    <group android:checkableBehavior="single" android:id="@+id/nav_group_primary">
         <item
-            android:id="@+id/nav_dashboard"
-            android:icon="@drawable/ic_dashboard"
-            android:title="@string/drawer_dashboard" />
+            android:id="@+id/nav_home"
+            android:icon="@drawable/ic_home"
+            android:title="@string/nav_home" />
         <item
-            android:id="@+id/nav_my_projects"
+            android:id="@+id/nav_my_jobs"
             android:icon="@drawable/ic_build"
-            android:title="@string/drawer_my_projects" />
-        <item
-            android:id="@+id/nav_notifications"
-            android:icon="@drawable/ic_notifications"
-            android:title="@string/drawer_notifications" />
+            android:title="@string/nav_my_jobs" />
         <item
             android:id="@+id/nav_reports"
             android:icon="@drawable/ic_description"
             android:title="@string/drawer_reports_tech" />
+        <item
+            android:id="@+id/nav_notifications"
+            android:icon="@drawable/ic_notifications"
+            android:title="@string/drawer_notifications" />
         <item
             android:id="@+id/nav_materials"
             android:icon="@drawable/ic_shopping_cart"
@@ -29,6 +29,8 @@
             android:id="@+id/nav_profile"
             android:icon="@drawable/ic_person"
             android:title="@string/drawer_profile_tech" />
+    </group>
+    <group>
         <item
             android:id="@+id/nav_logout"
             android:icon="@drawable/ic_logout"

@@ -32,6 +32,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.elettro.app.network.ApiClient;
+
 import com.google.android.material.navigation.NavigationView;
 
 import org.json.JSONArray;
@@ -51,33 +52,36 @@ public class AdminDashboardActivity extends AppCompatActivity {
     // Shell & drawer
     private DrawerLayout drawerLayout;
     private NavigationView navView;
-    private ImageButton btnMenu, btnBell, btnRefresh;
-    private TextView appBarTitle;
+    private ImageButton btnMenu, btnBell;
+    private TextView bellBadge;
+    private TextView headerUserName, headerUserRole, headerUserInitial;
     private TextView sectionTitle;
     private TextView sectionSubtitle;
     private SwipeRefreshLayout swipeRefresh;
 
     // Stat views
-    private TextView statTotalBookings, statPending, statInventory, statLowStock;
+    private TextView statTotalBookings, statActiveProjects, statRegistrations, statLowStock;
+    private TextView tileApproved, tileAssigned, tileStockUnits, tileSuspended;
 
     // Section containers
     private View viewDashboard, viewBookings, viewProjects, viewNotifications;
-    private View viewClients, viewTechnicians, viewInventory, viewReports, viewSettings;
+    private View viewClients, viewTechnicians, viewInventory, viewReports, viewSettings, viewMore;
     // List containers
     private LinearLayout recentBookingsContainer, bookingsListContainer, projectsListContainer;
     private LinearLayout registrationsListContainer, inventoryListContainer, techniciansListContainer;
     private LinearLayout clientsListContainer, reportsListContainer, notificationsListContainer;
     // Settings fields
     private EditText settingsOrgName, settingsSupportEmail;
-    private Button btnSaveSettings;
+    private TextView btnSaveSettings;
     // Notifications
-    private Button btnMarkAllRead;
+    private TextView btnMarkAllRead;
     private TextView regBadge;
 
     // Action buttons
-    private Button btnAddInventoryItem, btnAddTechnician;
+    private TextView btnAddInventoryItem, btnAddTechnician;
     private TextView btnGotoBookings;
     private LinearLayout btnQaAddClient, btnQaNewBooking, btnQaAssignTech, btnQaAddInventory;
+    private LinearLayout rowMoreClients, rowMoreTechnicians, rowMoreInventory, rowMoreReports, rowMoreSettings;
 
     // Filter chips
     private Button filterAll, filterPending, filterApproved, filterAssigned, filterCompleted;
@@ -132,16 +136,23 @@ public class AdminDashboardActivity extends AppCompatActivity {
         navView = findViewById(R.id.nav_view);
         btnMenu = findViewById(R.id.btn_menu);
         btnBell = findViewById(R.id.btn_bell);
-        btnRefresh = findViewById(R.id.btn_refresh);
-        appBarTitle = findViewById(R.id.app_bar_title);
+        bellBadge = findViewById(R.id.bell_badge);
+        headerUserName = findViewById(R.id.header_user_name);
+        headerUserRole = findViewById(R.id.header_user_role);
+        headerUserInitial = findViewById(R.id.header_user_initial);
         sectionTitle = findViewById(R.id.section_title);
         sectionSubtitle = findViewById(R.id.section_subtitle);
         swipeRefresh = findViewById(R.id.swipe_refresh);
 
         statTotalBookings = findViewById(R.id.stat_total_bookings);
-        statPending = findViewById(R.id.stat_pending);
-        statInventory = findViewById(R.id.stat_inventory);
+        statActiveProjects = findViewById(R.id.stat_active_projects);
+        statRegistrations = findViewById(R.id.stat_registrations);
         statLowStock = findViewById(R.id.stat_low_stock);
+
+        tileApproved = findViewById(R.id.tile_approved);
+        tileAssigned = findViewById(R.id.tile_assigned);
+        tileStockUnits = findViewById(R.id.tile_stock_units);
+        tileSuspended = findViewById(R.id.tile_suspended);
 
         viewDashboard = findViewById(R.id.view_dashboard_section);
         viewBookings = findViewById(R.id.view_bookings_section);
@@ -152,6 +163,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewInventory = findViewById(R.id.view_inventory_section);
         viewReports = findViewById(R.id.view_reports_section);
         viewSettings = findViewById(R.id.view_settings_section);
+        viewMore = findViewById(R.id.view_more_section);
 
         recentBookingsContainer = findViewById(R.id.recent_bookings_container);
         bookingsListContainer = findViewById(R.id.bookings_list_container);
@@ -178,24 +190,35 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnQaAssignTech = findViewById(R.id.btn_qa_assign_tech);
         btnQaAddInventory = findViewById(R.id.btn_qa_add_inventory);
 
+        rowMoreClients = findViewById(R.id.row_more_clients);
+        rowMoreTechnicians = findViewById(R.id.row_more_technicians);
+        rowMoreInventory = findViewById(R.id.row_more_inventory);
+        rowMoreReports = findViewById(R.id.row_more_reports);
+        rowMoreSettings = findViewById(R.id.row_more_settings);
+
         filterAll = findViewById(R.id.filter_all);
         filterPending = findViewById(R.id.filter_pending);
         filterApproved = findViewById(R.id.filter_approved);
         filterAssigned = findViewById(R.id.filter_assigned);
         filterCompleted = findViewById(R.id.filter_completed);
 
-        ((TextView) navView.getHeaderView(0).findViewById(R.id.drawer_header_name)).setText("Admin");
-        ((TextView) navView.getHeaderView(0).findViewById(R.id.drawer_header_role)).setText(R.string.role_admin);
+        headerUserName.setText("Admin");
+        headerUserRole.setText(R.string.role_admin);
+        headerUserInitial.setText("A");
+
+        View header = navView.getHeaderView(0);
+        if (header != null) {
+            ((TextView) header.findViewById(R.id.drawer_header_name)).setText("Admin");
+            ((TextView) header.findViewById(R.id.drawer_header_role)).setText(R.string.role_admin);
+            TextView initial = header.findViewById(R.id.drawer_header_initial);
+            if (initial != null) initial.setText("A");
+        }
     }
 
     private void setupSwipeRefresh() {
         swipeRefresh.setOnRefreshListener(() -> {
             loadDashboardData();
             swipeRefresh.setRefreshing(false);
-        });
-        btnRefresh.setOnClickListener(v -> {
-            Toast.makeText(this, R.string.refresh, Toast.LENGTH_SHORT).show();
-            loadDashboardData();
         });
     }
 
@@ -206,10 +229,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
         navView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             drawerLayout.closeDrawer(GravityCompat.START);
-            if (id == R.id.nav_dashboard) { showSection("home"); return true; }
-            if (id == R.id.nav_clients) { showSection("clients"); return true; }
+            if (id == R.id.nav_home) { showSection("home"); return true; }
             if (id == R.id.nav_bookings) { showSection("bookings"); return true; }
             if (id == R.id.nav_projects) { showSection("projects"); return true; }
+            if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
+            if (id == R.id.nav_more) { showSection("more"); return true; }
+            if (id == R.id.nav_clients) { showSection("clients"); return true; }
             if (id == R.id.nav_technicians) { showSection("technicians"); return true; }
             if (id == R.id.nav_inventory) { showSection("inventory"); return true; }
             if (id == R.id.nav_reports) { showSection("reports"); return true; }
@@ -229,10 +254,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewInventory.setVisibility("inventory".equals(key) ? View.VISIBLE : View.GONE);
         viewReports.setVisibility("reports".equals(key) ? View.VISIBLE : View.GONE);
         viewSettings.setVisibility("settings".equals(key) ? View.VISIBLE : View.GONE);
+        viewMore.setVisibility("more".equals(key) ? View.VISIBLE : View.GONE);
 
         int titleRes = R.string.drawer_dashboard;
         int subRes = R.string.welcome_admin_3;
-        int menuRes = R.id.nav_dashboard;
+        int menuRes = R.id.nav_home;
 
         switch (key) {
             case "bookings":
@@ -250,6 +276,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 subRes = R.string.notifications_subtitle;
                 menuRes = R.id.nav_notifications;
                 loadNotifications();
+                break;
+            case "more":
+                titleRes = R.string.more_title;
+                subRes = R.string.more_subtitle;
+                menuRes = R.id.nav_more;
                 break;
             case "clients":
                 titleRes = R.string.clients_title;
@@ -281,7 +312,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         sectionTitle.setText(titleRes);
         sectionSubtitle.setText(subRes);
-        appBarTitle.setText(sectionTitle.getText());
         navView.setCheckedItem(menuRes);
         if (!"notifications".equals(key)) {
             swipeRefresh.post(() -> swipeRefresh.setEnabled(true));
@@ -317,6 +347,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnQaNewBooking.setOnClickListener(v -> showNewBookingDialog());
         btnQaAssignTech.setOnClickListener(v -> showAssignTechFlow());
         btnQaAddInventory.setOnClickListener(v -> showAddInventoryDialog());
+
+        rowMoreClients.setOnClickListener(v -> showSection("clients"));
+        rowMoreTechnicians.setOnClickListener(v -> showSection("technicians"));
+        rowMoreInventory.setOnClickListener(v -> showSection("inventory"));
+        rowMoreReports.setOnClickListener(v -> showSection("reports"));
+        rowMoreSettings.setOnClickListener(v -> showSection("settings"));
 
         filterAll.setOnClickListener(v -> { currentBookingFilter = "ALL"; updateFilterChips(); renderBookingsList(); });
         filterPending.setOnClickListener(v -> { currentBookingFilter = "PENDING"; updateFilterChips(); renderBookingsList(); });
@@ -383,9 +419,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
         JSONObject stats = dashboardData.optJSONObject("stats");
         if (stats != null) {
             statTotalBookings.setText(String.valueOf(stats.optInt("totalBookings")));
-            statPending.setText(String.valueOf(stats.optInt("pending")));
-            statInventory.setText(String.valueOf(stats.optInt("totalInventory")));
+            statActiveProjects.setText(String.valueOf(stats.optInt("inProgress")));
+            statRegistrations.setText(String.valueOf(stats.optInt("pendingRegistrations")));
             statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
+            tileApproved.setText(String.valueOf(stats.optInt("approved")));
+            tileAssigned.setText(String.valueOf(stats.optInt("assigned")));
+            tileStockUnits.setText(String.valueOf(stats.optInt("totalInventory")));
+            tileSuspended.setText(String.valueOf(stats.optInt("suspendedTechnicians")));
         }
 
         renderRecentBookings();
@@ -496,6 +536,23 @@ public class AdminDashboardActivity extends AppCompatActivity {
             }
 
             notificationsListContainer.addView(card);
+        }
+
+        int unread = 0;
+        for (int i = 0; i < notificationsArray.length(); i++) {
+            JSONObject n = notificationsArray.optJSONObject(i);
+            if (n != null && !n.optBoolean("read", false)) unread++;
+        }
+        setBellBadge(unread);
+    }
+
+    private void setBellBadge(int unread) {
+        if (bellBadge == null) return;
+        if (unread > 0) {
+            bellBadge.setText(String.valueOf(unread));
+            bellBadge.setVisibility(View.VISIBLE);
+        } else {
+            bellBadge.setVisibility(View.GONE);
         }
     }
 

@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:id="@+id/group_admin_nav">
+    <group android:checkableBehavior="single" android:id="@+id/nav_group_primary">
         <item
-            android:id="@+id/nav_dashboard"
-            android:icon="@drawable/ic_dashboard"
-            android:title="@string/drawer_dashboard" />
-        <item
-            android:id="@+id/nav_clients"
-            android:icon="@drawable/ic_person"
-            android:title="@string/drawer_clients" />
+            android:id="@+id/nav_home"
+            android:icon="@drawable/ic_home"
+            android:title="@string/nav_home" />
         <item
             android:id="@+id/nav_bookings"
             android:icon="@drawable/ic_bookings"
@@ -18,21 +14,40 @@
             android:icon="@drawable/ic_build"
             android:title="@string/drawer_projects" />
         <item
-            android:id="@+id/nav_technicians"
-            android:icon="@drawable/ic_people"
-            android:title="@string/drawer_technicians" />
+            android:id="@+id/nav_notifications"
+            android:icon="@drawable/ic_notifications"
+            android:title="@string/drawer_notifications" />
         <item
-            android:id="@+id/nav_inventory"
-            android:icon="@drawable/ic_inventory"
-            android:title="@string/drawer_inventory" />
-        <item
-            android:id="@+id/nav_reports"
-            android:icon="@drawable/ic_description"
-            android:title="@string/drawer_reports" />
-        <item
-            android:id="@+id/nav_settings"
-            android:icon="@drawable/ic_settings"
-            android:title="@string/drawer_settings" />
+            android:id="@+id/nav_more"
+            android:icon="@drawable/ic_more_horiz"
+            android:title="@string/nav_more">
+            <menu>
+                <group android:checkableBehavior="single" android:id="@+id/nav_group_more">
+                    <item
+                        android:id="@+id/nav_clients"
+                        android:icon="@drawable/ic_person"
+                        android:title="@string/drawer_clients" />
+                    <item
+                        android:id="@+id/nav_technicians"
+                        android:icon="@drawable/ic_people"
+                        android:title="@string/drawer_technicians" />
+                    <item
+                        android:id="@+id/nav_inventory"
+                        android:icon="@drawable/ic_inventory"
+                        android:title="@string/drawer_inventory" />
+                    <item
+                        android:id="@+id/nav_reports"
+                        android:icon="@drawable/ic_description"
+                        android:title="@string/drawer_reports" />
+                    <item
+                        android:id="@+id/nav_settings"
+                        android:icon="@drawable/ic_settings"
+                        android:title="@string/drawer_settings" />
+                </group>
+            </menu>
+        </item>
+    </group>
+    <group>
         <item
             android:id="@+id/nav_logout"
             android:icon="@drawable/ic_logout"

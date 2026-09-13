@@ -13,23 +13,50 @@
     <color name="brand_900">#4c2700</color>
 
     <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
 
-    <!-- Core neutrals -->
+    <!-- Light theme surface & text (mirrors the web UI) -->
+    <color name="page_bg">#F7F8FA</color>
     <color name="el_ink">#0B0F10</color>
     <color name="el_ink_soft">#141A1C</color>
-    <color name="el_surface">#F4F7F8</color>
-    <color name="el_card_border">#E4E9EA</color>
-    <color name="text_primary">#101416</color>
-    <color name="text_secondary">#4B575C</color>
-    <color name="text_muted">#68747A</color>
-    <color name="text_faint">#9EA8AC</color>
+    <color name="el_surface">#F7F8FA</color>
+    <color name="el_card_border">#E2E8F0</color>
+    <color name="border_light">#E8EEF1</color>
+
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#64748B</color>
+    <color name="text_muted">#94A3B8</color>
+    <color name="text_faint">#B8C2CC</color>
+
+    <!-- Accents -->
+    <color name="slate_50">#F8FAFC</color>
+    <color name="slate_100">#F1F5F9</color>
+    <color name="slate_200">#E2E8F0</color>
+    <color name="slate_400">#94A3B8</color>
+    <color name="slate_500">#64748B</color>
+    <color name="slate_700">#334155</color>
+    <color name="slate_800">#1E293B</color>
+    <color name="slate_900">#0F172A</color>
+
+    <color name="yellow_text">#B45309</color>
+    <color name="yellow_text_soft">#FFC400</color>
+
+    <color name="accent_blue">#2563EB</color>
+    <color name="accent_blue_bg">#DBEAFE</color>
+    <color name="accent_violet">#7C3AED</color>
+    <color name="accent_violet_bg">#EDE9FE</color>
+    <color name="accent_red">#DC2626</color>
+    <color name="accent_red_bg">#FEE2E2</color>
+    <color name="accent_green">#059669</color>
+    <color name="accent_green_bg">#D1FAE5</color>
+    <color name="accent_slate">#475569</color>
 
     <!-- Status -->
     <color name="status_pending">#D97706</color>
     <color name="status_pending_bg">#FDF3E7</color>
     <color name="status_approved">#B37700</color>
     <color name="status_approved_bg">#FFF6E0</color>
-    <color name="status_active">#22A66F</color>
+    <color name="status_active">#059669</color>
     <color name="status_active_bg">#E7F6EF</color>
     <color name="status_in_progress">#2563EB</color>
     <color name="status_in_progress_bg">#E8F0FD</color>
@@ -42,11 +69,20 @@
     <color name="status_cancelled">#6B7280</color>
     <color name="status_cancelled_bg">#F0F1F3</color>
 
-    <!-- Drawer -->
-    <color name="drawer_bg">#141A1C</color>
-    <color name="drawer_text">#E6EAEC</color>
+    <!-- Navigation drawer (black sidebar) -->
+    <color name="drawer_bg">#0B0F10</color>
+    <color name="drawer_text">#A7B1BC</color>
     <color name="drawer_text_selected">#0B0F10</color>
-    <color name="drawer_icon">#C0C8CC</color>
+    <color name="drawer_icon">#A7B1BC</color>
     <color name="drawer_header_bg">#0B0F10</color>
-    <color name="nav_bg">#F4F7F8</color>
+
+    <!-- Dark chrome (black header / drawer / bottom nav theme) -->
+    <color name="dark_bg">#0B0F10</color>
+    <color name="dark_bg_elev">#161B20</color>
+    <color name="dark_border">#2A3138</color>
+    <color name="on_dark_primary">#F5F7FA</color>
+    <color name="on_dark_secondary">#A7B1BC</color>
+    <color name="on_dark_muted">#77848F</color>
+
+    <color name="nav_bg">#0B0F10</color>
 </resources>

@@ -25,6 +25,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.elettro.app.network.ApiClient;
+
 import com.google.android.material.navigation.NavigationView;
 
 import org.json.JSONArray;
@@ -38,8 +39,9 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     // Shell & drawer
     private DrawerLayout drawerLayout;
     private NavigationView navView;
-    private ImageButton btnMenu, btnBell, btnRefresh;
-    private TextView appBarTitle;
+    private ImageButton btnMenu, btnBell;
+    private TextView bellBadge;
+    private TextView headerUserName, headerUserRole, headerUserInitial;
     private TextView sectionTitle, sectionSubtitle;
     private SwipeRefreshLayout swipeRefresh;
 
@@ -47,7 +49,8 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private View viewHome, viewJobs, viewReports, viewNotifications, viewMaterials, viewInventorySection, viewProfile;
 
     // Home
-    private TextView techName, statActiveJobs, statInProgress, statCompletedJobs;
+    private TextView techName, statTodayJobs, statActiveJobs, statCompletedJobs, statPendingMaterials;
+    private View cardStatToday, cardStatActive, cardStatCompleted, cardStatMaterials;
     private LinearLayout recentJobsContainer, homeNotificationsContainer;
 
     // Jobs
@@ -56,23 +59,26 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private String currentJobsTab = "ACTIVE";
 
     // Reports
-    private Button btnNewReport;
+    private TextView btnNewReport;
     private LinearLayout reportsListContainer;
 
     // Notifications
-    private Button btnMarkAllRead;
+    private TextView btnMarkAllRead;
     private LinearLayout notificationsListContainer;
 
     // Materials
-    private Button btnRequestMaterial;
+    private TextView btnRequestMaterial;
     private LinearLayout materialsListContainer;
 
     // Inventory
     private LinearLayout inventoryListContainer;
 
     // Profile
-    private TextView profileName, profileEmail, profilePhone, profileSpec, profileExp, profileSkills;
-    private Button btnLogout;
+    private TextView profileName, profileEmail, profilePhone, profileSpec, profileExp, profileSkills, profileInitial;
+    private TextView btnLogout, btnViewInventory, btnGotoJobs;
+
+    // Quick actions
+    private LinearLayout btnQaUpdateProgress, btnQaSubmitReport, btnQaMaterialRequest, btnQaMyJobs;
 
     // Data
     private JSONObject techData;
@@ -104,8 +110,10 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         navView = findViewById(R.id.nav_view);
         btnMenu = findViewById(R.id.btn_menu);
         btnBell = findViewById(R.id.btn_bell);
-        btnRefresh = findViewById(R.id.btn_refresh);
-        appBarTitle = findViewById(R.id.app_bar_title);
+        bellBadge = findViewById(R.id.bell_badge);
+        headerUserName = findViewById(R.id.header_user_name);
+        headerUserRole = findViewById(R.id.header_user_role);
+        headerUserInitial = findViewById(R.id.header_user_initial);
         sectionTitle = findViewById(R.id.section_title);
         sectionSubtitle = findViewById(R.id.section_subtitle);
         swipeRefresh = findViewById(R.id.swipe_refresh);
@@ -119,9 +127,14 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         viewProfile = findViewById(R.id.view_profile_section);
 
         techName = findViewById(R.id.tech_name);
+        statTodayJobs = findViewById(R.id.stat_today_jobs);
         statActiveJobs = findViewById(R.id.stat_active_jobs);
-        statInProgress = findViewById(R.id.stat_in_progress);
         statCompletedJobs = findViewById(R.id.stat_completed_jobs);
+        statPendingMaterials = findViewById(R.id.stat_pending_materials);
+        cardStatToday = findViewById(R.id.card_stat_today);
+        cardStatActive = findViewById(R.id.card_stat_active);
+        cardStatCompleted = findViewById(R.id.card_stat_completed);
+        cardStatMaterials = findViewById(R.id.card_stat_materials);
         recentJobsContainer = findViewById(R.id.tech_recent_jobs_container);
         homeNotificationsContainer = findViewById(R.id.home_notifications_container);
 
@@ -140,13 +153,30 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
         inventoryListContainer = findViewById(R.id.inventory_list_container);
 
+        btnGotoJobs = findViewById(R.id.btn_goto_jobs);
+        btnQaUpdateProgress = findViewById(R.id.btn_qa_update_progress);
+        btnQaSubmitReport = findViewById(R.id.btn_qa_submit_report);
+        btnQaMaterialRequest = findViewById(R.id.btn_qa_material_request);
+        btnQaMyJobs = findViewById(R.id.btn_qa_my_jobs);
+
         profileName = findViewById(R.id.profile_name);
         profileEmail = findViewById(R.id.profile_email);
         profilePhone = findViewById(R.id.profile_phone);
         profileSpec = findViewById(R.id.profile_spec);
         profileExp = findViewById(R.id.profile_exp);
         profileSkills = findViewById(R.id.profile_skills);
+        profileInitial = findViewById(R.id.profile_initial);
         btnLogout = findViewById(R.id.btn_logout);
+        btnViewInventory = findViewById(R.id.btn_view_inventory);
+
+        headerUserRole.setText(R.string.role_technician);
+        headerUserInitial.setText("T");
+
+        View header = navView.getHeaderView(0);
+        if (header != null) {
+            TextView role = header.findViewById(R.id.drawer_header_role);
+            if (role != null) role.setText(R.string.role_technician);
+        }
     }
 
     private void setupDrawer() {
@@ -156,8 +186,8 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         navView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             drawerLayout.closeDrawer(GravityCompat.START);
-            if (id == R.id.nav_dashboard) { showSection("home"); return true; }
-            if (id == R.id.nav_my_projects) { showSection("jobs"); return true; }
+            if (id == R.id.nav_home) { showSection("home"); return true; }
+            if (id == R.id.nav_my_jobs) { showSection("jobs"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_reports) { showSection("reports"); return true; }
             if (id == R.id.nav_materials) { showSection("materials"); return true; }
@@ -179,13 +209,13 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
         int titleRes = R.string.drawer_dashboard;
         int subRes = R.string.tech_keep_up;
-        int menuRes = R.id.nav_dashboard;
+        int menuRes = R.id.nav_home;
 
         switch (key) {
             case "jobs":
                 titleRes = R.string.tech_jobs_title;
                 subRes = R.string.tech_jobs_subtitle;
-                menuRes = R.id.nav_my_projects;
+                menuRes = R.id.nav_my_jobs;
                 break;
             case "reports":
                 titleRes = R.string.tech_reports_title;
@@ -218,7 +248,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
         sectionTitle.setText(titleRes);
         sectionSubtitle.setText(subRes);
-        appBarTitle.setText(sectionTitle.getText());
         navView.setCheckedItem(menuRes);
     }
 
@@ -236,10 +265,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         swipeRefresh.setOnRefreshListener(() -> {
             loadData();
             swipeRefresh.setRefreshing(false);
-        });
-        btnRefresh.setOnClickListener(v -> {
-            loadData();
-            loadHomeNotifications();
         });
     }
 
@@ -262,6 +287,25 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         btnRequestMaterial.setOnClickListener(v -> showMaterialDialog(null, null));
 
         btnLogout.setOnClickListener(v -> logout());
+
+        btnGotoJobs.setOnClickListener(v -> showSection("jobs"));
+
+        btnQaUpdateProgress.setOnClickListener(v -> showSection("jobs"));
+        btnQaSubmitReport.setOnClickListener(v -> showReportDialog(null));
+        btnQaMaterialRequest.setOnClickListener(v -> showMaterialDialog(null, null));
+        btnQaMyJobs.setOnClickListener(v -> showSection("jobs"));
+
+        cardStatToday.setOnClickListener(v -> showSection("jobs"));
+        cardStatActive.setOnClickListener(v -> showSection("jobs"));
+        cardStatCompleted.setOnClickListener(v -> {
+            currentJobsTab = "COMPLETED";
+            updateJobsTabs();
+            showSection("jobs");
+            renderJobs();
+        });
+        cardStatMaterials.setOnClickListener(v -> showSection("materials"));
+
+        btnViewInventory.setOnClickListener(v -> showSection("inventory"));
     }
 
     // === DATA ===
@@ -300,10 +344,20 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     }
 
     private void refreshDrawerHeader() {
-        TextView name = navView.getHeaderView(0).findViewById(R.id.drawer_header_name);
-        TextView role = navView.getHeaderView(0).findViewById(R.id.drawer_header_role);
-        if (name != null) name.setText(techNameStr.isEmpty() ? getString(R.string.role_technician) : techNameStr);
+        String display = techNameStr.isEmpty() ? getString(R.string.role_technician) : techNameStr;
+        String initial = techNameStr.isEmpty() ? "T" : String.valueOf(techNameStr.charAt(0));
+
+        headerUserName.setText(display);
+        headerUserInitial.setText(initial);
+        if (profileInitial != null) profileInitial.setText(initial);
+
+        View header = navView.getHeaderView(0);
+        TextView name = header != null ? header.findViewById(R.id.drawer_header_name) : null;
+        TextView role = header != null ? header.findViewById(R.id.drawer_header_role) : null;
+        TextView drawerInitial = header != null ? header.findViewById(R.id.drawer_header_initial) : null;
+        if (name != null) name.setText(display);
         if (role != null) role.setText(R.string.role_technician);
+        if (drawerInitial != null) drawerInitial.setText(initial);
     }
 
     private void loadInventory() {
@@ -418,22 +472,32 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private void renderHome() {
         if (techData == null) return;
 
-        techName.setText(techNameStr.isEmpty() ? "" : techNameStr + "!");
+        techName.setText(techNameStr);
 
-        int active = 0, inProgress = 0, completed = 0;
+        int today = bookingsArray == null ? 0 : bookingsArray.length();
+        int active = 0, completed = 0, pendingMaterials = 0;
         if (bookingsArray != null) {
             for (int i = 0; i < bookingsArray.length(); i++) {
                 JSONObject b = bookingsArray.optJSONObject(i);
                 if (b == null) continue;
                 String status = b.optString("status", "");
                 if ("ASSIGNED".equals(status) || "IN_PROGRESS".equals(status)) active++;
-                if ("IN_PROGRESS".equals(status)) inProgress++;
                 if ("COMPLETED".equals(status)) completed++;
+
+                JSONArray mats = b.optJSONArray("materialRequests");
+                if (mats != null) {
+                    for (int j = 0; j < mats.length(); j++) {
+                        JSONObject m = mats.optJSONObject(j);
+                        if (m != null && "PENDING".equals(m.optString("status", "PENDING"))) pendingMaterials++;
+                    }
+                }
             }
         }
+        statTodayJobs.setText(String.valueOf(today));
         statActiveJobs.setText(String.valueOf(active));
-        statInProgress.setText(String.valueOf(inProgress));
         statCompletedJobs.setText(String.valueOf(completed));
+        statPendingMaterials.setText(String.valueOf(pendingMaterials));
+        statPendingMaterials.setTextColor(pendingMaterials > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#111827"));
 
         recentJobsContainer.removeAllViews();
         if (bookingsArray == null || bookingsArray.length() == 0) {
@@ -1157,6 +1221,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         homeNotificationsContainer.removeAllViews();
         if (notificationsArray == null || notificationsArray.length() == 0) {
             showEmpty(homeNotificationsContainer, R.string.no_notifications);
+            updateBellBadge();
             return;
         }
         int count = Math.min(3, notificationsArray.length());
@@ -1164,6 +1229,24 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             JSONObject n = notificationsArray.optJSONObject(i);
             if (n == null) continue;
             homeNotificationsContainer.addView(buildNotificationCard(n));
+        }
+        updateBellBadge();
+    }
+
+    private void updateBellBadge() {
+        if (bellBadge == null) return;
+        int unread = 0;
+        if (notificationsArray != null) {
+            for (int i = 0; i < notificationsArray.length(); i++) {
+                JSONObject n = notificationsArray.optJSONObject(i);
+                if (n != null && !n.optBoolean("read", false)) unread++;
+            }
+        }
+        if (unread > 0) {
+            bellBadge.setText(String.valueOf(unread));
+            bellBadge.setVisibility(View.VISIBLE);
+        } else {
+            bellBadge.setVisibility(View.GONE);
         }
     }
 

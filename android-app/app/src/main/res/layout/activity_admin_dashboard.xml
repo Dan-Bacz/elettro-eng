@@ -4,81 +4,158 @@
     android:id="@+id/drawer_layout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/el_surface">
+    android:background="@color/page_bg">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/el_surface"
+        android:background="@color/page_bg"
         android:orientation="vertical">
 
-        <!-- App bar: hamburger + title + bell -->
+        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:background="@drawable/bg_appbar"
+            android:layout_height="62dp"
+            android:background="@drawable/bg_header"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="6dp"
+            android:paddingStart="10dp"
             android:paddingEnd="10dp">
 
             <ImageButton
                 android:id="@+id/btn_menu"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:background="@android:color/transparent"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/menu"
-                android:scaleType="centerInside"
+                android:padding="10dp"
                 android:src="@drawable/ic_menu"
-                android:tint="@color/el_ink" />
+                android:tint="@color/on_dark_primary" />
+
+            <ImageView
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:layout_marginStart="6dp"
+                android:contentDescription="@string/app_name"
+                android:src="@drawable/ic_elettro_logo" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-black"
+                    android:letterSpacing="0.05"
+                    android:text="@string/app_name_full"
+                    android:textColor="@color/on_dark_primary"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:letterSpacing="0.1"
+                    android:text="@string/app_tagline"
+                    android:textColor="@color/on_dark_muted"
+                    android:textSize="7sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp">
+
+                <ImageButton
+                    android:id="@+id/btn_bell"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/notifications_toast"
+                    android:padding="9dp"
+                    android:src="@drawable/ic_notifications"
+                    android:tint="@color/on_dark_primary" />
+
+                <TextView
+                    android:id="@+id/bell_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_marginEnd="3dp"
+                    android:background="@drawable/bg_bell_badge"
+                    android:gravity="center"
+                    android:minWidth="15dp"
+                    android:minHeight="15dp"
+                    android:paddingStart="3dp"
+                    android:paddingEnd="3dp"
+                    android:textColor="@color/el_ink"
+                    android:textSize="8sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </FrameLayout>
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <TextView
-                android:id="@+id/app_bar_title"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:layout_weight="1"
-                android:text="@string/app_bar_dashboard"
-                android:textColor="@color/el_ink"
-                android:textSize="18sp"
+                android:id="@+id/header_user_initial"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:background="@drawable/bg_avatar"
+                android:gravity="center"
+                android:textColor="@color/brand_500"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
-            <ImageButton
-                android:id="@+id/btn_refresh"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="@string/refresh"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_refresh"
-                android:tint="@color/el_ink" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:maxWidth="96dp"
+                android:orientation="vertical">
 
-            <ImageButton
-                android:id="@+id/btn_bell"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="@string/notifications_toast"
-                android:scaleType="centerInside"
-                android:src="@drawable/ic_notifications"
-                android:tint="@color/el_ink" />
+                <TextView
+                    android:id="@+id/header_user_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/on_dark_primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/header_user_role"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/on_dark_secondary"
+                    android:textSize="9sp" />
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Section title -->
+        <!-- Section heading -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/el_surface"
             android:orientation="vertical"
-            android:paddingHorizontal="16dp"
-            android:paddingVertical="12dp">
+            android:paddingStart="16dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp">
 
             <TextView
                 android:id="@+id/section_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/text_primary"
-                android:textSize="19sp"
+                android:textSize="20sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -86,92 +163,83 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:textColor="@color/text_muted"
-                android:textSize="11sp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Content -->
         <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
             android:id="@+id/swipe_refresh"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1">
+            android:layout_weight="1"
+            android:background="@color/page_bg">
 
             <ScrollView
-                android:id="@+id/scroll_content"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:fillViewport="true"
-                android:overScrollMode="never">
+                android:scrollbars="none">
 
-                <FrameLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingHorizontal="12dp"
-                    android:paddingBottom="16dp">
+                    android:orientation="vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="10dp">
 
-                    <!-- ============ DASHBOARD (HOME) ============ -->
+                    <!-- ===== HOME ===== -->
                     <LinearLayout
                         android:id="@+id/view_dashboard_section"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="visible">
+                        android:orientation="vertical">
 
-                        <!-- Welcome banner -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:orientation="vertical">
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical"
-                                android:orientation="horizontal">
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="@string/welcome_admin_1"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="20sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginStart="6dp"
-                                    android:text="@string/welcome_admin_2"
-                                    android:textColor="@color/brand_600"
-                                    android:textSize="20sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:text="@string/welcome_admin_3"
-                                android:textColor="@color/text_muted"
-                                android:textSize="12sp" />
+                                android:text="@string/welcome_admin_1"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:text="@string/welcome_admin_2"
+                                android:textColor="@color/yellow_text"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
                         </LinearLayout>
 
-                        <!-- Stats grid (2 x 2) -->
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/welcome_admin_3"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+
+                        <!-- Stats -->
                         <GridLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
-                            android:columnCount="2"
-                            android:rowCount="2">
+                            android:columnCount="2">
 
                             <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_columnWeight="1"
-                                android:layout_marginEnd="4dp"
-                                android:layout_marginBottom="8dp"
+                                android:layout_marginStart="3dp"
+                                android:layout_marginEnd="3dp"
                                 android:background="@drawable/bg_card"
                                 android:orientation="vertical"
                                 android:padding="12dp">
@@ -182,42 +250,50 @@
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal">
 
-                                    <ImageView
-                                        android:layout_width="30dp"
-                                        android:layout_height="30dp"
-                                        android:background="@drawable/bg_icon_circle"
-                                        android:contentDescription="Bookings"
-                                        android:padding="6dp"
-                                        android:src="@drawable/ic_calendar"
-                                        app:tint="@color/brand_600" />
-
-                                    <TextView
-                                        android:id="@+id/stat_total_bookings"
+                                    <LinearLayout
                                         android:layout_width="0dp"
                                         android:layout_height="wrap_content"
                                         android:layout_weight="1"
-                                        android:gravity="end"
-                                        android:text="0"
-                                        android:textColor="@color/text_primary"
-                                        android:textSize="22sp"
-                                        android:textStyle="bold" />
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:letterSpacing="0.04"
+                                            android:maxLines="2"
+                                            android:text="@string/stat_total_bookings"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="9sp"
+                                            android:textStyle="bold"
+                                            android:textAllCaps="true" />
+
+                                        <TextView
+                                            android:id="@+id/stat_total_bookings"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="0"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="22sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <ImageView
+                                        android:layout_width="38dp"
+                                        android:layout_height="38dp"
+                                        android:background="@drawable/bg_tile_yellow"
+                                        android:contentDescription="@string/stat_total_bookings"
+                                        android:padding="9dp"
+                                        android:src="@drawable/ic_bookings"
+                                        android:tint="@color/el_ink" />
                                 </LinearLayout>
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/stat_total_bookings"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="1dp"
-                                    android:text="@string/trend_up"
-                                    android:textColor="@color/status_active"
+                                    android:layout_marginTop="4dp"
+                                    android:text="@string/hint_total_bookings"
+                                    android:textColor="@color/text_muted"
                                     android:textSize="10sp" />
                             </LinearLayout>
 
@@ -225,8 +301,8 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_columnWeight="1"
-                                android:layout_marginStart="4dp"
-                                android:layout_marginBottom="8dp"
+                                android:layout_marginStart="3dp"
+                                android:layout_marginEnd="3dp"
                                 android:background="@drawable/bg_card"
                                 android:orientation="vertical"
                                 android:padding="12dp">
@@ -237,42 +313,50 @@
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal">
 
-                                    <ImageView
-                                        android:layout_width="30dp"
-                                        android:layout_height="30dp"
-                                        android:background="@drawable/bg_icon_circle"
-                                        android:contentDescription="Pending"
-                                        android:padding="6dp"
-                                        android:src="@drawable/ic_clock"
-                                        app:tint="@color/status_pending" />
-
-                                    <TextView
-                                        android:id="@+id/stat_pending"
+                                    <LinearLayout
                                         android:layout_width="0dp"
                                         android:layout_height="wrap_content"
                                         android:layout_weight="1"
-                                        android:gravity="end"
-                                        android:text="0"
-                                        android:textColor="@color/status_pending"
-                                        android:textSize="22sp"
-                                        android:textStyle="bold" />
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:letterSpacing="0.04"
+                                            android:maxLines="2"
+                                            android:text="@string/stat_active_projects"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="9sp"
+                                            android:textStyle="bold"
+                                            android:textAllCaps="true" />
+
+                                        <TextView
+                                            android:id="@+id/stat_active_projects"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="0"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="22sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <ImageView
+                                        android:layout_width="38dp"
+                                        android:layout_height="38dp"
+                                        android:background="@drawable/bg_tile_blue"
+                                        android:contentDescription="@string/stat_active_projects"
+                                        android:padding="9dp"
+                                        android:src="@drawable/ic_build"
+                                        android:tint="@color/white" />
                                 </LinearLayout>
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/stat_pending_review"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="1dp"
-                                    android:text="@string/trend_watch"
-                                    android:textColor="@color/text_faint"
+                                    android:layout_marginTop="4dp"
+                                    android:text="@string/hint_active_projects"
+                                    android:textColor="@color/text_muted"
                                     android:textSize="10sp" />
                             </LinearLayout>
 
@@ -280,8 +364,9 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_columnWeight="1"
-                                android:layout_marginEnd="4dp"
-                                android:layout_marginBottom="8dp"
+                                android:layout_marginTop="6dp"
+                                android:layout_marginStart="3dp"
+                                android:layout_marginEnd="3dp"
                                 android:background="@drawable/bg_card"
                                 android:orientation="vertical"
                                 android:padding="12dp">
@@ -292,42 +377,50 @@
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal">
 
-                                    <ImageView
-                                        android:layout_width="30dp"
-                                        android:layout_height="30dp"
-                                        android:background="@drawable/bg_icon_circle"
-                                        android:contentDescription="Inventory"
-                                        android:padding="6dp"
-                                        android:src="@drawable/ic_inventory"
-                                        app:tint="@color/status_active" />
-
-                                    <TextView
-                                        android:id="@+id/stat_inventory"
+                                    <LinearLayout
                                         android:layout_width="0dp"
                                         android:layout_height="wrap_content"
                                         android:layout_weight="1"
-                                        android:gravity="end"
-                                        android:text="0"
-                                        android:textColor="@color/text_primary"
-                                        android:textSize="22sp"
-                                        android:textStyle="bold" />
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:letterSpacing="0.04"
+                                            android:maxLines="2"
+                                            android:text="@string/stat_registrations"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="9sp"
+                                            android:textStyle="bold"
+                                            android:textAllCaps="true" />
+
+                                        <TextView
+                                            android:id="@+id/stat_registrations"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="0"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="22sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
+                                    <ImageView
+                                        android:layout_width="38dp"
+                                        android:layout_height="38dp"
+                                        android:background="@drawable/bg_tile_violet"
+                                        android:contentDescription="@string/stat_registrations"
+                                        android:padding="9dp"
+                                        android:src="@drawable/ic_people"
+                                        android:tint="@color/white" />
                                 </LinearLayout>
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/stat_total_inventory"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="1dp"
-                                    android:text="@string/trend_items"
-                                    android:textColor="@color/text_faint"
+                                    android:layout_marginTop="4dp"
+                                    android:text="@string/hint_registrations"
+                                    android:textColor="@color/text_muted"
                                     android:textSize="10sp" />
                             </LinearLayout>
 
@@ -335,8 +428,9 @@
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_columnWeight="1"
-                                android:layout_marginStart="4dp"
-                                android:layout_marginBottom="8dp"
+                                android:layout_marginTop="6dp"
+                                android:layout_marginStart="3dp"
+                                android:layout_marginEnd="3dp"
                                 android:background="@drawable/bg_card"
                                 android:orientation="vertical"
                                 android:padding="12dp">
@@ -347,51 +441,59 @@
                                     android:gravity="center_vertical"
                                     android:orientation="horizontal">
 
+                                    <LinearLayout
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:orientation="vertical">
+
+                                        <TextView
+                                            android:layout_width="match_parent"
+                                            android:layout_height="wrap_content"
+                                            android:letterSpacing="0.04"
+                                            android:maxLines="2"
+                                            android:text="@string/stat_low_stock"
+                                            android:textColor="@color/text_muted"
+                                            android:textSize="9sp"
+                                            android:textStyle="bold"
+                                            android:textAllCaps="true" />
+
+                                        <TextView
+                                            android:id="@+id/stat_low_stock"
+                                            android:layout_width="wrap_content"
+                                            android:layout_height="wrap_content"
+                                            android:layout_marginTop="2dp"
+                                            android:text="0"
+                                            android:textColor="@color/text_primary"
+                                            android:textSize="22sp"
+                                            android:textStyle="bold" />
+                                    </LinearLayout>
+
                                     <ImageView
-                                        android:layout_width="30dp"
-                                        android:layout_height="30dp"
-                                        android:background="@drawable/bg_icon_circle"
-                                        android:contentDescription="Low stock"
-                                        android:padding="6dp"
+                                        android:layout_width="38dp"
+                                        android:layout_height="38dp"
+                                        android:background="@drawable/bg_tile_red"
+                                        android:contentDescription="@string/stat_low_stock"
+                                        android:padding="9dp"
                                         android:src="@drawable/ic_warning"
-                                        app:tint="@color/status_rejected" />
-
-                                    <TextView
-                                        android:id="@+id/stat_low_stock"
-                                        android:layout_width="0dp"
-                                        android:layout_height="wrap_content"
-                                        android:layout_weight="1"
-                                        android:gravity="end"
-                                        android:text="0"
-                                        android:textColor="@color/status_rejected"
-                                        android:textSize="22sp"
-                                        android:textStyle="bold" />
+                                        android:tint="@color/white" />
                                 </LinearLayout>
 
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/stat_low_stock"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="1dp"
-                                    android:text="@string/trend_warn"
-                                    android:textColor="@color/text_faint"
+                                    android:layout_marginTop="4dp"
+                                    android:text="@string/hint_low_stock"
+                                    android:textColor="@color/text_muted"
                                     android:textSize="10sp" />
                             </LinearLayout>
                         </GridLayout>
 
-                        <!-- Recent bookings -->
+                        <!-- Today's Activity -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="12dp"
                             android:background="@drawable/bg_card"
                             android:orientation="vertical"
                             android:padding="14dp">
@@ -399,179 +501,344 @@
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:gravity="center_vertical">
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
                                 <TextView
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:text="@string/recent_bookings_title"
+                                    android:text="@string/today_activity"
                                     android:textColor="@color/text_primary"
-                                    android:textSize="14sp"
+                                    android:textSize="13sp"
                                     android:textStyle="bold" />
 
                                 <TextView
                                     android:id="@+id/btn_goto_bookings"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:paddingStart="6dp"
+                                    android:paddingEnd="6dp"
                                     android:text="@string/view_all"
-                                    android:textColor="@color/brand_600"
+                                    android:textColor="@color/yellow_text"
                                     android:textSize="11sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
+
+                            <GridLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:columnCount="2">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_tile_light"
+                                    android:orientation="vertical"
+                                    android:padding="10dp">
+
+                                    <TextView
+                                        android:id="@+id/tile_approved"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="0"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="18sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="@string/tile_approved"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="8sp"
+                                        android:textStyle="bold"
+                                        android:textAllCaps="true" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_tile_light"
+                                    android:orientation="vertical"
+                                    android:padding="10dp">
+
+                                    <TextView
+                                        android:id="@+id/tile_assigned"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="0"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="18sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="@string/tile_assigned"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="8sp"
+                                        android:textStyle="bold"
+                                        android:textAllCaps="true" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginTop="4dp"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_tile_light"
+                                    android:orientation="vertical"
+                                    android:padding="10dp">
+
+                                    <TextView
+                                        android:id="@+id/tile_stock_units"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="0"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="18sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="@string/tile_stock_units"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="8sp"
+                                        android:textStyle="bold"
+                                        android:textAllCaps="true" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginTop="4dp"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_tile_light"
+                                    android:orientation="vertical"
+                                    android:padding="10dp">
+
+                                    <TextView
+                                        android:id="@+id/tile_suspended"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="0"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="18sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="@string/tile_suspended"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="8sp"
+                                        android:textStyle="bold"
+                                        android:textAllCaps="true" />
+                                </LinearLayout>
+                            </GridLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginTop="12dp"
+                                android:background="@color/border_light" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:text="@string/recent_bookings_title"
+                                android:textColor="@color/text_primary"
+                                android:textSize="12sp"
+                                android:textStyle="bold" />
 
                             <LinearLayout
                                 android:id="@+id/recent_bookings_container"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
                                 android:orientation="vertical" />
                         </LinearLayout>
 
-                        <!-- Quick actions -->
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="16dp"
-                            android:text="@string/quick_actions_title"
-                            android:textColor="@color/text_primary"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
-
-                        <GridLayout
+                        <!-- Quick Actions -->
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:columnCount="2"
-                            android:rowCount="2">
+                            android:layout_marginTop="12dp"
+                            android:background="@drawable/bg_card"
+                            android:orientation="vertical"
+                            android:padding="14dp">
 
-                            <LinearLayout
-                                android:id="@+id/btn_qa_add_client"
-                                android:layout_width="0dp"
+                            <TextView
+                                android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_columnWeight="1"
-                                android:layout_marginEnd="4dp"
-                                android:layout_marginBottom="8dp"
-                                android:background="@drawable/bg_card"
-                                android:clickable="true"
-                                android:focusable="true"
-                                android:gravity="center_horizontal"
-                                android:orientation="vertical"
-                                android:padding="14dp">
+                                android:text="@string/quick_actions_title"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
 
-                                <ImageView
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:contentDescription="@string/qa_add_client"
-                                    android:src="@drawable/ic_person"
-                                    app:tint="@color/brand_600" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/qa_add_client"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/btn_qa_new_booking"
-                                android:layout_width="0dp"
+                            <GridLayout
+                                android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_columnWeight="1"
-                                android:layout_marginStart="4dp"
-                                android:layout_marginBottom="8dp"
-                                android:background="@drawable/bg_card"
-                                android:clickable="true"
-                                android:focusable="true"
-                                android:gravity="center_horizontal"
-                                android:orientation="vertical"
-                                android:padding="14dp">
+                                android:layout_marginTop="10dp"
+                                android:columnCount="2">
 
-                                <ImageView
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:contentDescription="@string/qa_new_booking"
-                                    android:src="@drawable/ic_bookings"
-                                    app:tint="@color/brand_600" />
-
-                                <TextView
-                                    android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:id="@+id/btn_qa_add_client"
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/qa_new_booking"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_card"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:padding="10dp">
 
-                            <LinearLayout
-                                android:id="@+id/btn_qa_assign_tech"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_columnWeight="1"
-                                android:layout_marginEnd="4dp"
-                                android:layout_marginBottom="8dp"
-                                android:background="@drawable/bg_card"
-                                android:clickable="true"
-                                android:focusable="true"
-                                android:gravity="center_horizontal"
-                                android:orientation="vertical"
-                                android:padding="14dp">
+                                    <ImageView
+                                        android:layout_width="30dp"
+                                        android:layout_height="30dp"
+                                        android:background="@drawable/bg_tile_yellow"
+                                        android:contentDescription="@string/qa_add_client"
+                                        android:padding="6dp"
+                                        android:src="@drawable/ic_person"
+                                        android:tint="@color/el_ink" />
 
-                                <ImageView
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:contentDescription="@string/qa_assign_tech"
-                                    android:src="@drawable/ic_build"
-                                    app:tint="@color/brand_600" />
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:text="@string/qa_add_client"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
 
-                                <TextView
-                                    android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:id="@+id/btn_qa_new_booking"
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/qa_assign_tech"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_card"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:padding="10dp">
 
-                            <LinearLayout
-                                android:id="@+id/btn_qa_add_inventory"
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_columnWeight="1"
-                                android:layout_marginStart="4dp"
-                                android:layout_marginBottom="8dp"
-                                android:background="@drawable/bg_card"
-                                android:clickable="true"
-                                android:focusable="true"
-                                android:gravity="center_horizontal"
-                                android:orientation="vertical"
-                                android:padding="14dp">
+                                    <ImageView
+                                        android:layout_width="30dp"
+                                        android:layout_height="30dp"
+                                        android:background="@drawable/bg_tile_yellow"
+                                        android:contentDescription="@string/qa_new_booking"
+                                        android:padding="6dp"
+                                        android:src="@drawable/ic_bookings"
+                                        android:tint="@color/el_ink" />
 
-                                <ImageView
-                                    android:layout_width="32dp"
-                                    android:layout_height="32dp"
-                                    android:contentDescription="@string/qa_add_inventory"
-                                    android:src="@drawable/ic_inventory"
-                                    app:tint="@color/brand_600" />
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:text="@string/qa_new_booking"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
 
-                                <TextView
-                                    android:layout_width="wrap_content"
+                                <LinearLayout
+                                    android:id="@+id/btn_qa_assign_tech"
+                                    android:layout_width="0dp"
                                     android:layout_height="wrap_content"
-                                    android:layout_marginTop="6dp"
-                                    android:text="@string/qa_add_inventory"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="12sp"
-                                    android:textStyle="bold" />
-                            </LinearLayout>
-                        </GridLayout>
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginTop="4dp"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_card"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:padding="10dp">
+
+                                    <ImageView
+                                        android:layout_width="30dp"
+                                        android:layout_height="30dp"
+                                        android:background="@drawable/bg_tile_violet"
+                                        android:contentDescription="@string/qa_assign_tech"
+                                        android:padding="6dp"
+                                        android:src="@drawable/ic_people"
+                                        android:tint="@color/white" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:text="@string/qa_assign_tech"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <LinearLayout
+                                    android:id="@+id/btn_qa_add_inventory"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_columnWeight="1"
+                                    android:layout_marginTop="4dp"
+                                    android:layout_marginStart="2dp"
+                                    android:layout_marginEnd="2dp"
+                                    android:background="@drawable/bg_card"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal"
+                                    android:padding="10dp">
+
+                                    <ImageView
+                                        android:layout_width="30dp"
+                                        android:layout_height="30dp"
+                                        android:background="@drawable/bg_tile_green"
+                                        android:contentDescription="@string/qa_add_inventory"
+                                        android:padding="6dp"
+                                        android:src="@drawable/ic_inventory"
+                                        android:tint="@color/white" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:text="@string/qa_add_inventory"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="11sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+                            </GridLayout>
+                        </LinearLayout>
                     </LinearLayout>
 
-                    <!-- ============ BOOKINGS ============ -->
+                    <!-- ===== BOOKINGS ===== -->
                     <LinearLayout
                         android:id="@+id/view_bookings_section"
                         android:layout_width="match_parent"
@@ -579,72 +846,71 @@
                         android:orientation="vertical"
                         android:visibility="gone">
 
-                        <HorizontalScrollView
+                        <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="4dp"
-                            android:scrollbars="none">
+                            android:layout_marginTop="4dp"
+                            android:orientation="horizontal">
 
-                            <LinearLayout
+                            <Button
+                                android:id="@+id/filter_all"
+                                style="@style/Widget.Chip"
                                 android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:orientation="horizontal"
-                                android:paddingVertical="4dp">
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_chip_selected"
+                                android:text="ALL"
+                                android:textColor="@color/el_ink" />
 
-                                <Button
-                                    android:id="@+id/filter_all"
-                                    style="@style/Widget.Chip"
-                                    android:layout_width="wrap_content"
-                                    android:layout_marginEnd="6dp"
-                                    android:background="@drawable/bg_chip_selected"
-                                    android:text="ALL"
-                                    android:textColor="@color/el_ink" />
+                            <Button
+                                android:id="@+id/filter_pending"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_chip_unselected"
+                                android:text="PENDING"
+                                android:textColor="@color/text_secondary" />
 
-                                <Button
-                                    android:id="@+id/filter_pending"
-                                    style="@style/Widget.Chip"
-                                    android:layout_width="wrap_content"
-                                    android:layout_marginEnd="6dp"
-                                    android:background="@drawable/bg_chip_unselected"
-                                    android:text="PENDING"
-                                    android:textColor="@color/status_pending" />
+                            <Button
+                                android:id="@+id/filter_approved"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_chip_unselected"
+                                android:text="APPROVED"
+                                android:textColor="@color/text_secondary" />
 
-                                <Button
-                                    android:id="@+id/filter_approved"
-                                    style="@style/Widget.Chip"
-                                    android:layout_width="wrap_content"
-                                    android:layout_marginEnd="6dp"
-                                    android:background="@drawable/bg_chip_unselected"
-                                    android:text="APPROVED"
-                                    android:textColor="@color/status_approved" />
+                            <Button
+                                android:id="@+id/filter_assigned"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_chip_unselected"
+                                android:text="ASSIGNED"
+                                android:textColor="@color/text_secondary" />
 
-                                <Button
-                                    android:id="@+id/filter_assigned"
-                                    style="@style/Widget.Chip"
-                                    android:layout_width="wrap_content"
-                                    android:layout_marginEnd="6dp"
-                                    android:background="@drawable/bg_chip_unselected"
-                                    android:text="ASSIGNED"
-                                    android:textColor="@color/status_in_progress" />
-
-                                <Button
-                                    android:id="@+id/filter_completed"
-                                    style="@style/Widget.Chip"
-                                    android:layout_width="wrap_content"
-                                    android:background="@drawable/bg_chip_unselected"
-                                    android:text="COMPLETED"
-                                    android:textColor="@color/status_completed" />
-                            </LinearLayout>
-                        </HorizontalScrollView>
+                            <Button
+                                android:id="@+id/filter_completed"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_chip_unselected"
+                                android:text="COMPLETED"
+                                android:textColor="@color/text_secondary" />
+                        </LinearLayout>
 
                         <LinearLayout
                             android:id="@+id/bookings_list_container"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
                             android:orientation="vertical" />
                     </LinearLayout>
 
-                    <!-- ============ PROJECTS ============ -->
+                    <!-- ===== PROJECTS ===== -->
                     <LinearLayout
                         android:id="@+id/view_projects_section"
                         android:layout_width="match_parent"
@@ -656,10 +922,11 @@
                             android:id="@+id/projects_list_container"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:orientation="vertical" />
                     </LinearLayout>
 
-                    <!-- ============ NOTIFICATIONS ============ -->
+                    <!-- ===== NOTIFICATIONS ===== -->
                     <LinearLayout
                         android:id="@+id/view_notifications_section"
                         android:layout_width="match_parent"
@@ -667,25 +934,33 @@
                         android:orientation="vertical"
                         android:visibility="gone">
 
-                        <Button
+                        <TextView
                             android:id="@+id/btn_mark_all_read"
-                            android:layout_width="match_parent"
-                            android:layout_height="36dp"
-                            android:layout_marginBottom="8dp"
-                            android:background="@drawable/bg_chip_unselected"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="end"
+                            android:layout_marginTop="6dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="4dp"
+                            android:paddingBottom="4dp"
                             android:text="@string/mark_all_read"
-                            android:textColor="@color/el_ink"
-                            android:textSize="10sp"
+                            android:textColor="@color/yellow_text"
+                            android:textSize="11sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
                             android:id="@+id/notifications_list_container"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
                             android:orientation="vertical" />
                     </LinearLayout>
 
-                    <!-- ============ CLIENTS ============ -->
+                    <!-- ===== CLIENTS ===== -->
                     <LinearLayout
                         android:id="@+id/view_clients_section"
                         android:layout_width="match_parent"
@@ -697,10 +972,11 @@
                             android:id="@+id/clients_list_container"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:orientation="vertical" />
                     </LinearLayout>
 
-                    <!-- ============ TECHNICIANS (incl. registrations) ============ -->
+                    <!-- ===== TECHNICIANS ===== -->
                     <LinearLayout
                         android:id="@+id/view_technicians_section"
                         android:layout_width="match_parent"
@@ -711,6 +987,7 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:background="@drawable/bg_card"
                             android:orientation="vertical"
                             android:padding="14dp">
@@ -718,7 +995,8 @@
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:gravity="center_vertical">
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
 
                                 <TextView
                                     android:layout_width="0dp"
@@ -733,47 +1011,23 @@
                                     android:id="@+id/more_reg_badge"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:textColor="@color/status_pending"
-                                    android:textSize="12sp"
+                                    android:textColor="@color/yellow_text"
+                                    android:textSize="10sp"
                                     android:textStyle="bold"
                                     android:visibility="gone" />
-                            </LinearLayout>
-
-                            <LinearLayout
-                                android:id="@+id/registrations_list_container"
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
-                                android:orientation="vertical" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
-                            android:background="@drawable/bg_card"
-                            android:orientation="vertical"
-                            android:padding="14dp">
-
-                            <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:gravity="center_vertical">
 
                                 <TextView
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:layout_weight="1"
-                                    android:text="@string/drawer_technicians"
-                                    android:textColor="@color/text_primary"
-                                    android:textSize="13sp"
-                                    android:textStyle="bold" />
-
-                                <Button
                                     android:id="@+id/btn_add_technician"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="34dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="8dp"
                                     android:background="@drawable/bg_action_yellow"
+                                    android:clickable="true"
+                                    android:focusable="true"
+                                    android:paddingStart="12dp"
+                                    android:paddingEnd="12dp"
+                                    android:paddingTop="7dp"
+                                    android:paddingBottom="7dp"
                                     android:text="@string/add_tech_label"
                                     android:textColor="@color/el_ink"
                                     android:textSize="10sp"
@@ -781,15 +1035,39 @@
                             </LinearLayout>
 
                             <LinearLayout
+                                android:id="@+id/registrations_list_container"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="vertical" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:background="@drawable/bg_card"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/drawer_technicians"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <LinearLayout
                                 android:id="@+id/technicians_list_container"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="6dp"
+                                android:layout_marginTop="10dp"
                                 android:orientation="vertical" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- ============ INVENTORY ============ -->
+                    <!-- ===== INVENTORY ===== -->
                     <LinearLayout
                         android:id="@+id/view_inventory_section"
                         android:layout_width="match_parent"
@@ -797,40 +1075,33 @@
                         android:orientation="vertical"
                         android:visibility="gone">
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
+                        <TextView
+                            android:id="@+id/btn_add_inventory"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:layout_marginBottom="8dp">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:text="@string/drawer_inventory"
-                                android:textColor="@color/text_primary"
-                                android:textSize="13sp"
-                                android:textStyle="bold" />
-
-                            <Button
-                                android:id="@+id/btn_add_inventory"
-                                android:layout_width="wrap_content"
-                                android:layout_height="34dp"
-                                android:background="@drawable/bg_action_yellow"
-                                android:text="@string/add_item_label"
-                                android:textColor="@color/el_ink"
-                                android:textSize="10sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
+                            android:layout_gravity="end"
+                            android:layout_marginTop="6dp"
+                            android:background="@drawable/bg_action_yellow"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="7dp"
+                            android:paddingBottom="7dp"
+                            android:text="@string/add_item_label"
+                            android:textColor="@color/el_ink"
+                            android:textSize="10sp"
+                            android:textStyle="bold" />
 
                         <LinearLayout
                             android:id="@+id/inventory_list_container"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
                             android:orientation="vertical" />
                     </LinearLayout>
 
-                    <!-- ============ REPORTS ============ -->
+                    <!-- ===== REPORTS ===== -->
                     <LinearLayout
                         android:id="@+id/view_reports_section"
                         android:layout_width="match_parent"
@@ -842,89 +1113,313 @@
                             android:id="@+id/reports_list_container"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:orientation="vertical" />
                     </LinearLayout>
 
-                    <!-- ============ SETTINGS ============ -->
+                    <!-- ===== SETTINGS ===== -->
                     <LinearLayout
                         android:id="@+id/view_settings_section"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_card"
                         android:orientation="vertical"
-                        android:padding="16dp"
                         android:visibility="gone">
-
-                        <TextView
-                            android:id="@+id/settings_info"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="12sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="14dp"
-                            android:orientation="vertical">
+                            android:layout_marginTop="4dp"
+                            android:background="@drawable/bg_card"
+                            android:orientation="vertical"
+                            android:padding="16dp">
 
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Organization Name"
-                                android:textColor="@color/text_muted"
-                                android:textSize="10sp" />
+                                android:text="@string/drawer_settings"
+                                android:textColor="@color/text_primary"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
 
                             <EditText
                                 android:id="@+id/settings_org_name"
                                 android:layout_width="match_parent"
-                                android:layout_height="44dp"
-                                android:background="@drawable/bg_card"
-                                android:paddingHorizontal="10dp"
-                                android:singleLine="true"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:hint="Organization Name"
+                                android:inputType="text"
                                 android:textColor="@color/text_primary"
                                 android:textSize="13sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="8dp"
-                                android:text="Support Email"
-                                android:textColor="@color/text_muted"
-                                android:textSize="10sp" />
 
                             <EditText
                                 android:id="@+id/settings_support_email"
                                 android:layout_width="match_parent"
-                                android:layout_height="44dp"
-                                android:background="@drawable/bg_card"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:hint="Support Email"
                                 android:inputType="textEmailAddress"
-                                android:paddingHorizontal="10dp"
-                                android:singleLine="true"
                                 android:textColor="@color/text_primary"
                                 android:textSize="13sp" />
 
-                            <Button
+                            <TextView
                                 android:id="@+id/btn_save_settings"
-                                android:layout_width="match_parent"
-                                android:layout_height="42dp"
-                                android:layout_marginTop="10dp"
-                                android:background="@drawable/bg_action_yellow"
-                                android:text="Save Changes"
-                                android:textColor="@color/el_ink"
-                                android:textSize="12sp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="end"
+                                android:layout_marginTop="12dp"
+                                android:background="@drawable/bg_action_dark"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:paddingStart="18dp"
+                                android:paddingEnd="18dp"
+                                android:paddingTop="9dp"
+                                android:paddingBottom="9dp"
+                                android:text="Save Settings"
+                                android:textColor="@color/brand_500"
+                                android:textSize="11sp"
                                 android:textStyle="bold" />
                         </LinearLayout>
                     </LinearLayout>
-                </FrameLayout>
+
+                    <!-- ===== MORE ===== -->
+                    <LinearLayout
+                        android:id="@+id/view_more_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="@drawable/bg_card"
+                            android:orientation="vertical"
+                            android:padding="8dp">
+
+                            <LinearLayout
+                                android:id="@+id/row_more_clients"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="?attr/selectableItemBackground"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="10dp">
+
+                                <ImageView
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_tile_yellow"
+                                    android:contentDescription="@string/drawer_clients"
+                                    android:padding="7dp"
+                                    android:src="@drawable/ic_person"
+                                    android:tint="@color/el_ink" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/drawer_clients"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:contentDescription="@string/view_all"
+                                    android:src="@drawable/ic_arrow_right"
+                                    android:tint="@color/text_muted" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginStart="46dp"
+                                android:background="@color/border_light" />
+
+                            <LinearLayout
+                                android:id="@+id/row_more_technicians"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="?attr/selectableItemBackground"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="10dp">
+
+                                <ImageView
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_tile_violet"
+                                    android:contentDescription="@string/drawer_technicians"
+                                    android:padding="7dp"
+                                    android:src="@drawable/ic_people"
+                                    android:tint="@color/white" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/drawer_technicians"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:contentDescription="@string/view_all"
+                                    android:src="@drawable/ic_arrow_right"
+                                    android:tint="@color/text_muted" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginStart="46dp"
+                                android:background="@color/border_light" />
+
+                            <LinearLayout
+                                android:id="@+id/row_more_inventory"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="?attr/selectableItemBackground"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="10dp">
+
+                                <ImageView
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_tile_green"
+                                    android:contentDescription="@string/drawer_inventory"
+                                    android:padding="7dp"
+                                    android:src="@drawable/ic_inventory"
+                                    android:tint="@color/white" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/drawer_inventory"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:contentDescription="@string/view_all"
+                                    android:src="@drawable/ic_arrow_right"
+                                    android:tint="@color/text_muted" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginStart="46dp"
+                                android:background="@color/border_light" />
+
+                            <LinearLayout
+                                android:id="@+id/row_more_reports"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="?attr/selectableItemBackground"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="10dp">
+
+                                <ImageView
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_tile_blue"
+                                    android:contentDescription="@string/drawer_reports"
+                                    android:padding="7dp"
+                                    android:src="@drawable/ic_description"
+                                    android:tint="@color/white" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/drawer_reports"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:contentDescription="@string/view_all"
+                                    android:src="@drawable/ic_arrow_right"
+                                    android:tint="@color/text_muted" />
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginStart="46dp"
+                                android:background="@color/border_light" />
+
+                            <LinearLayout
+                                android:id="@+id/row_more_settings"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="?attr/selectableItemBackground"
+                                android:clickable="true"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:padding="10dp">
+
+                                <ImageView
+                                    android:layout_width="34dp"
+                                    android:layout_height="34dp"
+                                    android:background="@drawable/bg_tile_slate"
+                                    android:contentDescription="@string/drawer_settings"
+                                    android:padding="7dp"
+                                    android:src="@drawable/ic_settings"
+                                    android:tint="@color/white" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="12dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/drawer_settings"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="13sp"
+                                    android:textStyle="bold" />
+
+                                <ImageView
+                                    android:layout_width="18dp"
+                                    android:layout_height="18dp"
+                                    android:contentDescription="@string/view_all"
+                                    android:src="@drawable/ic_arrow_right"
+                                    android:tint="@color/text_muted" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
             </ScrollView>
         </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     </LinearLayout>
 
-    <!-- Navigation drawer -->
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
-        android:layout_width="280dp"
+        android:layout_width="300dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:background="@color/drawer_bg"
