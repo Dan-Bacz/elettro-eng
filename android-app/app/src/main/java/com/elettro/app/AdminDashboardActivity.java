@@ -7,7 +7,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -19,7 +18,6 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Space;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,11 +26,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.bumptech.glide.Glide;
 import com.elettro.app.network.ApiClient;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -40,33 +40,36 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class AdminDashboardActivity extends AppCompatActivity {
 
-    // Header & Nav
-    private BottomNavigationView bottomNav;
+    // Shell & drawer
+    private DrawerLayout drawerLayout;
+    private NavigationView navView;
+    private ImageButton btnMenu, btnBell, btnRefresh;
+    private TextView appBarTitle;
     private TextView sectionTitle;
     private TextView sectionSubtitle;
-    private ImageButton btnRefresh;
     private SwipeRefreshLayout swipeRefresh;
 
     // Stat views
-    private TextView statTotalBookings, statPending, statInventory, statLowStock, statTechnicians, statClients;
+    private TextView statTotalBookings, statPending, statInventory, statLowStock;
 
     // Section containers
-    private View viewDashboard, viewBookings, viewProjects, viewNotifications, viewMore;
-    // More sub-sections
-    private View subRegistrations, subInventory, subTechnicians, subClients, subReports, subSettings;
-    // More grid cards
-    private LinearLayout moreRegistrations, moreInventory, moreTechnicians, moreClients, moreReports, moreSettings;
+    private View viewDashboard, viewBookings, viewProjects, viewNotifications;
+    private View viewClients, viewTechnicians, viewInventory, viewReports, viewSettings;
     // List containers
     private LinearLayout recentBookingsContainer, bookingsListContainer, projectsListContainer;
     private LinearLayout registrationsListContainer, inventoryListContainer, techniciansListContainer;
     private LinearLayout clientsListContainer, reportsListContainer, notificationsListContainer;
     // Settings fields
     private EditText settingsOrgName, settingsSupportEmail;
+    private Button btnSaveSettings;
     // Notifications
     private Button btnMarkAllRead;
     private TextView regBadge;
@@ -74,14 +77,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
     // Action buttons
     private Button btnAddInventoryItem, btnAddTechnician;
     private TextView btnGotoBookings;
-    private Button btnSaveSettings;
+    private LinearLayout btnQaAddClient, btnQaNewBooking, btnQaAssignTech, btnQaAddInventory;
 
     // Filter chips
     private Button filterAll, filterPending, filterApproved, filterAssigned, filterCompleted;
     private String currentBookingFilter = "ALL";
-
-    // Back buttons for MORE sub-sections
-    private Button btnBackRegistrations, btnBackInventory, btnBackTechnicians, btnBackClients, btnBackReports, btnBackSettings;
 
     // Camera
     private static final int REQ_CAMERA = 1001;
@@ -110,10 +110,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
         ApiClient.setAuthToken(token);
 
         bindViews();
-        setupBottomNav();
+        setupDrawer();
         setupSwipeRefresh();
         setupActionButtons();
-        setupMoreNavigation();
 
         showSection("home");
         loadDashboardData();
@@ -129,39 +128,30 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     private void bindViews() {
-        bottomNav = findViewById(R.id.bottom_nav);
+        drawerLayout = findViewById(R.id.drawer_layout);
+        navView = findViewById(R.id.nav_view);
+        btnMenu = findViewById(R.id.btn_menu);
+        btnBell = findViewById(R.id.btn_bell);
+        btnRefresh = findViewById(R.id.btn_refresh);
+        appBarTitle = findViewById(R.id.app_bar_title);
         sectionTitle = findViewById(R.id.section_title);
         sectionSubtitle = findViewById(R.id.section_subtitle);
-        btnRefresh = findViewById(R.id.btn_refresh);
         swipeRefresh = findViewById(R.id.swipe_refresh);
 
         statTotalBookings = findViewById(R.id.stat_total_bookings);
         statPending = findViewById(R.id.stat_pending);
         statInventory = findViewById(R.id.stat_inventory);
         statLowStock = findViewById(R.id.stat_low_stock);
-        statTechnicians = findViewById(R.id.stat_technicians);
-        statClients = findViewById(R.id.stat_clients);
 
         viewDashboard = findViewById(R.id.view_dashboard_section);
         viewBookings = findViewById(R.id.view_bookings_section);
         viewProjects = findViewById(R.id.view_projects_section);
         viewNotifications = findViewById(R.id.view_notifications_section);
-        viewMore = findViewById(R.id.view_more_section);
-
-        subRegistrations = findViewById(R.id.sub_registrations);
-        subInventory = findViewById(R.id.sub_inventory);
-        subTechnicians = findViewById(R.id.sub_technicians);
-        subClients = findViewById(R.id.sub_clients);
-        subReports = findViewById(R.id.sub_reports);
-        subSettings = findViewById(R.id.sub_settings);
-
-        moreRegistrations = findViewById(R.id.more_registrations);
-        moreInventory = findViewById(R.id.more_inventory);
-        moreTechnicians = findViewById(R.id.more_technicians);
-        moreClients = findViewById(R.id.more_clients);
-        moreReports = findViewById(R.id.more_reports);
-        moreSettings = findViewById(R.id.more_settings);
-        regBadge = findViewById(R.id.more_reg_badge);
+        viewClients = findViewById(R.id.view_clients_section);
+        viewTechnicians = findViewById(R.id.view_technicians_section);
+        viewInventory = findViewById(R.id.view_inventory_section);
+        viewReports = findViewById(R.id.view_reports_section);
+        viewSettings = findViewById(R.id.view_settings_section);
 
         recentBookingsContainer = findViewById(R.id.recent_bookings_container);
         bookingsListContainer = findViewById(R.id.bookings_list_container);
@@ -177,10 +167,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
         settingsSupportEmail = findViewById(R.id.settings_support_email);
         btnSaveSettings = findViewById(R.id.btn_save_settings);
         btnMarkAllRead = findViewById(R.id.btn_mark_all_read);
+        regBadge = findViewById(R.id.more_reg_badge);
 
         btnAddInventoryItem = findViewById(R.id.btn_add_inventory);
         btnAddTechnician = findViewById(R.id.btn_add_technician);
         btnGotoBookings = findViewById(R.id.btn_goto_bookings);
+
+        btnQaAddClient = findViewById(R.id.btn_qa_add_client);
+        btnQaNewBooking = findViewById(R.id.btn_qa_new_booking);
+        btnQaAssignTech = findViewById(R.id.btn_qa_assign_tech);
+        btnQaAddInventory = findViewById(R.id.btn_qa_add_inventory);
 
         filterAll = findViewById(R.id.filter_all);
         filterPending = findViewById(R.id.filter_pending);
@@ -188,12 +184,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         filterAssigned = findViewById(R.id.filter_assigned);
         filterCompleted = findViewById(R.id.filter_completed);
 
-        btnBackRegistrations = findViewById(R.id.btn_back_registrations);
-        btnBackInventory = findViewById(R.id.btn_back_inventory);
-        btnBackTechnicians = findViewById(R.id.btn_back_technicians);
-        btnBackClients = findViewById(R.id.btn_back_clients);
-        btnBackReports = findViewById(R.id.btn_back_reports);
-        btnBackSettings = findViewById(R.id.btn_back_settings);
+        ((TextView) navView.getHeaderView(0).findViewById(R.id.drawer_header_name)).setText("Admin");
+        ((TextView) navView.getHeaderView(0).findViewById(R.id.drawer_header_role)).setText(R.string.role_admin);
     }
 
     private void setupSwipeRefresh() {
@@ -207,14 +199,22 @@ public class AdminDashboardActivity extends AppCompatActivity {
         });
     }
 
-    private void setupBottomNav() {
-        bottomNav.setOnItemSelectedListener(item -> {
+    private void setupDrawer() {
+        btnMenu.setOnClickListener(v -> drawerLayout.openDrawer(GravityCompat.START));
+        btnBell.setOnClickListener(v -> showSection("notifications"));
+
+        navView.setNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
-            if (id == R.id.nav_home) { showSection("home"); return true; }
+            drawerLayout.closeDrawer(GravityCompat.START);
+            if (id == R.id.nav_dashboard) { showSection("home"); return true; }
+            if (id == R.id.nav_clients) { showSection("clients"); return true; }
             if (id == R.id.nav_bookings) { showSection("bookings"); return true; }
             if (id == R.id.nav_projects) { showSection("projects"); return true; }
-            if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
-            if (id == R.id.nav_more) { showSection("more"); return true; }
+            if (id == R.id.nav_technicians) { showSection("technicians"); return true; }
+            if (id == R.id.nav_inventory) { showSection("inventory"); return true; }
+            if (id == R.id.nav_reports) { showSection("reports"); return true; }
+            if (id == R.id.nav_settings) { showSection("settings"); hideKeyboard(); return true; }
+            if (id == R.id.nav_logout) { logout(); return true; }
             return false;
         });
     }
@@ -224,82 +224,99 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewBookings.setVisibility("bookings".equals(key) ? View.VISIBLE : View.GONE);
         viewProjects.setVisibility("projects".equals(key) ? View.VISIBLE : View.GONE);
         viewNotifications.setVisibility("notifications".equals(key) ? View.VISIBLE : View.GONE);
-        viewMore.setVisibility("more".equals(key) ? View.VISIBLE : View.GONE);
+        viewClients.setVisibility("clients".equals(key) ? View.VISIBLE : View.GONE);
+        viewTechnicians.setVisibility("technicians".equals(key) ? View.VISIBLE : View.GONE);
+        viewInventory.setVisibility("inventory".equals(key) ? View.VISIBLE : View.GONE);
+        viewReports.setVisibility("reports".equals(key) ? View.VISIBLE : View.GONE);
+        viewSettings.setVisibility("settings".equals(key) ? View.VISIBLE : View.GONE);
 
-        hideMoreSubs();
+        int titleRes = R.string.drawer_dashboard;
+        int subRes = R.string.welcome_admin_3;
+        int menuRes = R.id.nav_dashboard;
 
         switch (key) {
-            case "home":
-                sectionTitle.setText(R.string.admin_title_dashboard);
-                sectionSubtitle.setText(R.string.admin_subtitle_dashboard);
-                break;
             case "bookings":
-                sectionTitle.setText(R.string.bookings_title);
-                sectionSubtitle.setText(R.string.bookings_subtitle);
+                titleRes = R.string.bookings_title;
+                subRes = R.string.bookings_subtitle;
+                menuRes = R.id.nav_bookings;
                 break;
             case "projects":
-                sectionTitle.setText(R.string.projects_title);
-                sectionSubtitle.setText(R.string.projects_subtitle);
+                titleRes = R.string.projects_title;
+                subRes = R.string.projects_subtitle;
+                menuRes = R.id.nav_projects;
                 break;
             case "notifications":
-                sectionTitle.setText(R.string.notifications_title);
-                sectionSubtitle.setText(R.string.notifications_subtitle);
+                titleRes = R.string.notifications_title;
+                subRes = R.string.notifications_subtitle;
+                menuRes = R.id.nav_notifications;
                 loadNotifications();
                 break;
-            case "more":
-                sectionTitle.setText(R.string.more_title);
-                sectionSubtitle.setText(R.string.more_subtitle);
+            case "clients":
+                titleRes = R.string.clients_title;
+                subRes = R.string.clients_subtitle;
+                menuRes = R.id.nav_clients;
                 break;
+            case "technicians":
+                titleRes = R.string.technicians_title;
+                subRes = R.string.technicians_subtitle;
+                menuRes = R.id.nav_technicians;
+                break;
+            case "inventory":
+                titleRes = R.string.inventory_title;
+                subRes = R.string.inventory_subtitle;
+                menuRes = R.id.nav_inventory;
+                break;
+            case "reports":
+                titleRes = R.string.reports_title;
+                subRes = R.string.reports_subtitle;
+                menuRes = R.id.nav_reports;
+                break;
+            case "settings":
+                titleRes = R.string.settings_title;
+                subRes = R.string.settings_subtitle;
+                menuRes = R.id.nav_settings;
+                loadSettings();
+                break;
+        }
+
+        sectionTitle.setText(titleRes);
+        sectionSubtitle.setText(subRes);
+        appBarTitle.setText(sectionTitle.getText());
+        navView.setCheckedItem(menuRes);
+        if (!"notifications".equals(key)) {
+            swipeRefresh.post(() -> swipeRefresh.setEnabled(true));
         }
     }
 
-    private void hideMoreSubs() {
-        subRegistrations.setVisibility(View.GONE);
-        subInventory.setVisibility(View.GONE);
-        subTechnicians.setVisibility(View.GONE);
-        subClients.setVisibility(View.GONE);
-        subReports.setVisibility(View.GONE);
-        subSettings.setVisibility(View.GONE);
-        moreRegistrations.setVisibility(View.VISIBLE);
-        moreInventory.setVisibility(View.VISIBLE);
-        moreTechnicians.setVisibility(View.VISIBLE);
-        moreClients.setVisibility(View.VISIBLE);
-        moreReports.setVisibility(View.VISIBLE);
-        moreSettings.setVisibility(View.VISIBLE);
+    private void hideKeyboard() {
+        android.view.inputmethod.InputMethodManager imm =
+                (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null && getCurrentFocus() != null) {
+            imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+        }
     }
 
-    private void showMoreSub(View sub) {
-        moreRegistrations.setVisibility(View.GONE);
-        moreInventory.setVisibility(View.GONE);
-        moreTechnicians.setVisibility(View.GONE);
-        moreClients.setVisibility(View.GONE);
-        moreReports.setVisibility(View.GONE);
-        moreSettings.setVisibility(View.GONE);
-        sub.setVisibility(View.VISIBLE);
-    }
-
-    private void setupMoreNavigation() {
-        moreRegistrations.setOnClickListener(v -> { loadRegistrations(); showMoreSub(subRegistrations); });
-        moreInventory.setOnClickListener(v -> { showMoreSub(subInventory); });
-        moreTechnicians.setOnClickListener(v -> { showMoreSub(subTechnicians); });
-        moreClients.setOnClickListener(v -> { showMoreSub(subClients); });
-        moreReports.setOnClickListener(v -> { loadReports(); showMoreSub(subReports); });
-        moreSettings.setOnClickListener(v -> { loadSettings(); showMoreSub(subSettings); });
-
-        btnBackRegistrations.setOnClickListener(v -> showSection("more"));
-        btnBackInventory.setOnClickListener(v -> showSection("more"));
-        btnBackTechnicians.setOnClickListener(v -> showSection("more"));
-        btnBackClients.setOnClickListener(v -> showSection("more"));
-        btnBackReports.setOnClickListener(v -> showSection("more"));
-        btnBackSettings.setOnClickListener(v -> showSection("more"));
+    private void logout() {
+        getSharedPreferences("elettro_login", MODE_PRIVATE).edit().remove(MainActivity.KEY_TOKEN).apply();
+        ApiClient.setAuthToken("");
+        Toast.makeText(this, R.string.signed_out, Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private void setupActionButtons() {
-        btnGotoBookings.setOnClickListener(v -> { bottomNav.setSelectedItemId(R.id.nav_bookings); });
+        btnGotoBookings.setOnClickListener(v -> showSection("bookings"));
         btnAddInventoryItem.setOnClickListener(v -> showAddInventoryDialog());
         btnAddTechnician.setOnClickListener(v -> showAddTechnicianDialog());
         btnSaveSettings.setOnClickListener(v -> saveSettings());
         btnMarkAllRead.setOnClickListener(v -> markAllNotificationsRead());
+
+        btnQaAddClient.setOnClickListener(v -> showAddClientDialog());
+        btnQaNewBooking.setOnClickListener(v -> showNewBookingDialog());
+        btnQaAssignTech.setOnClickListener(v -> showAssignTechFlow());
+        btnQaAddInventory.setOnClickListener(v -> showAddInventoryDialog());
 
         filterAll.setOnClickListener(v -> { currentBookingFilter = "ALL"; updateFilterChips(); renderBookingsList(); });
         filterPending.setOnClickListener(v -> { currentBookingFilter = "PENDING"; updateFilterChips(); renderBookingsList(); });
@@ -369,8 +386,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
             statPending.setText(String.valueOf(stats.optInt("pending")));
             statInventory.setText(String.valueOf(stats.optInt("totalInventory")));
             statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
-            statTechnicians.setText(String.valueOf(stats.optInt("technicians")));
-            statClients.setText(String.valueOf(stats.optInt("clients")));
         }
 
         renderRecentBookings();
@@ -447,7 +462,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             TextView tvType = new TextView(this);
             tvType.setText(type.replace("_", " "));
-            tvType.setTextColor(getTypeColor(type));
             tvType.setTextSize(9);
             tvType.setTypeface(null, Typeface.BOLD);
             tvType.setPadding(6, 3, 6, 3);
@@ -539,16 +553,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             String title = b.optString("title", "Service Request");
             String status = b.optString("status", "PENDING");
-            String id = b.optString("id", "");
+            String clientName = b.optJSONObject("client") != null ? b.optJSONObject("client").optString("name", "") : "";
 
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding(0, 10, 0, 10);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.setMarginStart(0);
-            row.setLayoutParams(lp);
+            row.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
             View dot = new View(this);
             LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(8, 8);
@@ -557,19 +569,30 @@ public class AdminDashboardActivity extends AppCompatActivity {
             dot.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getStatusColor(status)));
             row.addView(dot);
 
+            LinearLayout textCol = new LinearLayout(this);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+
             TextView tvTitle = new TextView(this);
             tvTitle.setText(title);
             tvTitle.setTextColor(Color.parseColor("#101416"));
             tvTitle.setTextSize(13);
             tvTitle.setTypeface(null, Typeface.BOLD);
-            LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
-            tvTitle.setLayoutParams(tLp);
-            row.addView(tvTitle);
+            textCol.addView(tvTitle);
+
+            if (!clientName.isEmpty()) {
+                TextView tvClient = new TextView(this);
+                tvClient.setText(clientName);
+                tvClient.setTextColor(Color.parseColor("#68747A"));
+                tvClient.setTextSize(11);
+                textCol.addView(tvClient);
+            }
+            textCol.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            row.addView(textCol);
 
             TextView tvStatus = new TextView(this);
-            tvStatus.setText(status);
+            tvStatus.setText(status.replace("_", " "));
             tvStatus.setTextColor(getStatusColor(status));
-            tvStatus.setTextSize(10);
+            tvStatus.setTextSize(9);
             tvStatus.setTypeface(null, Typeface.BOLD);
             tvStatus.setPadding(8, 3, 8, 3);
             tvStatus.setBackgroundResource(R.drawable.bg_pill);
@@ -611,6 +634,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             String bookingId = b.optString("id");
             String title = b.optString("title", "Booking Request");
+            String clientName = b.optJSONObject("client") != null ? b.optJSONObject("client").optString("name", "") : "";
 
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
@@ -628,8 +652,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
             tvTitle.setTypeface(null, Typeface.BOLD);
             card.addView(tvTitle);
 
+            if (!clientName.isEmpty()) {
+                TextView tvClient = new TextView(this);
+                tvClient.setText("Client: " + clientName);
+                tvClient.setTextColor(Color.parseColor("#68747A"));
+                tvClient.setTextSize(11);
+                card.addView(tvClient);
+            }
+
             TextView tvStatus = new TextView(this);
-            tvStatus.setText(status);
+            tvStatus.setText(status.replace("_", " "));
             tvStatus.setTextColor(getStatusColor(status));
             tvStatus.setTextSize(11);
             tvStatus.setTypeface(null, Typeface.BOLD);
@@ -692,7 +724,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
             String techName = techObj != null ? techObj.optString("name", "Unassigned") : "Unassigned";
 
             TextView tvInfo = new TextView(this);
-            tvInfo.setText("Tech: " + techName + " • " + status);
+            tvInfo.setText("Tech: " + techName + " • " + status.replace("_", " "));
             tvInfo.setTextColor(getStatusColor(status));
             tvInfo.setTextSize(11);
             tvInfo.setTypeface(null, Typeface.BOLD);
@@ -819,11 +851,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             String image = inv.optString("imageUrl");
             if (image == null || image.isEmpty()) image = inv.optString("imageData");
-            if (image != null && !image.isEmpty()) {
-                Glide.with(this).load(image).centerCrop().into(iv);
-            } else {
-                iv.setImageResource(android.R.drawable.ic_menu_gallery);
-            }
+            loadInventoryImage(iv, image);
 
             LinearLayout textCol = new LinearLayout(this);
             textCol.setOrientation(LinearLayout.VERTICAL);
@@ -849,6 +877,31 @@ public class AdminDashboardActivity extends AppCompatActivity {
             item.addView(textCol);
             inventoryListContainer.addView(item);
         }
+    }
+
+    private void loadInventoryImage(ImageView iv, String image) {
+        if (image == null || image.isEmpty()) {
+            iv.setImageResource(android.R.drawable.ic_menu_gallery);
+            return;
+        }
+        if (image.startsWith("data:image/")) {
+            try {
+                String b64 = image.substring(image.indexOf(',') + 1);
+                byte[] raw = Base64.decode(b64, Base64.DEFAULT);
+                Bitmap bmp = BitmapFactory.decodeByteArray(raw, 0, raw.length);
+                if (bmp != null) {
+                    iv.setImageBitmap(bmp);
+                    return;
+                }
+            } catch (Exception ignored) {}
+            iv.setImageResource(android.R.drawable.ic_menu_gallery);
+            return;
+        }
+        if (image.startsWith("http://") || image.startsWith("https://")) {
+            Glide.with(this).load(image).centerCrop().into(iv);
+            return;
+        }
+        iv.setImageResource(android.R.drawable.ic_menu_gallery);
     }
 
     // === TECHNICIANS ===
@@ -880,8 +933,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
             tvName.setTextSize(13);
             card.addView(tvName);
 
+            String spec = tech.optString("specialization", "");
             TextView tvEmail = new TextView(this);
-            tvEmail.setText(tech.optString("email", ""));
+            tvEmail.setText(spec.isEmpty() ? tech.optString("email", "") : tech.optString("email", "") + " • " + spec);
             tvEmail.setTextColor(Color.parseColor("#68747A"));
             tvEmail.setTextSize(12);
             card.addView(tvEmail);
@@ -1090,6 +1144,35 @@ public class AdminDashboardActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void showAssignTechFlow() {
+        if (bookingsArray == null || bookingsArray.length() == 0) {
+            Toast.makeText(this, "No bookings to assign", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        List<String> names = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (int i = 0; i < bookingsArray.length(); i++) {
+            JSONObject b = bookingsArray.optJSONObject(i);
+            if (b == null) continue;
+            if (b.optString("assignedToId", "").isEmpty()) {
+                String status = b.optString("status", "PENDING");
+                if ("PENDING".equals(status) || "APPROVED".equals(status)) {
+                    names.add(b.optString("title", "Booking") + " (" + status + ")");
+                    ids.add(b.optString("id"));
+                }
+            }
+        }
+        if (ids.isEmpty()) {
+            Toast.makeText(this, "No unassigned bookings", Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Select Booking")
+                .setItems(names.toArray(new String[0]), (dialog, which) -> showAssignTechDialog(ids.get(which), names.get(which)))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
     private void approveUser(String userId) {
         new Thread(() -> {
             try {
@@ -1131,6 +1214,145 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 .show();
     }
 
+    // === QUICK ACTIONS ===
+
+    private void showAddClientDialog() {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 20, 40, 20);
+
+        final EditText etName = new EditText(this);
+        etName.setHint("Client Name");
+        layout.addView(etName);
+
+        final EditText etEmail = new EditText(this);
+        etEmail.setHint("Email Address");
+        etEmail.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS);
+        layout.addView(etEmail);
+
+        final EditText etPass = new EditText(this);
+        etPass.setHint("Password (e.g. client123)");
+        layout.addView(etPass);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Add Client Account")
+                .setView(layout)
+                .setPositiveButton("Create", (dialog, which) -> {
+                    String name = etName.getText().toString().trim();
+                    String email = etEmail.getText().toString().trim();
+                    String pass = etPass.getText().toString().trim();
+                    if (!name.isEmpty() && !email.isEmpty()) {
+                        createUser(name, email, pass.isEmpty() ? "client123" : pass, "CLIENT");
+                    } else {
+                        Toast.makeText(this, "Enter name and email", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showNewBookingDialog() {
+        if (clientsArray == null || clientsArray.length() == 0) {
+            Toast.makeText(this, "No clients yet. Add a client first.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        final String[] clientNames = new String[clientsArray.length()];
+        final String[] clientIds = new String[clientsArray.length()];
+        for (int i = 0; i < clientsArray.length(); i++) {
+            JSONObject c = clientsArray.optJSONObject(i);
+            clientNames[i] = (c != null ? c.optString("name", "Client") : "Client") + " (" + (c != null ? c.optString("email", "") : "") + ")";
+            clientIds[i] = c != null ? c.optString("id") : "";
+        }
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(40, 20, 40, 20);
+
+        final EditText etClient = new EditText(this);
+        etClient.setText(clientNames[0]);
+        etClient.setFocusable(false);
+        etClient.setClickable(true);
+        etClient.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Select Client")
+                .setItems(clientNames, (d, which) -> etClient.setText(clientNames[which]))
+                .show());
+        layout.addView(etClient);
+
+        final EditText etTitle = new EditText(this);
+        etTitle.setHint("Service / Project Title");
+        layout.addView(etTitle);
+
+        final EditText etDescription = new EditText(this);
+        etDescription.setHint("Description");
+        etDescription.setMinLines(2);
+        layout.addView(etDescription);
+
+        final EditText etStart = new EditText(this);
+        etStart.setHint("Start Date (YYYY-MM-DD, optional)");
+        layout.addView(etStart);
+
+        final EditText etEnd = new EditText(this);
+        etEnd.setHint("End Date (YYYY-MM-DD, optional)");
+        layout.addView(etEnd);
+
+        new AlertDialog.Builder(this)
+                .setTitle("New Booking")
+                .setView(layout)
+                .setPositiveButton("Create", (dialog, which) -> {
+                    String title = etTitle.getText().toString().trim();
+                    if (title.isEmpty()) {
+                        Toast.makeText(this, "Enter a booking title", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String description = etDescription.getText().toString().trim();
+                    String startDate = parseDate(etStart.getText().toString().trim());
+                    String endDate = parseDate(etEnd.getText().toString().trim());
+                    final String selectedClientId = clientIds[indexOf(clientNames, etClient.getText().toString())];
+                    createBooking(selectedClientId, title, description, startDate, endDate);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private int indexOf(String[] arr, String value) {
+        if (value == null) return 0;
+        for (int i = 0; i < arr.length; i++) if (value.equals(arr[i])) return i;
+        return 0;
+    }
+
+    private String parseDate(String value) {
+        if (value == null || value.isEmpty()) return null;
+        try {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+            Date date = sdf.parse(value);
+            if (date != null) {
+                SimpleDateFormat iso = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+                return iso.format(date);
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    private void createBooking(String clientId, String title, String description, String startDate, String endDate) {
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("clientId", clientId);
+                json.put("title", title);
+                if (!description.isEmpty()) json.put("description", description);
+                if (startDate != null) json.put("startDate", startDate);
+                if (endDate != null) json.put("endDate", endDate);
+                ApiClient.post("/bookings", json.toString());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Booking Created", Toast.LENGTH_SHORT).show();
+                    loadDashboardData();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Failed to create booking", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
     // === INVENTORY DIALOG ===
 
     private void showAddInventoryDialog() {
@@ -1156,7 +1378,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         layout.addView(etUnit);
 
         Button btnCapture = new Button(this);
-        btnCapture.setText("📷 Capture Photo");
+        btnCapture.setText("Capture Photo");
         btnCapture.setTextSize(12);
         btnCapture.setBackgroundResource(R.drawable.bg_action_yellow);
         btnCapture.setTextColor(Color.parseColor("#0B0F10"));
@@ -1232,7 +1454,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         }).start();
     }
 
-    // === TECHNICIAN DIALOG ===
+    // === USER ACCOUNTS ===
 
     private void showAddTechnicianDialog() {
         LinearLayout layout = new LinearLayout(this);
@@ -1260,14 +1482,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     String email = etEmail.getText().toString().trim();
                     String pass = etPass.getText().toString().trim();
                     if (!name.isEmpty() && !email.isEmpty()) {
-                        createTechnician(name, email, pass.isEmpty() ? "tech123" : pass);
+                        createUser(name, email, pass.isEmpty() ? "tech123" : pass, "TECH");
+                    } else {
+                        Toast.makeText(this, "Enter name and email", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void createTechnician(String name, String email, String password) {
+    private void createUser(String name, String email, String password, String role) {
         new Thread(() -> {
             try {
                 JSONObject json = new JSONObject();
@@ -1275,14 +1499,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 json.put("name", name);
                 json.put("email", email);
                 json.put("password", password);
-                json.put("role", "TECH");
+                json.put("role", role);
                 ApiClient.post("/admin", json.toString());
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Technician Account Created", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Account created (" + role + ")", Toast.LENGTH_SHORT).show();
                     loadDashboardData();
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "Failed to create technician", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(this, "Failed to create account", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }

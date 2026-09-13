@@ -42,8 +42,11 @@
     <color name="status_cancelled">#6B7280</color>
     <color name="status_cancelled_bg">#F0F1F3</color>
 
-    <!-- Bottom nav -->
-    <color name="nav_bg">#101416</color>
-    <color name="nav_inactive">#8A9499</color>
-    <color name="nav_active">#F5C400</color>
+    <!-- Drawer -->
+    <color name="drawer_bg">#141A1C</color>
+    <color name="drawer_text">#E6EAEC</color>
+    <color name="drawer_text_selected">#0B0F10</color>
+    <color name="drawer_icon">#C0C8CC</color>
+    <color name="drawer_header_bg">#0B0F10</color>
+    <color name="nav_bg">#F4F7F8</color>
 </resources>

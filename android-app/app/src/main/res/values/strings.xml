@@ -33,14 +33,6 @@
     <string name="error_invalid_credentials">Invalid email or password</string>
 
     <!-- Shared dashboard -->
-    <string name="nav_home">Home</string>
-    <string name="nav_bookings">Bookings</string>
-    <string name="nav_projects">Projects</string>
-    <string name="nav_notifications">Notifications</string>
-    <string name="nav_more">More</string>
-    <string name="nav_my_jobs">My Jobs</string>
-    <string name="nav_reports">Reports</string>
-    <string name="nav_profile">Profile</string>
     <string name="refresh">Refresh</string>
     <string name="signed_out">Signed Out</string>
     <string name="logout">Log Out</string>
@@ -49,49 +41,96 @@
     <string name="empty">Nothing here yet</string>
     <string name="network_error">Unable to reach the server. Check your connection and try again.</string>
 
-    <!-- Admin -->
-    <string name="admin_title_dashboard">Operations Dashboard</string>
-    <string name="admin_subtitle_dashboard">Real-time database metrics for your business</string>
+    <!-- App bar -->
+    <string name="app_bar_dashboard">Dashboard</string>
+    <string name="menu">Menu</string>
+    <string name="notifications_toast">Notifications</string>
+    <string name="today_update_subtitle">Here\'s what\'s happening today.</string>
+
+    <!-- Admin drawer -->
+    <string name="drawer_dashboard">Dashboard</string>
+    <string name="drawer_clients">Clients</string>
+    <string name="drawer_bookings">Bookings</string>
+    <string name="drawer_projects">Projects</string>
+    <string name="drawer_technicians">Technicians</string>
+    <string name="drawer_inventory">Inventory</string>
+    <string name="drawer_reports">Reports</string>
+    <string name="drawer_settings">Settings</string>
+    <string name="drawer_logout">Logout</string>
+    <string name="role_admin">Administrator</string>
+
+    <!-- Admin welcome -->
+    <string name="welcome_admin_1">Welcome back,</string>
+    <string name="welcome_admin_2">Admin!</string>
+    <string name="welcome_admin_3">Here\'s what\'s happening today.</string>
+
+    <!-- Admin stats -->
     <string name="stat_total_bookings">Total Bookings</string>
     <string name="stat_pending_review">Pending Review</string>
-    <string name="stat_total_inventory">Inventory Items</string>
+    <string name="stat_total_inventory">Total Inventory</string>
     <string name="stat_low_stock">Low Stock</string>
     <string name="stat_technicians">Technicians</string>
     <string name="stat_clients">Clients</string>
-    <string name="stat_active_projects">Active Projects</string>
-    <string name="stat_completed_jobs">Completed Jobs</string>
-    <string name="recent_inquiries">Recent Inquiries &amp; Status</string>
-    <string name="manage_all">Manage All</string>
-    <string name="no_recent_bookings">No recent inquiries recorded.</string>
+    <string name="trend_up">▲ 12% this month</string>
+    <string name="trend_watch">Awaiting your review</string>
+    <string name="trend_items">Items in warehouse</string>
+    <string name="trend_warn">Needs restock</string>
+
+    <!-- Admin home -->
+    <string name="recent_bookings_title">Recent Bookings</string>
+    <string name="view_all">View All</string>
+    <string name="quick_actions_title">Quick Actions</string>
+    <string name="qa_add_client">Add Client</string>
+    <string name="qa_new_booking">New Booking</string>
+    <string name="qa_assign_tech">Assign Technician</string>
+    <string name="qa_add_inventory">Add Inventory</string>
+    <string name="no_recent_bookings">No bookings yet.</string>
     <string name="no_bookings">No bookings found.</string>
-    <string name="bookings_title">Inquiry &amp; Bookings</string>
+    <string name="bookings_title">Bookings</string>
     <string name="bookings_subtitle">Verify client requests and manage the booking lifecycle</string>
     <string name="projects_title">Active Projects</string>
     <string name="projects_subtitle">Assigned electrical installation &amp; maintenance jobs</string>
-    <string name="notifications_title">Alerts &amp; Notifications</string>
+    <string name="notifications_title">Notifications</string>
     <string name="notifications_subtitle">Pending inquiries, registrations &amp; warnings</string>
     <string name="mark_all_read">Mark all read</string>
     <string name="no_notifications">No notifications yet.</string>
-    <string name="more_title">More Options</string>
-    <string name="more_subtitle">Additional management tools</string>
-    <string name="more_registrations">Tech Registrations</string>
-    <string name="more_inventory">Inventory</string>
-    <string name="more_technicians">Technicians</string>
-    <string name="more_clients">Clients</string>
-    <string name="more_reports">Reports</string>
-    <string name="more_settings">Settings</string>
-    <string name="more_back">Back to More</string>
+    <string name="clients_title">Clients</string>
+    <string name="clients_subtitle">Registered client accounts</string>
+    <string name="technicians_title">Technicians</string>
+    <string name="technicians_subtitle">Your engineering team &amp; pending registrations</string>
+    <string name="pending_registrations">Pending Registrations</string>
+    <string name="inventory_title">Inventory</string>
+    <string name="inventory_subtitle">Stock levels &amp; warehouse items</string>
+    <string name="reports_title">Reports</string>
+    <string name="reports_subtitle">Technician progress reports</string>
+    <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">System preferences for your organization</string>
+    <string name="add_item_label">+ Add Item</string>
+    <string name="add_tech_label">+ Add Tech</string>
 
-    <!-- Technician -->
-    <string name="tech_title_home">My Dashboard</string>
-    <string name="tech_subtitle_home">Overview of your jobs and activity</string>
-    <string name="tech_welcome">Welcome back,</string>
-    <string name="tech_active_jobs">Active Jobs</string>
+    <!-- Technician drawer -->
+    <string name="drawer_my_projects">My Projects</string>
+    <string name="drawer_notifications">Notifications</string>
+    <string name="drawer_reports_tech">Reports</string>
+    <string name="drawer_materials">Material Requests</string>
+    <string name="drawer_inventory_tech">Inventory</string>
+    <string name="drawer_profile_tech">Profile</string>
+    <string name="role_technician">Technician</string>
+
+    <!-- Technician home -->
+    <string name="tech_welcome">Good day,</string>
+    <string name="tech_keep_up">Keep up the good work!</string>
+    <string name="tech_active_jobs">My Projects</string>
+    <string name="tech_in_progress">In Progress</string>
     <string name="tech_completed_jobs">Completed</string>
-    <string name="tech_pending_materials">Pending Materials</string>
+    <string name="today_assignments">Today\'s Assignments</string>
+    <string name="no_assignments">No assignments for today.</string>
+    <string name="recent_notifications_home">Recent Notifications</string>
     <string name="tech_quick_report">Progress Report</string>
     <string name="tech_quick_material">Request Material</string>
-    <string name="tech_jobs_title">My Jobs</string>
+
+    <!-- Technician jobs -->
+    <string name="tech_jobs_title">My Projects</string>
     <string name="tech_jobs_subtitle">Projects assigned to you</string>
     <string name="tab_active">ACTIVE</string>
     <string name="tab_completed">COMPLETED</string>
@@ -115,7 +154,7 @@
     <string name="tech_issues">Problems / issues</string>
     <string name="tech_next_work">Next planned work</string>
     <string name="tech_photo_hint">Photo upload is available from the web app</string>
-    <string name="tech_material_title">New Material Request</string>
+    <string name="tech_material_title">Material Requests</string>
     <string name="tech_material_name">Material name</string>
     <string name="tech_material_qty">Quantity</string>
     <string name="tech_material_unit">Unit</string>
@@ -123,9 +162,8 @@
     <string name="tech_material_priority">Priority</string>
     <string name="priority_normal">Normal</string>
     <string name="priority_urgent">Urgent</string>
-    <string name="tech_status_approved">Approved</string>
-    <string name="tech_status_rejected">Rejected</string>
-    <string name="tech_status_pending">Pending</string>
+    <string name="tech_inventory_title">Inventory</string>
+    <string name="tech_inventory_subtitle">Available stock for your projects</string>
     <string name="tech_profile_title">My Profile</string>
     <string name="tech_profile_subtitle">Your account information</string>
     <string name="specialization">Specialization</string>
