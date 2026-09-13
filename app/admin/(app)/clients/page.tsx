@@ -50,7 +50,13 @@ export default function AdminClientsPage() {
   })
 
   return (
-    <div className="space-y-6">
+    <div
+      className="relative space-y-6 rounded-2xl bg-cover bg-center p-4 sm:p-6"
+      style={{
+        backgroundImage:
+          "linear-gradient(rgba(247,248,250,0.88), rgba(247,248,250,0.88)), url('/bgweb.png')",
+      }}
+    >
       <PageHeader
         icon="👥"
         title="Clients"
