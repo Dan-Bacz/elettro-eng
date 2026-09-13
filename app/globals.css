@@ -2,9 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #__next {
+html,
+body,
+#__next {
   height: 100%;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+}
+
 /* simple brand styles */
-.btn { @apply px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600 }
+.btn {
+  @apply px-4 py-2 rounded-md bg-brand-500 text-white hover:bg-brand-600;
+}
+
+/* no horizontal overflow anywhere */
+html,
+body {
+  overflow-x: clip;
+}
