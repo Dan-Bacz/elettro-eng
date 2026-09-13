@@ -122,8 +122,26 @@ export default function InventoryPage(){
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => {
-      const dataUrl = String(reader.result || "")
-      setForm((prev) => ({ ...prev, imageData: dataUrl, imageUrl: dataUrl }))
+      const img = new Image()
+      img.onload = () => {
+        const MAX = 1280
+        let width = img.width
+        let height = img.height
+        if (width > MAX || height > MAX) {
+          const ratio = Math.min(MAX / width, MAX / height)
+          width = Math.round(width * ratio)
+          height = Math.round(height * ratio)
+        }
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        ctx.drawImage(img, 0, 0, width, height)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82)
+        setForm((prev) => ({ ...prev, imageData: dataUrl, imageUrl: dataUrl }))
+      }
+      img.src = String(reader.result || "")
     }
     reader.readAsDataURL(file)
     e.target.value = ""

@@ -1,6 +1,17 @@
 import { PrismaClient } from '@prisma/client'
 import crypto from 'crypto'
+
 const prisma = new PrismaClient()
+
+// Allow larger request bodies so camera/photo images (base64 data URLs) can be uploaded
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '12mb',
+    },
+    responseLimit: '12mb',
+  },
+}
 
 function parseCloudinaryUrl(url: string | undefined) {
   // expected format: cloudinary://<api_key>:<api_secret>@<cloud_name>
@@ -72,76 +83,104 @@ async function uploadToCloudinary(dataUrl: string) {
   }
 }
 
-export default async function handler(req, res) {
-  if (req.method === 'GET') {
-    const items = await prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } })
-    return res.json(items)
+// Upload data-URL images to Cloudinary and return the final { imageUrl, imageData } to store.
+// Empty/absent values become undefined so Prisma stores NULL.
+async function resolveImage(body: any) {
+  const rawUrl = body.imageUrl ? String(body.imageUrl).trim() : ''
+  const rawData = body.imageData ? String(body.imageData).trim() : ''
+
+  // If the payload carries a local base64 image, upload it to Cloudinary
+  if (rawData.startsWith('data:')) {
+    const uploaded = await uploadToCloudinary(rawData)
+    if (uploaded) {
+      return { imageUrl: uploaded, imageData: null }
+    }
+    // Cloudinary upload failed — keep the raw data as a last resort
+    return { imageUrl: rawUrl || null, imageData: rawData }
   }
 
-  if (req.method === 'POST') {
-    const body = req.body || {}
-    let imageUrl = body.imageUrl ? String(body.imageUrl).trim() : undefined
-    const imageData = body.imageData ? String(body.imageData).trim() : undefined
+  return { imageUrl: rawUrl || null, imageData: rawData || null }
+}
 
-    // If imageData is a data URL, attempt to upload to Cloudinary and use the returned URL
-    if (imageData && imageData.startsWith('data:')) {
-      const uploaded = await uploadToCloudinary(imageData)
-      if (uploaded) {
-        imageUrl = uploaded
-      }
+export default async function handler(req, res) {
+  try {
+    if (req.method === 'GET') {
+      const items = await prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } })
+      return res.json(items)
     }
 
-    const item = await prisma.inventoryItem.create({
-      data: {
-        name: String(body.name || '').trim(),
-        sku: body.sku ? String(body.sku).trim() : undefined,
-        category: body.category ? String(body.category).trim() : undefined,
-        brand: body.brand ? String(body.brand).trim() : undefined,
-        model: body.model ? String(body.model).trim() : undefined,
-        description: body.description ? String(body.description).trim() : undefined,
-        unit: body.unit ? String(body.unit).trim() : 'pcs',
-        quantity: Number(body.quantity || 0),
-        imageUrl: imageUrl,
-        imageData: // only store raw data if we could not upload
-          !imageUrl && imageData ? imageData : undefined
+    if (req.method === 'POST') {
+      const body = req.body || {}
+      if (!body.name || !String(body.name).trim()) {
+        return res.status(400).json({ error: 'Item name is required' })
       }
-    })
 
-    return res.status(201).json(item)
-  }
+      const { imageUrl, imageData } = await resolveImage(body)
 
-  if (req.method === 'PUT') {
-    const body = req.body || {}
-    const { id, quantity, ...rest } = body
-    if (!id) return res.status(400).json({ error: 'Inventory item id required' })
+      const item = await prisma.inventoryItem.create({
+        data: {
+          name: String(body.name).trim(),
+          sku: body.sku ? String(body.sku).trim() : undefined,
+          category: body.category ? String(body.category).trim() : undefined,
+          brand: body.brand ? String(body.brand).trim() : undefined,
+          model: body.model ? String(body.model).trim() : undefined,
+          description: body.description ? String(body.description).trim() : undefined,
+          unit: body.unit ? String(body.unit).trim() : 'pcs',
+          quantity: Math.max(0, Math.round(Number(body.quantity) || 0)),
+          imageUrl: imageUrl ?? undefined,
+          imageData: imageData ?? undefined
+        }
+      })
 
-    const item = await prisma.inventoryItem.update({
-      where: { id: String(id) },
-      data: {
-        ...(typeof quantity !== 'undefined' ? { quantity: Number(quantity) } : {}),
-        ...(rest.name ? { name: String(rest.name).trim() } : {}),
-        ...(rest.sku ? { sku: String(rest.sku).trim() } : {}),
-        ...(rest.category ? { category: String(rest.category).trim() } : {}),
-        ...(rest.brand ? { brand: String(rest.brand).trim() } : {}),
-        ...(rest.model ? { model: String(rest.model).trim() } : {}),
-        ...(rest.description ? { description: String(rest.description).trim() } : {}),
-        ...(rest.unit ? { unit: String(rest.unit).trim() } : {}),
-        ...(rest.imageUrl ? { imageUrl: String(rest.imageUrl).trim() } : {}),
-        ...(rest.imageData ? { imageData: String(rest.imageData).trim() } : {})
+      return res.status(201).json(item)
+    }
+
+    if (req.method === 'PUT') {
+      const body = req.body || {}
+      const { id } = body
+      if (!id) return res.status(400).json({ error: 'Inventory item id required' })
+
+      const data: any = {}
+
+      if (typeof body.quantity !== 'undefined') {
+        data.quantity = Math.max(0, Math.round(Number(body.quantity) || 0))
       }
-    })
+      if (typeof body.name !== 'undefined') {
+        if (!String(body.name).trim()) return res.status(400).json({ error: 'Item name cannot be empty' })
+        data.name = String(body.name).trim()
+      }
+      const optional = ['sku', 'category', 'brand', 'model', 'description', 'unit'] as const
+      for (const key of optional) {
+        if (typeof body[key] !== 'undefined') {
+          data[key] = body[key] ? String(body[key]).trim() : null
+        }
+      }
 
-    return res.json(item)
+      // Handle image: upload data-URL images to Cloudinary, allow clearing
+      const { imageUrl, imageData } = await resolveImage(body)
+      if (typeof body.imageUrl !== 'undefined') data.imageUrl = imageUrl
+      if (typeof body.imageData !== 'undefined') data.imageData = imageData
+
+      const item = await prisma.inventoryItem.update({
+        where: { id: String(id) },
+        data
+      })
+
+      return res.json(item)
+    }
+
+    if (req.method === 'DELETE') {
+      const body = req.body || {}
+      const { id } = body
+      if (!id) return res.status(400).json({ error: 'Inventory item id required' })
+
+      await prisma.inventoryItem.delete({ where: { id: String(id) } })
+      return res.status(200).json({ ok: true })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  } catch (e) {
+    console.error('Inventory API error', e)
+    return res.status(500).json({ error: (e as any)?.message || 'Server error' })
   }
-
-  if (req.method === 'DELETE') {
-    const body = req.body || {}
-    const { id } = body
-    if (!id) return res.status(400).json({ error: 'Inventory item id required' })
-
-    await prisma.inventoryItem.delete({ where: { id: String(id) } })
-    return res.status(200).json({ ok: true })
-  }
-
-  return res.status(405).end()
 }
