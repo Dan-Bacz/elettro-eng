@@ -106,14 +106,6 @@ export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boole
 
       {/* Bottom */}
       <div className="border-t border-white/10 p-3">
-        <Link
-          href="/"
-          title={collapsed ? 'View Website' : undefined}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
-        >
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center text-base leading-none">🌐</span>
-          {!collapsed && <span className="truncate">View Website</span>}
-        </Link>
         <button
           onClick={handleLogout}
           disabled={loggingOut}
