@@ -90,22 +90,6 @@ export default function Navbar() {
                 </svg>
               </Link>
 
-              {/* Admin Sign In */}
-              <Link
-                href="/admin/login"
-                className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold text-gray-300 hover:text-yellow-400 transition-colors whitespace-nowrap"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-                  />
-                </svg>
-                Admin Sign In
-              </Link>
-
               {/* Book a Service */}
               <Link
                 href="/book-service"
