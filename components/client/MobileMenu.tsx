@@ -79,21 +79,6 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
             </svg>
             Book a Service
           </Link>
-          <Link
-            href="/admin/login"
-            onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full px-5 py-3 rounded-xl border border-white/15 text-gray-200 text-sm font-semibold hover:border-yellow-400 hover:text-yellow-400 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
-              />
-            </svg>
-            Admin Sign In
-          </Link>
         </div>
 
         <div className="absolute bottom-0 inset-x-0 px-5 py-4 border-t border-white/10 bg-[#0b0f10]">
