@@ -194,4 +194,14 @@
     <string name="specialization">Specialization</string>
     <string name="experience">Experience</string>
     <string name="not_set">Not set</string>
+
+    <!-- Tech registration -->
+    <string name="tech_reg_header">Technician Registration</string>
+    <string name="tech_reg_title">Join Our Team</string>
+    <string name="tech_reg_subtitle">Fill in your details to register as a technician</string>
+    <string name="tech_take_photo">Photo</string>
+    <string name="tech_experience_hint">Years</string>
+    <string name="tech_skills_hint">Skills</string>
+    <string name="tech_register_button">Submit Registration</string>
+    <string name="tech_register_link">Register as Technician</string>
 </resources>

@@ -19,7 +19,7 @@ async function resolveProfileImage(profileImage: string | undefined | null) {
   if (!raw) return null
   // A locally selected/captured image must be uploaded to Cloudinary
   if (raw.startsWith('data:')) {
-    const uploaded = await uploadToCloudinary(raw, 'elettro-technicians')
+    const uploaded = await uploadToCloudinary(raw, 'technician-img')
     return uploaded ? uploaded.secure_url : null
   }
   // A remote URL can be stored directly

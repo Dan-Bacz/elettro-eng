@@ -46,7 +46,8 @@
         <activity android:name=".AdminDashboardActivity" />
         <activity android:name=".TechnicianDashboardActivity" />
         <activity android:name=".AdminActivity" />
-        <activity android:name=".TechActivity" />
+        <activity android:name=".TechActivity"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name=".InventoryActivity" />
     </application>
 

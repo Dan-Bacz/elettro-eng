@@ -975,27 +975,67 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (tech == null) continue;
 
             LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
+            card.setOrientation(LinearLayout.HORIZONTAL);
             card.setPadding(14, 14, 14, 14);
             card.setBackgroundResource(R.drawable.bg_card);
+            card.setGravity(android.view.Gravity.CENTER_VERTICAL);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
             lp.setMargins(0, 0, 0, 6);
             card.setLayoutParams(lp);
+
+            ImageView avatar = new ImageView(this);
+            int avatarSize = (int) (40 * getResources().getDisplayMetrics().density);
+            LinearLayout.LayoutParams avatarLp = new LinearLayout.LayoutParams(avatarSize, avatarSize);
+            avatarLp.setMarginEnd(12);
+            avatar.setLayoutParams(avatarLp);
+            avatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+
+            String profileUrl = tech.optString("profileImageUrl", "");
+            if (!profileUrl.isEmpty() && !profileUrl.equals("null")) {
+                com.bumptech.glide.Glide.with(this)
+                        .load(profileUrl)
+                        .placeholder(R.drawable.bg_avatar)
+                        .error(R.drawable.bg_avatar)
+                        .circleCrop()
+                        .into(avatar);
+            } else {
+                avatar.setBackgroundResource(R.drawable.bg_avatar);
+                avatar.setImageDrawable(null);
+            }
+            card.addView(avatar);
+
+            LinearLayout textContainer = new LinearLayout(this);
+            textContainer.setOrientation(LinearLayout.VERTICAL);
+            textContainer.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
             TextView tvName = new TextView(this);
             tvName.setText(tech.optString("name", "Tech"));
             tvName.setTextColor(Color.parseColor("#101416"));
             tvName.setTypeface(null, Typeface.BOLD);
             tvName.setTextSize(13);
-            card.addView(tvName);
+            textContainer.addView(tvName);
 
             String spec = tech.optString("specialization", "");
             TextView tvEmail = new TextView(this);
             tvEmail.setText(spec.isEmpty() ? tech.optString("email", "") : tech.optString("email", "") + " • " + spec);
             tvEmail.setTextColor(Color.parseColor("#68747A"));
             tvEmail.setTextSize(12);
-            card.addView(tvEmail);
+            textContainer.addView(tvEmail);
+
+            card.addView(textContainer);
+
+            String status = tech.optString("status", "ACTIVE");
+            if ("SUSPENDED".equals(status)) {
+                TextView tvBadge = new TextView(this);
+                tvBadge.setText("Suspended");
+                tvBadge.setTextSize(10);
+                tvBadge.setTypeface(null, Typeface.BOLD);
+                tvBadge.setTextColor(Color.WHITE);
+                tvBadge.setBackgroundColor(Color.parseColor("#9CA3AF"));
+                tvBadge.setPadding(12, 4, 12, 4);
+                card.addView(tvBadge);
+            }
 
             techniciansListContainer.addView(card);
         }
