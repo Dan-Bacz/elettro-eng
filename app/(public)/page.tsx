@@ -96,7 +96,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {SERVICES.slice(0, 6).map((service) => (
               <ServiceCard key={service.slug} service={service}
-                imageUrl={service.slug === "electrical-installation" ? "/installation.png" : service.slug === "electrical-maintenance" ? "/maintenance.png" : service.slug === "electrical-repair" ? "/repair.png" : service.slug === "lighting-solutions" ? "/light.jpg" : undefined} />
+                imageUrl={service.slug === "electrical-installation" ? "/installation.png" : service.slug === "electrical-maintenance" ? "/maintenance.png" : service.slug === "electrical-repair" ? "/repair.png" : service.slug === "lighting-solutions" ? "/light.jpg" : service.slug === "industrial-electrical-works" ? "/industrial.jpg" : undefined} />
             ))}
           </div>
         </div>
