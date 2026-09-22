@@ -36,7 +36,8 @@ export default function ServicesPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {SERVICES.map((service) => (
-              <ServiceCard key={service.slug} service={service} />
+              <ServiceCard key={service.slug} service={service}
+                imageUrl={service.slug === "electrical-installation" ? "/installation.png" : undefined} />
             ))}
           </div>
         </div>
