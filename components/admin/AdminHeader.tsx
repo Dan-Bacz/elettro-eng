@@ -79,10 +79,10 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#2a3138] bg-[#0b0f10] px-4 sm:px-6">
       <div>
-        <h1 className="text-sm sm:text-base font-black text-slate-900">{title}</h1>
-        <p className="hidden sm:block text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
+        <h1 className="text-sm sm:text-base font-black text-[#f5f7fa]">{title}</h1>
+        <p className="hidden sm:block text-[10px] uppercase tracking-widest text-[#77848f] font-semibold">
           Elettro Engineering Enterprises
         </p>
       </div>
@@ -92,49 +92,49 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
         <div className="relative" ref={panelRef}>
           <button
             onClick={togglePanel}
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-[#2a3138] bg-[#0b0f10] text-[#a7b1bc] hover:bg-[#141a1f] transition-colors"
             aria-label="Notifications"
           >
             <span className="text-lg leading-none">🔔</span>
             {unreadCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-black text-black">
+              <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#f5c400] px-1 text-[10px] font-black text-black">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>
 
           {panelOpen && (
-            <div className="absolute right-0 mt-2 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white shadow-2xl z-50">
-              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-                <div className="text-sm font-black text-slate-900">Notifications</div>
+            <div className="absolute right-0 mt-2 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-[#2a3138] bg-[#0f1419] shadow-2xl z-50">
+              <div className="flex items-center justify-between border-b border-[#2a3138] px-4 py-3">
+                <div className="text-sm font-black text-[#f5f7fa]">Notifications</div>
                 <button
                   onClick={() => markRead()}
-                  className="text-[11px] font-bold text-yellow-600 hover:underline"
+                  className="text-[11px] font-bold text-[#f5c400] hover:underline"
                 >
                   Mark all read
                 </button>
               </div>
               <div className="max-h-80 overflow-y-auto">
-                {loadingN && <div className="p-6 text-center text-xs text-slate-400">Loading…</div>}
+                {loadingN && <div className="p-6 text-center text-xs text-[#77848f]">Loading…</div>}
                 {!loadingN && notifications.length === 0 && (
-                  <div className="p-6 text-center text-xs text-slate-400">No notifications yet</div>
+                  <div className="p-6 text-center text-xs text-[#77848f]">No notifications yet</div>
                 )}
                 {!loadingN &&
                   notifications.slice(0, 8).map((n) => (
-                    <div key={n.id} className={`border-b border-slate-50 px-4 py-3 ${n.read ? 'opacity-60' : 'bg-yellow-50/40'}`}>
+                    <div key={n.id} className={`border-b border-[#1a2029] px-4 py-3 ${n.read ? 'opacity-60' : 'bg-[#f5c400]/5'}`}>
                       <div className="flex items-start justify-between gap-2">
-                        <div className="text-xs font-bold text-slate-800">{n.title}</div>
+                        <div className="text-xs font-bold text-[#e5e9ee]">{n.title}</div>
                         {!n.read && (
-                          <button onClick={() => markRead(n.id)} className="text-[10px] font-bold text-yellow-600 hover:underline shrink-0">
+                          <button onClick={() => markRead(n.id)} className="text-[10px] font-bold text-[#f5c400] hover:underline shrink-0">
                             Mark read
                           </button>
                         )}
                       </div>
-                      {n.message && <div className="mt-1 text-xs text-slate-500">{n.message}</div>}
-                      <div className="mt-1 text-[10px] text-slate-400">
+                      {n.message && <div className="mt-1 text-xs text-[#a7b1bc]">{n.message}</div>}
+                      <div className="mt-1 text-[10px] text-[#77848f]">
                         {new Date(n.createdAt).toLocaleString()}
                         {n.link && (
-                          <Link href={n.link} className="ml-2 font-bold text-yellow-700 hover:underline">
+                          <Link href={n.link} className="ml-2 font-bold text-[#f5c400] hover:underline">
                             Open →
                           </Link>
                         )}
@@ -142,8 +142,8 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
                     </div>
                   ))}
               </div>
-              <div className="border-t border-slate-100 p-2">
-                <Link href="/admin/notifications" onClick={() => setPanelOpen(false)} className="block text-center text-xs font-bold text-slate-600 hover:text-yellow-600 py-1.5">
+              <div className="border-t border-[#2a3138] p-2">
+                <Link href="/admin/notifications" onClick={() => setPanelOpen(false)} className="block text-center text-xs font-bold text-[#a7b1bc] hover:text-[#f5c400] py-1.5">
                   View all notifications
                 </Link>
               </div>
@@ -155,20 +155,20 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
         <div className="flex items-center gap-2 sm:gap-3">
           {user.profileImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.profileImageUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-slate-200" />
+            <img src={user.profileImageUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-[#2a3138]" />
           ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black text-yellow-400 text-sm font-black">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f5c400] text-black text-sm font-black">
               {(user.name || 'A').charAt(0).toUpperCase()}
             </div>
           )}
           <div className="hidden md:block">
-            <div className="text-xs font-black text-slate-900 leading-tight">{user.name}</div>
-            <div className="text-[10px] text-slate-400 font-medium">Administrator</div>
+            <div className="text-xs font-black text-[#f5f7fa] leading-tight">{user.name}</div>
+            <div className="text-[10px] text-[#77848f] font-medium">Administrator</div>
           </div>
           <button
             onClick={handleLogout}
             disabled={loggingOut}
-            className="ml-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-slate-500 hover:bg-red-50 hover:text-red-600 border border-slate-200 transition-colors"
+            className="ml-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-[#a7b1bc] hover:bg-red-950/50 hover:text-red-400 border border-[#2a3138] transition-colors"
           >
             {loggingOut ? '…' : 'Logout'}
           </button>
