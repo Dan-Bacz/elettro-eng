@@ -39,7 +39,7 @@ export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boole
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex h-full flex-col bg-[#0b0f10] text-gray-300 transition-all duration-300 ${
+      className={`fixed inset-y-0 left-0 z-40 flex h-full flex-col border-r border-[#2a3138] bg-[#0b0f10] text-gray-300 transition-all duration-300 ${
         collapsed ? 'w-[68px]' : 'w-[260px]'
       }`}
     >
