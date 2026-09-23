@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import { uploadToCloudinary } from '../../../lib/cloudinary'
 import { sendBookingSubmittedNotification } from '../../../lib/email'
+import { sendTextbeeSms, BOOKING_SUBMITTED_SMS_MESSAGE } from '../../../lib/textbee'
 
 const prisma = new PrismaClient()
 
@@ -106,6 +107,9 @@ export default async function handler(req: any, res: any) {
       preferredTime: preferredTime ? String(preferredTime).trim() : undefined,
       address: projectLocation ? String(projectLocation).trim() : undefined,
     })
+
+    // Notify the client by SMS via the TextBee Android gateway (non-blocking failure)
+    void sendTextbeeSms(phone ? String(phone).trim() : null, BOOKING_SUBMITTED_SMS_MESSAGE)
 
     return res.status(201).json({
       ok: true,
