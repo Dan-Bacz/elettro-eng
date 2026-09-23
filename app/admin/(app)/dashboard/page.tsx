@@ -77,23 +77,21 @@ export default function AdminDashboardPage() {
     <div className="space-y-6">
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        <StatCard label="Total Bookings" value={stats.totalBookings} icon="🧾" accent="yellow" href="/admin/bookings" />
-        <StatCard label="Pending" value={stats.pending} icon="⏳" accent="blue" href="/admin/bookings" hint="Awaiting approval" />
-        <StatCard label="In Progress" value={stats.inProgress} icon="🛠️" accent="violet" href="/admin/projects" />
-        <StatCard label="Completed" value={stats.completed} icon="✅" accent="green" href="/admin/projects" />
+        <StatCard label="Total Bookings" value={stats.totalBookings} href="/admin/bookings" />
+        <StatCard label="Pending" value={stats.pending} href="/admin/bookings" hint="Awaiting approval" />
+        <StatCard label="In Progress" value={stats.inProgress} href="/admin/projects" />
+        <StatCard label="Completed" value={stats.completed} href="/admin/projects" />
       </div>
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        <StatCard label="Active Technicians" value={stats.technicians} icon="👷" accent="slate" href="/admin/technicians" />
+        <StatCard label="Active Technicians" value={stats.technicians} href="/admin/technicians" />
         <StatCard
           label="Pending Registrations"
           value={stats.pendingRegistrations}
-          icon="📋"
-          accent={pendingRegs > 0 ? 'red' : 'slate'}
           href="/admin/registrations"
           hint={pendingRegs > 0 ? `${pendingRegs} need review` : 'All clear'}
         />
-        <StatCard label="Clients" value={stats.clients} icon="👥" accent="blue" href="/admin/clients" />
-        <StatCard label="Low Stock Items" value={stats.lowStock} icon="📦" accent={stats.lowStock > 0 ? 'red' : 'green'} href="/admin/inventory" />
+        <StatCard label="Clients" value={stats.clients} href="/admin/clients" />
+        <StatCard label="Low Stock Items" value={stats.lowStock} href="/admin/inventory" />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

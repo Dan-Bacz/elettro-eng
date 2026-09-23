@@ -1617,7 +1617,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             fromSel[0] = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d);
             tvFrom.setText("From:  " + fromSel[0]);
             updateLeaveDays(fromSel[0], toSel[0], tvDays);
-        }, tvFrom));
+        }));
         layout.addView(tvFrom);
 
         TextView tvTo = new TextView(this);
@@ -1630,7 +1630,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             toSel[0] = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d);
             tvTo.setText("To:  " + toSel[0]);
             updateLeaveDays(fromSel[0], toSel[0], tvDays);
-        }, tvTo));
+        }));
         layout.addView(tvTo);
 
         layout.addView(tvDays);
@@ -1675,7 +1675,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void pickDate(android.content.DialogInterface.OnDateSetListener listener, TextView target) {
+    private void pickDate(android.app.DatePickerDialog.OnDateSetListener listener) {
         Calendar c = Calendar.getInstance();
         new DatePickerDialog(this, listener, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
     }
