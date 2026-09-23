@@ -2,18 +2,19 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { GridIcon, InboxIcon, HammerIcon, CalendarIcon, UserPlusIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon } from './icons'
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', icon: '▣', href: '/admin/dashboard' },
-  { key: 'bookings', label: 'Bookings', icon: '🧾', href: '/admin/bookings' },
-  { key: 'projects', label: 'Projects', icon: '🛠️', href: '/admin/projects' },
-  { key: 'leave', label: 'Leave Requests', icon: '🗓️', href: '/admin/leave' },
-  { key: 'registrations', label: 'Registrations', icon: '📋', href: '/admin/registrations' },
-  { key: 'inventory', label: 'Inventory', icon: '📦', href: '/admin/inventory' },
-  { key: 'technicians', label: 'Technicians', icon: '👷', href: '/admin/technicians' },
-  { key: 'reports', label: 'Reports', icon: '📊', href: '/admin/reports' },
-  { key: 'notifications', label: 'Notifications', icon: '🔔', href: '/admin/notifications' },
-  { key: 'settings', label: 'Settings', icon: '⚙️', href: '/admin/settings' },
+  { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/admin/dashboard' },
+  { key: 'bookings', label: 'Bookings', icon: InboxIcon, href: '/admin/bookings' },
+  { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
+  { key: 'leave', label: 'Leave Requests', icon: CalendarIcon, href: '/admin/leave' },
+  { key: 'registrations', label: 'Registrations', icon: UserPlusIcon, href: '/admin/registrations' },
+  { key: 'inventory', label: 'Inventory', icon: PackageIcon, href: '/admin/inventory' },
+  { key: 'technicians', label: 'Technicians', icon: UsersIcon, href: '/admin/technicians' },
+  { key: 'reports', label: 'Reports', icon: BarChartIcon, href: '/admin/reports' },
+  { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/admin/notifications' },
+  { key: 'settings', label: 'Settings', icon: GearIcon, href: '/admin/settings' },
 ]
 
 export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
@@ -97,7 +98,9 @@ export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boole
                 active ? 'bg-yellow-400 text-black shadow-md shadow-yellow-400/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center text-base leading-none">{item.icon}</span>
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                {<item.icon className="h-[18px] w-[18px]" />}
+              </span>
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           )
@@ -112,7 +115,9 @@ export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boole
           title={collapsed ? 'Logout' : undefined}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
         >
-          <span className="flex h-5 w-5 shrink-0 items-center justify-center text-base leading-none">⎋</span>
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+            <LogoutIcon className="h-[18px] w-[18px]" />
+          </span>
           {!collapsed && <span className="truncate">{loggingOut ? 'Signing out…' : 'Logout'}</span>}
         </button>
       </div>

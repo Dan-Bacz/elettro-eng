@@ -255,3 +255,25 @@ export function NoteIcon(props: IconProps) {
     </>
   )
 }
+
+export function GridIcon(props: IconProps) {
+  return base(
+    props,
+    <>
+      <rect x="4" y="4" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13" width="7" height="7" rx="1.5" />
+      <rect x="13" y="13" width="7" height="7" rx="1.5" />
+    </>
+  )
+}
+
+export function LogoutIcon(props: IconProps) {
+  return base(
+    props,
+    <>
+      <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+      <path d="M10 8l-4 4 4 4M6 12h10" />
+    </>
+  )
+}
