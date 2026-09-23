@@ -90,7 +90,12 @@ export default async function handler(req, res) {
       value: bookings.filter((b) => b.status === status).length
     }))
 
-    const recentBookings = bookings.slice(0, 5).map((booking) => ({
+    // Approved bookings become projects, so the "recent bookings" widget on the
+    // dashboard only surfaces incoming (pending) requests.
+    const recentBookings = bookings
+      .filter((b) => b.status === 'PENDING')
+      .slice(0, 5)
+      .map((booking) => ({
       id: booking.id,
       title: booking.title,
       status: booking.status,

@@ -596,10 +596,10 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             if (b == null) continue;
             String status = b.optString("status", "");
             boolean isActive = "ASSIGNED".equals(status) || "IN_PROGRESS".equals(status);
-            boolean isCompleted = "COMPLETED".equals(status);
+            boolean isClosed = "COMPLETED".equals(status) || "CANCELLED".equals(status);
 
             if ("ACTIVE".equals(currentJobsTab) && !isActive) continue;
-            if ("COMPLETED".equals(currentJobsTab) && !isCompleted) continue;
+            if ("COMPLETED".equals(currentJobsTab) && !isClosed) continue;
             any = true;
 
             String jobId = b.optString("id");
@@ -665,6 +665,17 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 complete.setLayoutParams(cp);
                 complete.setOnClickListener(v -> confirmCompleteJob(jobId));
                 actionRow.addView(complete);
+            }
+
+            if ("ASSIGNED".equals(status) || "IN_PROGRESS".equals(status)) {
+                Button cancel = createButton("Cancel Job", R.drawable.bg_action_outline);
+                cancel.setTextColor(Color.parseColor("#DC2626"));
+                LinearLayout.LayoutParams cc = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                cc.setMarginStart(8);
+                cancel.setLayoutParams(cc);
+                cancel.setOnClickListener(v -> confirmCancelJob(jobId));
+                actionRow.addView(cancel);
             }
 
             if ("COMPLETED".equals(status)) {
@@ -792,6 +803,15 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 .setMessage("Confirm this job is complete?")
                 .setPositiveButton("Complete", (d, w) -> updateJobStatus(jobId, "COMPLETED"))
                 .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void confirmCancelJob(String jobId) {
+        new AlertDialog.Builder(this)
+                .setTitle("Cancel Project")
+                .setMessage("Cancel this project? The client will be notified and the project will be closed.")
+                .setPositiveButton("Cancel Project", (d, w) -> updateJobStatus(jobId, "CANCELLED"))
+                .setNegativeButton("Keep Job", null)
                 .show();
     }
 

@@ -93,9 +93,14 @@ export default async function handler(req: any, res: any) {
           }
         }
 
-        if (user.role === 'ADMIN' && teamCount > 0) {
+        if (user.role === 'ADMIN') {
           const requested = status ? String(status) : bookingRow.status
-          if (requested !== bookingRow.status) {
+          // Once a project is running or finished (in progress / completed / cancelled) the
+          // technicians own its status. Admin may still update an approved project before work starts.
+          if ((bookingRow.status === 'IN_PROGRESS' || bookingRow.status === 'COMPLETED' || bookingRow.status === 'CANCELLED') && requested !== bookingRow.status) {
+            return res.status(403).json({ error: `This project is "${bookingRow.status.replace('_', ' ')}" and is managed by the assigned technicians. You can only change status while the project is approved.` })
+          }
+          if (teamCount > 0 && requested !== bookingRow.status) {
             return res.status(403).json({ error: 'Project status is managed by the assigned technicians once technicians are assigned. Technicians report progress from their dashboard.' })
           }
         }

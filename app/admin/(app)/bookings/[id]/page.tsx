@@ -103,10 +103,6 @@ export default function AdminBookingDetailPage() {
     }
   }
 
-  async function handleUnassign() {
-    await post('assign', { assignToId: null })
-  }
-
   if (loading) {
     return <div className="h-72 animate-pulse rounded-2xl bg-slate-200/70" />
   }
@@ -263,20 +259,11 @@ export default function AdminBookingDetailPage() {
                 </select>
                 <button
                   onClick={handleTeamAdd}
-                  disabled={busy || !techId}
+                  disabled={busy || !techId || booking.status === 'COMPLETED' || booking.status === 'CANCELLED'}
                   className="w-full rounded-xl bg-black px-4 py-2.5 text-xs font-bold text-yellow-400 hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
                   {teamMembers.length > 0 ? 'Add Technician to Project' : 'Assign First Technician'}
                 </button>
-                {teamMembers.length > 0 && (
-                  <button
-                    onClick={handleUnassign}
-                    disabled={busy}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50"
-                  >
-                    Remove all technicians (back to approved)
-                  </button>
-                )}
               </div>
             </div>
           )}
@@ -285,10 +272,10 @@ export default function AdminBookingDetailPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="text-sm font-black text-slate-900">Project Status</h2>
             {teamLocked ? (
-              <p className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 leading-relaxed">
-                Technicians are assigned to this project. Status is updated by the assigned technicians as they report
-                progress (in progress → completed). You can still update the budget below.
-              </p>
+<p className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 leading-relaxed">
+                  Technicians are assigned to this project. Status (in progress → completed / cancelled) is managed
+                  by the assigned technicians from their dashboard. You can only add technicians and update the budget.
+                </p>
             ) : (
               <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400">
                 {BOOKING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}

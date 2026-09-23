@@ -10,7 +10,7 @@ import EmptyState from '../../../../components/admin/EmptyState'
 import { statusProgress, formatDate } from '../../../../components/admin/types'
 import type { BookingObj } from '../../../../components/admin/types'
 
-type Filter = 'ALL' | 'APPROVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED'
+type Filter = 'ALL' | 'APPROVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
@@ -18,9 +18,10 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ASSIGNED', label: 'Assigned' },
   { value: 'IN_PROGRESS', label: 'In Progress' },
   { value: 'COMPLETED', label: 'Completed' },
+  { value: 'CANCELLED', label: 'Cancelled' },
 ]
 
-const PROJECT_STATUSES = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED']
+const PROJECT_STATUSES = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
 
 export default function AdminProjectsPage() {
   const router = useRouter()

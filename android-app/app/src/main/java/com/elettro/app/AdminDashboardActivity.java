@@ -358,17 +358,18 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         filterAll.setOnClickListener(v -> { currentBookingFilter = "ALL"; updateFilterChips(); renderBookingsList(); });
         filterPending.setOnClickListener(v -> { currentBookingFilter = "PENDING"; updateFilterChips(); renderBookingsList(); });
-        filterApproved.setOnClickListener(v -> { currentBookingFilter = "APPROVED"; updateFilterChips(); renderBookingsList(); });
-        filterAssigned.setOnClickListener(v -> { currentBookingFilter = "ASSIGNED"; updateFilterChips(); renderBookingsList(); });
-        filterCompleted.setOnClickListener(v -> { currentBookingFilter = "COMPLETED"; updateFilterChips(); renderBookingsList(); });
+        // Approved bookings are projects (see the Projects section), so these chips are hidden.
+        filterApproved.setVisibility(View.GONE);
+        filterAssigned.setVisibility(View.GONE);
+        filterCompleted.setVisibility(View.GONE);
     }
 
     private void updateFilterChips() {
         int selectedColor = Color.parseColor("#0B0F10");
         int defaultText = Color.parseColor("#68747A");
 
-        Button[] chips = {filterAll, filterPending, filterApproved, filterAssigned, filterCompleted};
-        String[] keys = {"ALL", "PENDING", "APPROVED", "ASSIGNED", "COMPLETED"};
+        Button[] chips = {filterAll, filterPending};
+        String[] keys = {"ALL", "PENDING"};
 
         for (int i = 0; i < chips.length; i++) {
             if (keys[i].equals(currentBookingFilter)) {
@@ -606,10 +607,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
             showEmpty(recentBookingsContainer, R.string.no_recent_bookings);
             return;
         }
-        int count = Math.min(5, bookingsArray.length());
-        for (int i = 0; i < count; i++) {
+        int shown = 0;
+        for (int i = 0; i < bookingsArray.length() && shown < 5; i++) {
             JSONObject b = bookingsArray.optJSONObject(i);
             if (b == null) continue;
+            // Approved bookings become projects — the recent list shows incoming requests.
+            if (!"PENDING".equals(b.optString("status", "PENDING"))) continue;
+            shown++;
 
             String title = b.optString("title", "Service Request");
             String status = b.optString("status", "PENDING");
@@ -690,7 +694,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (b == null) continue;
 
             String status = b.optString("status", "PENDING");
-            if (!"ALL".equals(currentBookingFilter) && !status.equalsIgnoreCase(currentBookingFilter)) continue;
+            // Only pending bookings appear here — approved ones become projects (see the Projects section).
+            if (!"PENDING".equals(status)) continue;
+            if (!"ALL".equals(currentBookingFilter) && !"PENDING".equalsIgnoreCase(currentBookingFilter)) continue;
 
             String bookingId = b.optString("id");
             String title = b.optString("title", "Booking Request");
@@ -737,7 +743,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 actionRow.addView(btnApprove);
             }
 
-            if ("PENDING".equals(status) || "APPROVED".equals(status)) {
+            if ("PENDING".equals(status)) {
                 Button btnDecline = createSmallButton("Decline", Color.parseColor("#DC2626"));
                 LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -746,14 +752,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 btnDecline.setOnClickListener(v -> declineBookingDialog(bookingId, title));
                 actionRow.addView(btnDecline);
             }
-
-            Button btnAssign = createYellowSmallButton("Assign Tech");
-            LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            p.setMarginStart(8);
-            btnAssign.setLayoutParams(p);
-            btnAssign.setOnClickListener(v -> showAssignTechDialog(bookingId, title));
-            actionRow.addView(btnAssign);
 
             card.addView(actionRow);
             bookingsListContainer.addView(card);
@@ -1345,7 +1343,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         final String finalStatus = status;
         if (bookingId != null && !bookingId.isEmpty()) {
-            builder.setNeutralButton("Add Technician", (dialog, which) -> showAddTechnicianDialog(bookingId, project));
+            if (!"COMPLETED".equals(finalStatus) && !"CANCELLED".equals(finalStatus)) {
+                builder.setNeutralButton("Add Technician", (dialog, which) -> showAddTechnicianDialog(bookingId, project));
+            }
             if ("APPROVED".equals(finalStatus)) {
                 builder.setNegativeButton("Decline", (dialog, which) -> declineBookingDialog(bookingId, title));
             }
@@ -1447,7 +1447,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (b == null) continue;
             if (b.optString("assignedToId", "").isEmpty()) {
                 String status = b.optString("status", "PENDING");
-                if ("PENDING".equals(status) || "APPROVED".equals(status)) {
+                // Assignment happens on approved projects (they already become projects on approval).
+                if ("APPROVED".equals(status)) {
                     names.add(b.optString("title", "Booking") + " (" + status + ")");
                     ids.add(b.optString("id"));
                 }

@@ -7,20 +7,19 @@ import SearchBar from '../../../../components/admin/SearchBar'
 import FilterBar from '../../../../components/admin/FilterBar'
 import StatusBadge from '../../../../components/admin/StatusBadge'
 import EmptyState from '../../../../components/admin/EmptyState'
-import type { BookingObj, BookingStatusValue } from '../../../../components/admin/types'
+import type { BookingObj } from '../../../../components/admin/types'
 import { formatDate } from '../../../../components/admin/types'
 
-type Filter = BookingStatusValue | 'ALL'
+type Filter = 'PENDING' | 'ALL'
 
+// Bookings are the incoming requests awaiting approval. Once approved they become
+// projects (see the Projects section) and no longer appear here.
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
   { value: 'PENDING', label: 'Under Review' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
 ]
+
+const BOOKINGS_LIST_STATUSES = ['PENDING']
 
 export default function AdminBookingsPage() {
   const router = useRouter()
@@ -40,7 +39,7 @@ export default function AdminBookingsPage() {
           throw new Error('Failed to load bookings')
         }
         const payload = await res.json()
-        if (!cancelled) setBookings(payload.bookings || [])
+        if (!cancelled) setBookings((payload.bookings || []).filter((b: BookingObj) => BOOKINGS_LIST_STATUSES.includes(b.status)))
       } catch (e: any) {
         if (!cancelled) setError(e.message || 'Failed to load bookings')
       } finally {

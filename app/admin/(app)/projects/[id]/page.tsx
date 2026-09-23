@@ -72,10 +72,6 @@ export default function AdminProjectDetailPage() {
     }
   }
 
-  async function handleUnassign() {
-    await post('assign', { assignToId: null })
-  }
-
   async function handleDecline() {
     await post('decline')
     setShowDecline(false)
@@ -157,9 +153,10 @@ export default function AdminProjectDetailPage() {
                 )
               })}
             </div>
-            {teamLocked && booking.status !== 'COMPLETED' && (
+            {teamLocked && booking.status !== 'COMPLETED' && booking.status !== 'CANCELLED' && (
               <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">
-                Status is managed by the assigned technicians as they report progress. An admin can still edit budget and add or remove technicians.
+                Status (in progress → completed / cancelled) is managed by the assigned technicians from their
+                dashboard. You can only add technicians and edit the budget.
               </p>
             )}
           </div>
@@ -228,15 +225,6 @@ export default function AdminProjectDetailPage() {
               >
                 {teamLocked ? 'Add Technician to Project' : 'Assign First Technician'}
               </button>
-              {teamLocked && booking.status !== 'COMPLETED' && booking.status !== 'CANCELLED' && (
-                <button
-                  onClick={handleUnassign}
-                  disabled={busy}
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50"
-                >
-                  Remove all technicians (back to approved)
-                </button>
-              )}
             </div>
           </div>
 
