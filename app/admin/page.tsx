@@ -104,7 +104,6 @@ const navItems = [
   { key: 'registrations', label: 'Registrations', emoji: '📋' },
   { key: 'inventory', label: 'Inventory', emoji: '📦' },
   { key: 'technicians', label: 'Technicians', emoji: '👷' },
-  { key: 'clients', label: 'Clients', emoji: '👥' },
   { key: 'reports', label: 'Reports', emoji: '📊' },
   { key: 'notifications', label: 'Notifications', emoji: '🔔' },
   { key: 'settings', label: 'Settings', emoji: '⚙️' }

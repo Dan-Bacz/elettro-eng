@@ -234,7 +234,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_projects) { showSection("projects"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_more) { showSection("more"); return true; }
-            if (id == R.id.nav_clients) { showSection("clients"); return true; }
             if (id == R.id.nav_technicians) { showSection("technicians"); return true; }
             if (id == R.id.nav_inventory) { showSection("inventory"); return true; }
             if (id == R.id.nav_reports) { showSection("reports"); return true; }
@@ -285,7 +284,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
             case "clients":
                 titleRes = R.string.clients_title;
                 subRes = R.string.clients_subtitle;
-                menuRes = R.id.nav_clients;
+                menuRes = 0;
                 break;
             case "technicians":
                 titleRes = R.string.technicians_title;
@@ -312,7 +311,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         sectionTitle.setText(titleRes);
         sectionSubtitle.setText(subRes);
-        navView.setCheckedItem(menuRes);
+        if (menuRes != 0) {
+            navView.setCheckedItem(menuRes);
+        }
         if (!"notifications".equals(key)) {
             swipeRefresh.post(() -> swipeRefresh.setEnabled(true));
         }

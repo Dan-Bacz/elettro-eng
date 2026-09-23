@@ -24,10 +24,6 @@
             <menu>
                 <group android:checkableBehavior="single" android:id="@+id/nav_group_more">
                     <item
-                        android:id="@+id/nav_clients"
-                        android:icon="@drawable/ic_person"
-                        android:title="@string/drawer_clients" />
-                    <item
                         android:id="@+id/nav_technicians"
                         android:icon="@drawable/ic_people"
                         android:title="@string/drawer_technicians" />
