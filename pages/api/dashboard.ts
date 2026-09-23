@@ -19,18 +19,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    const [bookings, inventory, users] = await Promise.all([
+    const [bookings, inventory, users, projects] = await Promise.all([
       prisma.booking.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
           client: { select: { id: true, name: true, email: true } },
-          assignedTo: { select: { id: true, name: true, email: true } }
+          assignedTo: { select: { id: true, name: true, email: true } },
+          project: {
+            include: { assignments: { include: { tech: { select: { id: true, name: true, email: true } } } } }
+          }
         }
       }),
       prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.user.findMany({
         where: { role: { in: ['ADMIN', 'TECH', 'CLIENT'] } },
         select: { id: true, name: true, email: true, role: true, phone: true, approved: true, status: true, createdAt: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
+      }),
+      prisma.project.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          booking: {
+            select: {
+              id: true,
+              title: true,
+              description: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              budget: true,
+              client: { select: { id: true, name: true, email: true, phone: true } }
+            }
+          },
+          assignments: { include: { tech: { select: { id: true, name: true, email: true } } } }
+        }
       })
     ])
 
@@ -93,6 +114,7 @@ export default async function handler(req, res) {
       recentBookings,
       inventoryAlerts,
       bookings,
+      projects,
       inventory,
       technicians: activeTechs,
       pendingUsers: pendingRegs,

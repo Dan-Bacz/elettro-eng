@@ -61,15 +61,44 @@ export default async function handler(req: any, res: any) {
         if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' })
       }
 
-      // --- Booking lifecycle: approve/assign/delete admin only; TECH may update status on assigned bookings ---
+      // --- Booking lifecycle: approve/assign/decline/delete admin only; TECH may update status on assigned bookings ---
 
-      if (action === 'approve' || action === 'assign' || action === 'delete_booking') {
+      if (action === 'approve' || action === 'assign' || action === 'add_technician' || action === 'decline' || action === 'delete_booking') {
         if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' })
       }
 
-      if (action === 'update_status' && user.role === 'TECH') {
-        const assigned = await prisma.booking.findUnique({ where: { id: bookingId }, select: { assignedToId: true } })
-        if (!assigned || assigned.assignedToId !== user.id) return res.status(403).json({ error: 'Forbidden' })
+      if (action === 'update_status') {
+        const bookingRow = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          select: { assignedToId: true, status: true }
+        })
+        if (!bookingRow) return res.status(404).json({ error: 'Booking not found' })
+
+        const project = await prisma.project.findUnique({
+          where: { bookingId },
+          select: { id: true, status: true }
+        })
+        const teamCount = project
+          ? await prisma.projectAssignment.count({ where: { projectId: project.id } })
+          : 0
+
+        if (user.role === 'TECH') {
+          const isMember = teamCount > 0 && project
+            ? await prisma.projectAssignment.findUnique({
+                where: { projectId_techId: { projectId: project.id, techId: user.id } }
+              })
+            : null
+          if (bookingRow.assignedToId !== user.id && !isMember) {
+            return res.status(403).json({ error: 'You can only update status on projects assigned to you' })
+          }
+        }
+
+        if (user.role === 'ADMIN' && teamCount > 0) {
+          const requested = status ? String(status) : bookingRow.status
+          if (requested !== bookingRow.status) {
+            return res.status(403).json({ error: 'Project status is managed by the assigned technicians once technicians are assigned. Technicians report progress from their dashboard.' })
+          }
+        }
       }
 
       if (action === 'approve_user') {
@@ -128,13 +157,45 @@ export default async function handler(req: any, res: any) {
           data: { status: 'APPROVED' },
           include: { client: true, assignedTo: true }
         })
+        // Approving a booking automatically creates its project
+        const existingProject = await prisma.project.findUnique({ where: { bookingId } })
+        if (!existingProject) {
+          await prisma.project.create({
+            data: {
+              bookingId,
+              title: b.title,
+              description: b.description,
+              startDate: b.startDate,
+              endDate: b.endDate,
+              status: 'APPROVED'
+            }
+          })
+        } else {
+          await prisma.project.update({
+            where: { bookingId },
+            data: { title: b.title, description: b.description, startDate: b.startDate, endDate: b.endDate, status: 'APPROVED' }
+          })
+        }
+        if (b.clientId) {
+          await notifyUser(b.clientId, 'BOOKING', 'Booking Approved', `Your booking "${b.title}" has been approved and converted into a project.`, '/client')
+        }
         return res.json(b)
       }
 
       if (action === 'assign') {
-        const dataToUpdate: any = {
-          assignedToId: assignToId || null,
-          status: assignToId ? 'ASSIGNED' : 'APPROVED'
+        const booking = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          select: { assignedToId: true, title: true, description: true, startDate: true, endDate: true }
+        })
+        if (!booking) return res.status(404).json({ error: 'Booking not found' })
+
+        const dataToUpdate: any = {}
+        if (assignToId) {
+          dataToUpdate.assignedToId = booking.assignedToId || assignToId
+          dataToUpdate.status = 'ASSIGNED'
+        } else {
+          dataToUpdate.assignedToId = null
+          dataToUpdate.status = 'APPROVED'
         }
         if (startDate) dataToUpdate.startDate = new Date(startDate)
         if (endDate) dataToUpdate.endDate = new Date(endDate)
@@ -144,11 +205,112 @@ export default async function handler(req: any, res: any) {
           data: dataToUpdate,
           include: { client: true, assignedTo: true }
         })
-        if (assignToId && status) {
-          await prisma.booking.update({ where: { id: bookingId }, data: { status } })
-        }
+
+        const project = await prisma.project.upsert({
+          where: { bookingId },
+          update: {
+            title: booking.title,
+            description: booking.description,
+            startDate: dataToUpdate.startDate,
+            endDate: dataToUpdate.endDate,
+            status: assignToId ? 'ASSIGNED' : 'APPROVED'
+          },
+          create: {
+            bookingId,
+            title: booking.title,
+            description: booking.description,
+            startDate: dataToUpdate.startDate || null,
+            endDate: dataToUpdate.endDate || null,
+            status: assignToId ? 'ASSIGNED' : 'APPROVED'
+          }
+        })
+
         if (assignToId) {
+          await prisma.projectAssignment.upsert({
+            where: { projectId_techId: { projectId: project.id, techId: assignToId } },
+            update: {},
+            create: { projectId: project.id, techId: assignToId }
+          })
           await notifyUser(assignToId, 'ASSIGNMENT', 'New Job Assigned', `You have been assigned to "${b.title}".`, '/technician/dashboard')
+        } else {
+          await prisma.projectAssignment.deleteMany({ where: { projectId: project.id } })
+        }
+        return res.json(b)
+      }
+
+      if (action === 'add_technician') {
+        if (!assignToId) return res.status(400).json({ error: 'Technician is required' })
+        const booking = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          select: { assignedToId: true, title: true, description: true, startDate: true, endDate: true, status: true, clientId: true }
+        })
+        if (!booking) return res.status(404).json({ error: 'Booking not found' })
+        if (booking.status === 'COMPLETED' || booking.status === 'CANCELLED') {
+          return res.status(400).json({ error: 'Technicians cannot be added to a finished project.' })
+        }
+
+        const project = await prisma.project.upsert({
+          where: { bookingId },
+          update: { title: booking.title, description: booking.description },
+          create: {
+            bookingId,
+            title: booking.title,
+            description: booking.description,
+            startDate: booking.startDate || null,
+            endDate: booking.endDate || null,
+            status: 'ASSIGNED'
+          }
+        })
+
+        const exists = await prisma.projectAssignment.findUnique({
+          where: { projectId_techId: { projectId: project.id, techId: assignToId } }
+        })
+        if (!exists) {
+          await prisma.projectAssignment.create({ data: { projectId: project.id, techId: assignToId } })
+        }
+
+        const b = await prisma.booking.update({
+          where: { id: bookingId },
+          data: {
+            assignedToId: booking.assignedToId || assignToId,
+            ...(booking.status === 'PENDING' || booking.status === 'APPROVED' ? { status: 'ASSIGNED' } : {})
+          },
+          include: { client: true, assignedTo: true }
+        })
+
+        if (project.status === 'APPROVED') {
+          await prisma.project.update({ where: { id: project.id }, data: { status: 'ASSIGNED' } })
+        }
+        await notifyUser(assignToId, 'ASSIGNMENT', 'Added to Project Team', `You have been added to the project team for "${b.title}".`, '/technician/dashboard')
+        return res.json(b)
+      }
+
+      if (action === 'decline') {
+        const booking = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          select: { status: true, title: true, clientId: true, client: true }
+        })
+        if (!booking) return res.status(404).json({ error: 'Booking not found' })
+        if (booking.status !== 'PENDING' && booking.status !== 'APPROVED') {
+          return res.status(400).json({ error: 'Only pending or approved bookings can be declined.' })
+        }
+        const project = await prisma.project.findUnique({ where: { bookingId }, select: { id: true } })
+        if (project) {
+          const teamCount = await prisma.projectAssignment.count({ where: { projectId: project.id } })
+          if (teamCount > 0) {
+            return res.status(400).json({ error: 'This project already has assigned technicians and cannot be declined.' })
+          }
+        }
+        const b = await prisma.booking.update({
+          where: { id: bookingId },
+          data: { status: 'CANCELLED' },
+          include: { client: true, assignedTo: true }
+        })
+        if (project) {
+          await prisma.project.update({ where: { bookingId }, data: { status: 'CANCELLED' } })
+        }
+        if (booking.clientId) {
+          await notifyUser(booking.clientId, 'BOOKING', 'Booking Declined', `Your booking "${booking.title}" was declined by our team. Please contact us for details.`, '/client')
         }
         return res.json(b)
       }
@@ -159,6 +321,10 @@ export default async function handler(req: any, res: any) {
           data: { status, ...(typeof req.body.budget !== 'undefined' ? { budget: req.body.budget ? Number(req.body.budget) : null } : {}) },
           include: { client: true, assignedTo: true }
         })
+        const projectExists = await prisma.project.findUnique({ where: { bookingId }, select: { id: true } })
+        if (projectExists) {
+          await prisma.project.update({ where: { bookingId }, data: { status } })
+        }
         if (b.assignedToId) {
           await notifyUser(b.assignedToId, 'ASSIGNMENT', `Booking status updated to ${status}`, `"${b.title}" is now ${status}.`, '/technician/dashboard')
         }
@@ -166,6 +332,7 @@ export default async function handler(req: any, res: any) {
       }
 
       if (action === 'delete_booking') {
+        await prisma.project.deleteMany({ where: { bookingId } })
         await prisma.technicianActivity.deleteMany({ where: { bookingId } })
         await prisma.report.deleteMany({ where: { bookingId } })
         await prisma.booking.delete({ where: { id: bookingId } })

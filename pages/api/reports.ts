@@ -58,7 +58,12 @@ export default async function handler(req: any, res: any) {
       const booking = await prisma.booking.findUnique({ where: { id: String(bookingId) }, select: { id: true, assignedToId: true, title: true } })
       if (!booking) return res.status(404).json({ error: 'Booking not found' })
       if (user.role === 'TECH' && booking.assignedToId !== user.id) {
-        return res.status(403).json({ error: 'You can only report on your assigned projects' })
+        const isMember = await prisma.projectAssignment.findFirst({
+          where: { project: { bookingId: booking.id }, techId: user.id }
+        })
+        if (!isMember) {
+          return res.status(403).json({ error: 'You can only report on your assigned projects' })
+        }
       }
 
       const newReport = await prisma.report.create({
@@ -83,6 +88,7 @@ export default async function handler(req: any, res: any) {
         const current = await prisma.booking.findUnique({ where: { id: booking.id }, select: { status: true } })
         if (current && current.status !== 'COMPLETED' && current.status !== 'IN_PROGRESS') {
           await prisma.booking.update({ where: { id: booking.id }, data: { status: 'IN_PROGRESS' } }).catch(() => {})
+          await prisma.project.update({ where: { bookingId: booking.id }, data: { status: 'IN_PROGRESS' } }).catch(() => {})
         }
       }
 

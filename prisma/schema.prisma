@@ -29,6 +29,7 @@ model User {
   technicianActivities TechnicianActivity[]
   notifications Notification[]
   materialRequests MaterialRequest[]
+  projectAssignments ProjectAssignment[]
 }
 
 model Booking {
@@ -47,6 +48,35 @@ model Booking {
   technicianActivities TechnicianActivity[]
   reports   Report[]
   materialRequests MaterialRequest[]
+  project   Project?
+}
+
+// A project is created automatically when a booking is approved.
+// Technicians are assigned to the project team; project status is driven by
+// technician reporting once the team has been assigned.
+model Project {
+  id          String   @id @default(uuid())
+  bookingId   String   @unique
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      BookingStatus @default(ASSIGNED)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  assignments ProjectAssignment[]
+}
+
+model ProjectAssignment {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  techId    String
+  tech      User     @relation(fields: [techId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, techId])
 }
 
 model TechnicianActivity {

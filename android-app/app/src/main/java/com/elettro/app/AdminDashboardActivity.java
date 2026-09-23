@@ -104,6 +104,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private JSONArray reportsArray;
     private JSONArray pendingUsersArray;
     private JSONArray notificationsArray;
+    private JSONArray projectsArray;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -395,6 +396,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     techniciansArray = dashboardData.optJSONArray("technicians");
                     clientsArray = dashboardData.optJSONArray("clients");
                     pendingUsersArray = dashboardData.optJSONArray("pendingUsers");
+                    projectsArray = dashboardData.optJSONArray("projects");
                 }
 
                 String reportsResp = ApiClient.get("/reports");
@@ -735,6 +737,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 actionRow.addView(btnApprove);
             }
 
+            if ("PENDING".equals(status) || "APPROVED".equals(status)) {
+                Button btnDecline = createSmallButton("Decline", Color.parseColor("#DC2626"));
+                LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                dp.setMarginStart(8);
+                btnDecline.setLayoutParams(dp);
+                btnDecline.setOnClickListener(v -> declineBookingDialog(bookingId, title));
+                actionRow.addView(btnDecline);
+            }
+
             Button btnAssign = createYellowSmallButton("Assign Tech");
             LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
@@ -752,54 +764,109 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
     private void renderProjectsList() {
         projectsListContainer.removeAllViews();
-        if (bookingsArray == null) return;
+        if (bookingsArray == null && projectsArray == null) return;
 
         boolean hasProjects = false;
-        for (int i = 0; i < bookingsArray.length(); i++) {
-            JSONObject b = bookingsArray.optJSONObject(i);
-            if (b == null) continue;
-            String status = b.optString("status", "");
-            if (!("ASSIGNED".equals(status) || "IN_PROGRESS".equals(status) || "COMPLETED".equals(status))) continue;
-            hasProjects = true;
 
-            LinearLayout card = new LinearLayout(this);
-            card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(14, 14, 14, 14);
-            card.setBackgroundResource(R.drawable.bg_card);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(0, 0, 0, 8);
-            card.setLayoutParams(lp);
+        if (projectsArray != null && projectsArray.length() > 0) {
+            for (int i = 0; i < projectsArray.length(); i++) {
+                JSONObject project = projectsArray.optJSONObject(i);
+                if (project == null) continue;
+                JSONObject booking = project.optJSONObject("booking");
+                String status = project.optString("status", "");
+                if (booking != null && !booking.optString("status", "").isEmpty()) {
+                    status = booking.optString("status", status);
+                }
+                if (status.isEmpty()) continue;
+                hasProjects = true;
 
-            TextView tvTitle = new TextView(this);
-            tvTitle.setText(b.optString("title", "Project"));
-            tvTitle.setTextColor(Color.parseColor("#101416"));
-            tvTitle.setTextSize(14);
-            tvTitle.setTypeface(null, Typeface.BOLD);
-            card.addView(tvTitle);
+                final JSONObject finalProject = project;
+                final String finalBookingId = booking != null ? booking.optString("id", "") : "";
 
-            JSONObject techObj = b.optJSONObject("assignedTo");
-            String techName = techObj != null ? techObj.optString("name", "Unassigned") : "Unassigned";
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(14, 14, 14, 14);
+                card.setBackgroundResource(R.drawable.bg_card);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 8);
+                card.setLayoutParams(lp);
+                card.setClickable(true);
+                card.setOnClickListener(v -> showProjectDetailDialog(finalProject, finalBookingId));
 
-            TextView tvInfo = new TextView(this);
-            tvInfo.setText("Tech: " + techName + " • " + status.replace("_", " "));
-            tvInfo.setTextColor(getStatusColor(status));
-            tvInfo.setTextSize(11);
-            tvInfo.setTypeface(null, Typeface.BOLD);
-            tvInfo.setPadding(0, 4, 0, 0);
-            card.addView(tvInfo);
+                String title = booking != null ? booking.optString("title", project.optString("title", "Project")) : project.optString("title", "Project");
 
-            JSONObject clientObj = b.optJSONObject("client");
-            if (clientObj != null) {
-                TextView tvClient = new TextView(this);
-                tvClient.setText("Client: " + clientObj.optString("name", ""));
-                tvClient.setTextColor(Color.parseColor("#68747A"));
-                tvClient.setTextSize(12);
-                tvClient.setPadding(0, 4, 0, 0);
-                card.addView(tvClient);
+                TextView tvTitle = new TextView(this);
+                tvTitle.setText(title);
+                tvTitle.setTextColor(Color.parseColor("#101416"));
+                tvTitle.setTextSize(14);
+                tvTitle.setTypeface(null, Typeface.BOLD);
+                card.addView(tvTitle);
+
+                TextView tvInfo = new TextView(this);
+                tvInfo.setText(status.replace("_", " "));
+                tvInfo.setTextColor(getStatusColor(status));
+                tvInfo.setTextSize(11);
+                tvInfo.setTypeface(null, Typeface.BOLD);
+                tvInfo.setPadding(0, 4, 0, 0);
+                card.addView(tvInfo);
+
+                String clientName = "";
+                if (booking != null) {
+                    JSONObject client = booking.optJSONObject("client");
+                    if (client != null) clientName = client.optString("name", "");
+                }
+                if (!clientName.isEmpty()) {
+                    TextView tvClient = new TextView(this);
+                    tvClient.setText("Client: " + clientName);
+                    tvClient.setTextColor(Color.parseColor("#68747A"));
+                    tvClient.setTextSize(12);
+                    tvClient.setPadding(0, 4, 0, 0);
+                    card.addView(tvClient);
+                }
+
+                projectsListContainer.addView(card);
             }
+        }
 
-            projectsListContainer.addView(card);
+        if (!hasProjects) {
+            for (int i = 0; i < bookingsArray.length(); i++) {
+                JSONObject b = bookingsArray.optJSONObject(i);
+                if (b == null) continue;
+                String status = b.optString("status", "");
+                if (!("APPROVED".equals(status) || "ASSIGNED".equals(status) || "IN_PROGRESS".equals(status) || "COMPLETED".equals(status))) continue;
+                hasProjects = true;
+
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(14, 14, 14, 14);
+                card.setBackgroundResource(R.drawable.bg_card);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 8);
+                card.setLayoutParams(lp);
+
+                TextView tvTitle = new TextView(this);
+                tvTitle.setText(b.optString("title", "Project"));
+                tvTitle.setTextColor(Color.parseColor("#101416"));
+                tvTitle.setTextSize(14);
+                tvTitle.setTypeface(null, Typeface.BOLD);
+                card.addView(tvTitle);
+
+                String techName = "Unassigned";
+                JSONObject techObj = b.optJSONObject("assignedTo");
+                if (techObj != null) techName = techObj.optString("name", "Unassigned");
+
+                TextView tvInfo = new TextView(this);
+                tvInfo.setText("Tech: " + techName + " • " + status.replace("_", " "));
+                tvInfo.setTextColor(getStatusColor(status));
+                tvInfo.setTextSize(11);
+                tvInfo.setTypeface(null, Typeface.BOLD);
+                tvInfo.setPadding(0, 4, 0, 0);
+                card.addView(tvInfo);
+
+                projectsListContainer.addView(card);
+            }
         }
 
         if (!hasProjects) {
@@ -1238,6 +1305,132 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(this, "Assignment failed", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void showProjectDetailDialog(JSONObject project, String bookingId) {
+        JSONObject booking = project.optJSONObject("booking");
+        String title = booking != null ? booking.optString("title", project.optString("title", "Project")) : project.optString("title", "Project");
+        String status = project.optString("status", "");
+        if (booking != null && !booking.optString("status", "").isEmpty()) {
+            status = booking.optString("status", status);
+        }
+
+        String clientName = "";
+        if (booking != null) {
+            JSONObject client = booking.optJSONObject("client");
+            if (client != null) clientName = client.optString("name", "");
+        }
+
+        StringBuilder team = new StringBuilder();
+        JSONArray assignments = project.optJSONArray("assignments");
+        if (assignments != null && assignments.length() > 0) {
+            for (int i = 0; i < assignments.length(); i++) {
+                JSONObject a = assignments.optJSONObject(i);
+                JSONObject t = a != null ? a.optJSONObject("tech") : null;
+                if (t != null) {
+                    if (team.length() > 0) team.append("\n");
+                    team.append("• ").append(t.optString("name"));
+                }
+            }
+        } else {
+            team.append("No technicians assigned");
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage("Status: " + status.replace("_", " ") + "\nClient: " + clientName + "\n\nProject Team:\n" + team)
+                .setPositiveButton("Close", null);
+
+        final String finalStatus = status;
+        if (bookingId != null && !bookingId.isEmpty()) {
+            builder.setNeutralButton("Add Technician", (dialog, which) -> showAddTechnicianDialog(bookingId, project));
+            if ("APPROVED".equals(finalStatus)) {
+                builder.setNegativeButton("Decline", (dialog, which) -> declineBookingDialog(bookingId, title));
+            }
+        }
+        builder.show();
+    }
+
+    private void showAddTechnicianDialog(String bookingId, JSONObject project) {
+        if (techniciansArray == null || techniciansArray.length() == 0) {
+            Toast.makeText(this, "No technicians available", Toast.LENGTH_LONG).show();
+            return;
+        }
+        JSONArray assignments = project.optJSONArray("assignments");
+        List<String> names = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
+        for (int i = 0; i < techniciansArray.length(); i++) {
+            JSONObject t = techniciansArray.optJSONObject(i);
+            if (t == null) continue;
+            String id = t.optString("id");
+            boolean already = false;
+            if (assignments != null) {
+                for (int j = 0; j < assignments.length(); j++) {
+                    JSONObject a = assignments.optJSONObject(j);
+                    JSONObject tech = a != null ? a.optJSONObject("tech") : null;
+                    if (tech != null && id.equals(tech.optString("id"))) {
+                        already = true;
+                        break;
+                    }
+                }
+            }
+            if (already) continue;
+            names.add(t.optString("name") + " (" + t.optString("email") + ")");
+            ids.add(id);
+        }
+        if (ids.isEmpty()) {
+            Toast.makeText(this, "All available technicians are already on the team", Toast.LENGTH_LONG).show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Add Technician to Project")
+                .setItems(names.toArray(new String[0]), (dialog, which) -> addTechnicianToProject(bookingId, ids.get(which)))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void addTechnicianToProject(String bookingId, String techId) {
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("action", "add_technician");
+                json.put("bookingId", bookingId);
+                json.put("assignToId", techId);
+                ApiClient.post("/admin", json.toString());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Technician Added to Project", Toast.LENGTH_SHORT).show();
+                    loadDashboardData();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Add technician failed", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void declineBookingDialog(String bookingId, String title) {
+        new AlertDialog.Builder(this)
+                .setTitle("Decline Booking")
+                .setMessage("Decline \"" + title + "\"? The client will be notified that the booking was declined.")
+                .setPositiveButton("Decline", (dialog, which) -> declineBooking(bookingId))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void declineBooking(String bookingId) {
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("action", "decline");
+                json.put("bookingId", bookingId);
+                ApiClient.post("/admin", json.toString());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Booking Declined", Toast.LENGTH_SHORT).show();
+                    loadDashboardData();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Decline failed", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
@@ -1692,11 +1885,19 @@ public class AdminDashboardActivity extends AppCompatActivity {
     // === HELPERS ===
 
     private Button createYellowSmallButton(String text) {
+        return createSmallButton(text, Color.parseColor("#0B0F10"), R.drawable.bg_action_yellow);
+    }
+
+    private Button createSmallButton(String text, int textColor) {
+        return createSmallButton(text, textColor, R.drawable.bg_action_outline);
+    }
+
+    private Button createSmallButton(String text, int textColor, int backgroundRes) {
         Button btn = new Button(this);
         btn.setText(text);
         btn.setTextSize(11);
-        btn.setBackgroundResource(R.drawable.bg_action_yellow);
-        btn.setTextColor(Color.parseColor("#0B0F10"));
+        btn.setBackgroundResource(backgroundRes);
+        btn.setTextColor(textColor);
         btn.setTypeface(null, Typeface.BOLD);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);

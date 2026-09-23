@@ -34,6 +34,24 @@ export type BookingObj = {
   createdAt: string
   technicianActivities?: ActivityObj[]
   reports?: ReportObj[]
+  project?: ProjectObj | null
+}
+
+export type ProjectAssignmentObj = {
+  id: string
+  techId: string
+  tech?: Pick<UserObj, 'id' | 'name' | 'email'>
+}
+
+export type ProjectObj = {
+  id: string
+  bookingId: string
+  title?: string
+  status?: BookingStatusValue
+  startDate?: string | null
+  endDate?: string | null
+  createdAt?: string
+  assignments: ProjectAssignmentObj[]
 }
 
 export type ActivityObj = {

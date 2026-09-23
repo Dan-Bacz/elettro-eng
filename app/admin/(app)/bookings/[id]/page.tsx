@@ -23,6 +23,7 @@ export default function AdminBookingDetailPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [showDelete, setShowDelete] = useState(false)
+  const [showDecline, setShowDecline] = useState(false)
 
   const bookingId = params?.id ?? ''
 
@@ -78,18 +79,32 @@ export default function AdminBookingDetailPage() {
     }
   }
 
-  async function handleAssign() {
-    await post('assign', { assignToId: techId || null, startDate: startDate || undefined, endDate: endDate || undefined })
-  }
-
   async function handleStatus() {
-    await post('update_status', { status: newStatus, budget: budget ? Number(budget) : null })
+    await post('update_status', { status: newStatus || booking?.status || '', budget: budget ? Number(budget) : null })
   }
 
   async function handleDelete() {
     await post('delete_booking')
     setShowDelete(false)
     router.push('/admin/bookings')
+  }
+
+  async function handleDecline() {
+    await post('decline')
+    setShowDecline(false)
+  }
+
+  async function handleTeamAdd() {
+    if (!techId) return
+    if (teamLocked) {
+      await post('add_technician', { assignToId: techId })
+    } else {
+      await post('assign', { assignToId: techId, startDate: startDate || undefined, endDate: endDate || undefined })
+    }
+  }
+
+  async function handleUnassign() {
+    await post('assign', { assignToId: null })
   }
 
   if (loading) {
@@ -108,6 +123,9 @@ export default function AdminBookingDetailPage() {
 
   if (!booking) return null
 
+  const teamMembers = booking.project?.assignments || []
+  const teamLocked = teamMembers.length > 0
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -121,13 +139,24 @@ export default function AdminBookingDetailPage() {
             <div className="mt-1 text-xs text-slate-400">Created {formatDateTime(booking.createdAt)}</div>
           </div>
         </div>
-        <button
-          onClick={() => setShowDelete(true)}
-          disabled={busy}
-          className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
-        >
-          Delete Booking
-        </button>
+        <div className="flex items-center gap-2">
+          {(booking.status === 'PENDING' || booking.status === 'APPROVED') && (
+            <button
+              onClick={() => setShowDecline(true)}
+              disabled={busy}
+              className="rounded-xl border border-red-300 bg-white px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              Decline Booking
+            </button>
+          )}
+          <button
+            onClick={() => setShowDelete(true)}
+            disabled={busy}
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+          >
+            Delete Booking
+          </button>
+        </div>
       </div>
 
       {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-600">{message}</div>}
@@ -197,6 +226,7 @@ export default function AdminBookingDetailPage() {
           {booking.status === 'PENDING' && (
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="text-sm font-black text-slate-900">Approval</h2>
+              <p className="mt-1 text-xs text-slate-500">Approving converts this booking into a project.</p>
               <button
                 onClick={() => post('approve')}
                 disabled={busy}
@@ -207,58 +237,74 @@ export default function AdminBookingDetailPage() {
             </div>
           )}
 
-          {/* Assignment */}
-          {(booking.status === 'APPROVED' || booking.status === 'ASSIGNED') && (
+          {/* Project team */}
+          {(booking.status === 'APPROVED' || booking.status === 'ASSIGNED' || booking.status === 'IN_PROGRESS') && (
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h2 className="text-sm font-black text-slate-900">Assign Technician</h2>
-              <div className="mt-3 space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1">Technician</label>
-                  <select value={techId} onChange={(e) => setTechId(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                    <option value="">— Unassigned —</option>
-                    {techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Start</label>
-                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">End</label>
-                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-                  </div>
-                </div>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-black text-slate-900">Project Team</h2>
+                {teamMembers.length > 0 && <StatusBadge status={booking.status} />}
+              </div>
+              {teamMembers.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-400">No technicians assigned yet. Assign the first technician to start the project.</p>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {teamMembers.map((m) => (
+                    <li key={m.id} className="flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-black text-yellow-400 text-[10px] font-black">{m.tech?.name?.charAt(0) || '?'}</span>
+                      <span className="text-xs font-bold text-slate-700">{m.tech?.name || 'Technician'}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div className="mt-4 space-y-3">
+                <select value={techId} onChange={(e) => setTechId(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                  <option value="">— Select technician —</option>
+                  {techs.filter((t) => !teamMembers.some((m) => m.techId === t.id)).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
                 <button
-                  onClick={handleAssign}
-                  disabled={busy}
+                  onClick={handleTeamAdd}
+                  disabled={busy || !techId}
                   className="w-full rounded-xl bg-black px-4 py-2.5 text-xs font-bold text-yellow-400 hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
-                  {techId ? 'Assign & Set Dates' : 'Unassign'}
+                  {teamMembers.length > 0 ? 'Add Technician to Project' : 'Assign First Technician'}
                 </button>
+                {teamMembers.length > 0 && (
+                  <button
+                    onClick={handleUnassign}
+                    disabled={busy}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-2 text-[11px] font-bold text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  >
+                    Remove all technicians (back to approved)
+                  </button>
+                )}
               </div>
             </div>
           )}
 
           {/* Status update */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <h2 className="text-sm font-black text-slate-900">Update Status</h2>
-            <div className="mt-3 space-y-3">
-              <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400">
+            <h2 className="text-sm font-black text-slate-900">Project Status</h2>
+            {teamLocked ? (
+              <p className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 leading-relaxed">
+                Technicians are assigned to this project. Status is updated by the assigned technicians as they report
+                progress (in progress → completed). You can still update the budget below.
+              </p>
+            ) : (
+              <select value={newStatus} onChange={(e) => setNewStatus(e.target.value)} className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400">
                 {BOOKING_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Budget (USD)</label>
-                <input type="number" min="0" step="0.01" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 500" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-              </div>
-              <button
-                onClick={handleStatus}
-                disabled={busy}
-                className="w-full rounded-xl border border-yellow-400 bg-white px-4 py-2.5 text-xs font-bold text-yellow-700 hover:bg-yellow-50 transition-colors disabled:opacity-50"
-              >
-                Save Status & Budget
-              </button>
+            )}
+            <div className="mt-3">
+              <label className="block text-xs font-bold text-slate-500 mb-1">Budget (USD)</label>
+              <input type="number" min="0" step="0.01" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 500" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
             </div>
+            <button
+              onClick={handleStatus}
+              disabled={busy}
+              className="mt-3 w-full rounded-xl border border-yellow-400 bg-white px-4 py-2.5 text-xs font-bold text-yellow-700 hover:bg-yellow-50 transition-colors disabled:opacity-50"
+            >
+              Save {teamLocked ? 'Budget' : 'Status & Budget'}
+            </button>
           </div>
 
           {/* Client card */}
@@ -288,6 +334,17 @@ export default function AdminBookingDetailPage() {
         busy={busy}
         onConfirm={handleDelete}
         onCancel={() => setShowDelete(false)}
+      />
+
+      <ConfirmDialog
+        open={showDecline}
+        title="Decline Booking"
+        message={`Decline "${booking.title}"? The client will be notified that the booking was declined.`}
+        confirmLabel="Decline"
+        danger
+        busy={busy}
+        onConfirm={handleDecline}
+        onCancel={() => setShowDecline(false)}
       />
     </div>
   )

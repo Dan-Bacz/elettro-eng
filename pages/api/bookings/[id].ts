@@ -30,6 +30,11 @@ export default async function handler(req: any, res: any) {
         reports: {
           orderBy: { createdAt: 'desc' },
           include: { author: { select: { id: true, name: true, email: true } } }
+        },
+        project: {
+          include: {
+            assignments: { include: { tech: { select: { id: true, name: true, email: true } } } }
+          }
         }
       }
     })

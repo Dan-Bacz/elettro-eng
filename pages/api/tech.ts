@@ -31,7 +31,12 @@ export default async function handler(req: any, res: any) {
           select: { id: true, name: true, email: true, phone: true, role: true, status: true, approved: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
         }),
         prisma.booking.findMany({
-          where: { assignedToId: String(techUserId) },
+          where: {
+            OR: [
+              { assignedToId: String(techUserId) },
+              { project: { assignments: { some: { techId: String(techUserId) } } } }
+            ]
+          },
           orderBy: { createdAt: 'desc' },
           include: {
             client: { select: { id: true, name: true, email: true, phone: true } },
@@ -40,7 +45,10 @@ export default async function handler(req: any, res: any) {
               include: { tech: { select: { id: true, name: true } } }
             },
             reports: { orderBy: { createdAt: 'desc' }, include: { author: { select: { id: true, name: true } } } },
-            materialRequests: { orderBy: { createdAt: 'desc' } }
+            materialRequests: { orderBy: { createdAt: 'desc' } },
+            project: {
+              include: { assignments: { include: { tech: { select: { id: true, name: true } } } } }
+            }
           }
         })
       ])

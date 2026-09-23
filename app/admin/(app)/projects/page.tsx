@@ -10,16 +10,17 @@ import EmptyState from '../../../../components/admin/EmptyState'
 import { statusProgress, formatDate } from '../../../../components/admin/types'
 import type { BookingObj } from '../../../../components/admin/types'
 
-type Filter = 'ALL' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED'
+type Filter = 'ALL' | 'APPROVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED'
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
+  { value: 'APPROVED', label: 'Approved' },
   { value: 'ASSIGNED', label: 'Assigned' },
   { value: 'IN_PROGRESS', label: 'In Progress' },
   { value: 'COMPLETED', label: 'Completed' },
 ]
 
-const PROJECT_STATUSES = ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED']
+const PROJECT_STATUSES = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED']
 
 export default function AdminProjectsPage() {
   const router = useRouter()
@@ -78,7 +79,7 @@ export default function AdminProjectsPage() {
         <EmptyState
           icon="🛠️"
           title="No projects yet"
-          message="Projects are created automatically once a booking is assigned to a technician."
+          message="Projects are created automatically once a booking is approved by an admin."
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -110,8 +111,12 @@ export default function AdminProjectsPage() {
                 </div>
 
                 <div className="mt-4 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-600">
-                    👷 {b.assignedTo?.name || 'Unassigned'}
+                  <span className="font-semibold text-slate-600" title={b.project?.assignments?.map((a) => a.tech?.name).join(', ')}>
+                    👷 {b.project?.assignments?.length
+                      ? b.project.assignments.length === 1
+                        ? b.project.assignments[0].tech?.name || '1 technician'
+                        : `${b.project.assignments.length} technicians`
+                      : b.assignedTo?.name || 'Unassigned'}
                   </span>
                   <span className="font-bold text-slate-800">
                     {b.budget != null ? `$${Number(b.budget).toLocaleString()}` : '—'}
