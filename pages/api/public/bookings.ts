@@ -26,6 +26,7 @@ export default async function handler(req: any, res: any) {
     description,
     buildingType,
     installations,
+    offerings,
     attachment,
   } = req.body || {}
 
@@ -64,11 +65,13 @@ export default async function handler(req: any, res: any) {
     }
 
     const title = String(service).trim()
-    const installmentList = Array.isArray(installations) && installations.length
-      ? installations.map((i: string) => String(i).trim()).filter(Boolean)
-      : []
+    const selectedOffers = Array.isArray(offerings) && offerings.length
+      ? offerings.map((i: string) => String(i).trim()).filter(Boolean)
+      : Array.isArray(installations) && installations.length
+        ? installations.map((i: string) => String(i).trim()).filter(Boolean)
+        : []
     const details = [
-      installmentList.length ? `Installation services: ${installmentList.join(', ')}` : '',
+      selectedOffers.length ? `Selected offerings: ${selectedOffers.join(', ')}` : '',
       buildingType ? `Building type: ${String(buildingType).trim()}` : '',
       projectLocation ? `Location: ${String(projectLocation).trim()}` : '',
       preferredDate ? `Preferred date: ${String(preferredDate).trim()}` : '',
@@ -98,7 +101,7 @@ export default async function handler(req: any, res: any) {
       service: title,
       reference,
       buildingType: buildingType ? String(buildingType).trim() : undefined,
-      installations: installmentList,
+      offerings: selectedOffers,
       preferredDate: preferredDate ? String(preferredDate).trim() : undefined,
       preferredTime: preferredTime ? String(preferredTime).trim() : undefined,
       address: projectLocation ? String(projectLocation).trim() : undefined,

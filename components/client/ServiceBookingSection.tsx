@@ -2,18 +2,6 @@
 import { useRef, useState } from "react"
 import type { Service } from "./siteData"
 
-const INSTALLATION_TYPES = [
-  "Household Wiring",
-  "Residential Wiring",
-  "Commercial Wiring",
-  "Service Panel Installation",
-  "Circuit Breaker Installation",
-  "Outlet & Switch Installation",
-  "Lighting Installation",
-  "Appliance Wiring",
-  "Electrical Rewiring",
-]
-
 type FormState = {
   clientName: string
   email: string
@@ -36,8 +24,8 @@ const INITIAL_FORM: FormState = {
   description: "",
 }
 
-export default function InstallationBookingSection({ service }: { service: Service }) {
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
+export default function ServiceBookingSection({ service }: { service: Service }) {
+  const [selectedOfferings, setSelectedOfferings] = useState<string[]>([])
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [attachment, setAttachment] = useState<string>("")
@@ -48,9 +36,9 @@ export default function InstallationBookingSection({ service }: { service: Servi
   const [result, setResult] = useState<{ reference: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  function toggleType(type: string) {
-    setSelectedTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+  function toggleOffering(offering: string) {
+    setSelectedOfferings((prev) =>
+      prev.includes(offering) ? prev.filter((t) => t !== offering) : [...prev, offering]
     )
   }
 
@@ -82,7 +70,7 @@ export default function InstallationBookingSection({ service }: { service: Servi
     if (!form.phone.trim()) next.phone = "Please enter your mobile number."
     if (!form.address.trim()) next.address = "Please enter your building / project address."
     if (!form.buildingType) next.buildingType = "Please select a building type."
-    if (selectedTypes.length === 0) next.installations = "Please select at least one installation service."
+    if (selectedOfferings.length === 0) next.offerings = "Please select at least one offering."
     if (!form.preferredDate) next.preferredDate = "Please choose a preferred date."
     return next
   }
@@ -109,7 +97,7 @@ export default function InstallationBookingSection({ service }: { service: Servi
           preferredTime: form.preferredTime,
           description: form.description || undefined,
           buildingType: form.buildingType,
-          installations: selectedTypes,
+          offerings: selectedOfferings,
           attachment: attachment || undefined,
         }),
       })
@@ -151,7 +139,7 @@ export default function InstallationBookingSection({ service }: { service: Servi
               onClick={() => {
                 setResult(null)
                 setForm(INITIAL_FORM)
-                setSelectedTypes([])
+                setSelectedOfferings([])
                 setAttachment("")
                 setAttachmentName("")
                 setFormOpen(false)
@@ -174,37 +162,39 @@ export default function InstallationBookingSection({ service }: { service: Servi
 
   return (
     <>
-      {/* Selectable installation types */}
+      {/* Selectable offerings */}
       <div className="mt-10">
-        <h3 className="text-xl font-bold text-gray-900">Select installation types that match your project</h3>
-        <p className="mt-1 text-xs text-gray-500">Choose one or multiple installation services you need.</p>
+        <h3 className="text-xl font-bold text-gray-900">Select the offerings you need</h3>
+        <p className="mt-1 text-xs text-gray-500">
+          Choose one or multiple {service.title.toLowerCase()} offerings below.
+        </p>
         <div className="mt-4 flex flex-wrap gap-2.5">
-            {INSTALLATION_TYPES.map((type) => {
-              const active = selectedTypes.includes(type)
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => toggleType(type)}
-                  className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
-                    active
-                      ? "border-yellow-400 bg-yellow-400 text-black shadow-md shadow-yellow-400/20"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-yellow-400 hover:text-yellow-600"
-                  }`}
+          {service.offerings.map((offering) => {
+            const active = selectedOfferings.includes(offering)
+            return (
+              <button
+                key={offering}
+                type="button"
+                onClick={() => toggleOffering(offering)}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                  active
+                    ? "border-yellow-400 bg-yellow-400 text-black shadow-md shadow-yellow-400/20"
+                    : "border-gray-300 bg-white text-gray-700 hover:border-yellow-400 hover:text-yellow-600"
+                }`}
+              >
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded border ${
+                    active ? "border-black bg-black text-yellow-400" : "border-gray-400 text-transparent"
+                  } text-[10px] font-black`}
                 >
-                  <span
-                    className={`flex h-4 w-4 items-center justify-center rounded border ${
-                      active ? "border-black bg-black text-yellow-400" : "border-gray-400 text-transparent"
-                    } text-[10px] font-black`}
-                  >
-                    ✓
-                  </span>
-                  {type}
-                </button>
-              )
-            })}
-          </div>
-          {errors.installations && <p className="mt-1.5 text-xs text-red-600">{errors.installations}</p>}
+                  ✓
+                </span>
+                {offering}
+              </button>
+            )
+          })}
+        </div>
+        {errors.offerings && <p className="mt-1.5 text-xs text-red-600">{errors.offerings}</p>}
       </div>
 
       {/* Actions */}
@@ -321,16 +311,16 @@ export default function InstallationBookingSection({ service }: { service: Servi
                 {errors.buildingType && <p className="mt-1 text-xs text-red-600">{errors.buildingType}</p>}
               </div>
 
-              {/* Selected installations */}
+              {/* Selected offerings */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                  Selected Installation Services <span className="text-red-500">*</span>
+                  Selected Offerings <span className="text-red-500">*</span>
                 </label>
                 <div className="min-h-[46px] rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700">
-                  {selectedTypes.length === 0 ? (
+                  {selectedOfferings.length === 0 ? (
                     <span className="text-gray-400 font-normal">Select from the options above</span>
                   ) : (
-                    selectedTypes.join(", ")
+                    selectedOfferings.join(", ")
                   )}
                 </div>
               </div>

@@ -16,6 +16,7 @@ export type Service = {
   short: string
   description: string
   features: string[]
+  offerings: string[]
 }
 
 export const SERVICES: Service[] = [
@@ -33,6 +34,17 @@ export const SERVICES: Service[] = [
       "Circuit and outlet installation",
       "Code-compliant workmanship",
     ],
+    offerings: [
+      "Household Wiring",
+      "Residential Wiring",
+      "Commercial Wiring",
+      "Service Panel Installation",
+      "Circuit Breaker Installation",
+      "Outlet & Switch Installation",
+      "Lighting Installation",
+      "Appliance Wiring",
+      "Electrical Rewiring",
+    ],
   },
   {
     slug: "electrical-maintenance",
@@ -47,6 +59,14 @@ export const SERVICES: Service[] = [
       "Thermographic scanning",
       "Panel and breaker servicing",
       "Preventive maintenance plans",
+    ],
+    offerings: [
+      "Preventive Maintenance",
+      "Electrical Inspection",
+      "Panel Inspection",
+      "Circuit Testing",
+      "Equipment Maintenance",
+      "Wiring Inspection",
     ],
   },
   {
@@ -63,6 +83,14 @@ export const SERVICES: Service[] = [
       "Breaker & wiring repairs",
       "Equipment replacement",
     ],
+    offerings: [
+      "Power Outage Diagnosis",
+      "Circuit Breaker Repair",
+      "Short Circuit Repair",
+      "Outlet Repair",
+      "Wiring Repair",
+      "Electrical Equipment Repair",
+    ],
   },
   {
     slug: "lighting-solutions",
@@ -77,6 +105,14 @@ export const SERVICES: Service[] = [
       "Indoor & outdoor lighting",
       "Security & flood lights",
       "Smart lighting control",
+    ],
+    offerings: [
+      "Indoor Lighting",
+      "Outdoor Lighting",
+      "LED Lighting",
+      "Security Lighting",
+      "Lighting Design",
+      "Lighting Replacement",
     ],
   },
   {
@@ -93,6 +129,13 @@ export const SERVICES: Service[] = [
       "High-capacity panels",
       "Industrial-grade wiring",
     ],
+    offerings: [
+      "Industrial Wiring",
+      "Motor Installation",
+      "Control Panel Installation",
+      "Machine Wiring",
+      "Power Distribution",
+    ],
   },
   {
     slug: "renewable-energy-systems",
@@ -107,6 +150,13 @@ export const SERVICES: Service[] = [
       "Inverter & battery storage",
       "Grid-tie & off-grid systems",
       "Energy efficiency audits",
+    ],
+    offerings: [
+      "Solar Panel Installation",
+      "Solar Inverter Installation",
+      "Solar Battery Systems",
+      "Solar Wiring",
+      "Solar Maintenance",
     ],
   },
 ]

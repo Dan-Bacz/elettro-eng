@@ -104,7 +104,7 @@ export async function sendBookingSubmittedNotification(input: {
   service: string
   reference: string
   buildingType?: string
-  installations?: string[]
+  offerings?: string[]
   preferredDate?: string
   preferredTime?: string
   address?: string
@@ -115,8 +115,8 @@ export async function sendBookingSubmittedNotification(input: {
       const details = [
         input.service ? `<p style="margin: 8px 0;"><strong style="color: #333;">Service:</strong> ${input.service}</p>` : '',
         input.buildingType ? `<p style="margin: 8px 0;"><strong style="color: #333;">Building Type:</strong> ${input.buildingType}</p>` : '',
-        input.installations && input.installations.length
-          ? `<p style="margin: 8px 0;"><strong style="color: #333;">Installation Services:</strong> ${input.installations.join(', ')}</p>`
+        input.offerings && input.offerings.length
+          ? `<p style="margin: 8px 0;"><strong style="color: #333;">Selected Offerings:</strong> ${input.offerings.join(', ')}</p>`
           : '',
         input.address ? `<p style="margin: 8px 0;"><strong style="color: #333;">Project Address:</strong> ${input.address}</p>` : '',
         input.preferredDate ? `<p style="margin: 8px 0;"><strong style="color: #333;">Preferred Date:</strong> ${input.preferredDate}</p>` : '',
