@@ -79,10 +79,13 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#2a3138] bg-[#0b0f10] px-4 sm:px-6">
+    <header className="relative sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#2a3138] bg-[#0b0f10] px-4 sm:px-6">
       <div>
-        <h1 className="text-sm sm:text-base font-black text-[#f5f7fa]">{title}</h1>
-        <p className="hidden sm:block text-[10px] uppercase tracking-widest text-[#77848f] font-semibold">
+        <h1 className="text-lg sm:text-xl font-bold text-[#f5f7fa] tracking-wide">{title}</h1>
+      </div>
+
+      <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block">
+        <p className="glow-text-yellow whitespace-nowrap text-xs sm:text-sm font-black uppercase tracking-[0.22em] text-[#f5f7fa]">
           Elettro Engineering Enterprises
         </p>
       </div>
