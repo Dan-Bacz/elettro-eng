@@ -36,3 +36,49 @@ html,
 body {
   overflow-x: clip;
 }
+
+/* ---------- dashboard animations ---------- */
+
+@keyframes dash-in {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes flow-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes flow-beam {
+  0% {
+    width: 0%;
+    opacity: 1;
+  }
+  60%,
+  100% {
+    width: 100%;
+    opacity: 0.1;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card-enter {
+  animation: fade-up 0.5s ease both;
+}

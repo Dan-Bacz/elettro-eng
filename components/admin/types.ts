@@ -108,6 +108,8 @@ export type DashboardData = {
     rejectedTechnicians: number
     clients: number
     admins: number
+    pendingLeaves: number
+    onLeave: number
   }
   statusBreakdown: { status: string; value: number }[]
   recentBookings: { id: string; title: string; status: string; clientName: string; createdAt: string }[]
@@ -120,6 +122,51 @@ export type DashboardData = {
   rejectedUsers: UserObj[]
   clients: UserObj[]
   admins: UserObj[]
+  admin: { name: string; email: string } | null
+  bookingTrend: { date: string; count: number }[]
+  activityTrend: { date: string; count: number }[]
+  serviceBreakdown: { service: string; count: number }[]
+  stockBreakdown: { status: 'In Stock' | 'Low Stock' | 'Out of Stock'; value: number }[]
+  stockSummary: {
+    totalItems: number
+    inStock: number
+    lowStock: number
+    outOfStock: number
+    totalUnits: number
+    topLow: { id: string; name: string; quantity: number; status: string }[]
+  }
+  flow: { status: string; label: string; count: number; latestAt: string | null }[]
+  technicianStatus: { active: number; onLeave: number; suspended: number; inactive: number }
+  recentProjects: {
+    id: string
+    title: string
+    status: string
+    clientName: string
+    progress: number
+    techCount: number
+    createdAt: string
+    bookId: string
+  }[]
+  recentBookingsAll: {
+    id: string
+    title: string
+    service: string
+    status: string
+    clientName: string
+    technicianName: string | null
+    createdAt: string
+    progress: number
+  }[]
+  notifications: {
+    id: string
+    type: string
+    title: string
+    message: string | null
+    link: string | null
+    read: boolean
+    createdAt: string
+  }[]
+  pendingLeaves: number
 }
 
 export const BOOKING_STATUSES: BookingStatusValue[] = ['PENDING', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
