@@ -174,29 +174,11 @@ export default function InstallationBookingSection({ service }: { service: Servi
 
   return (
     <>
-      {/* What's Included + selectable installation types */}
+      {/* Selectable installation types */}
       <div className="mt-10">
-        <h3 className="text-xl font-bold text-gray-900">What&apos;s Included</h3>
-        <ul className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {service.features.map((feature) => (
-            <li
-              key={feature}
-              className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 bg-gray-50 text-sm font-medium text-gray-800"
-            >
-              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-yellow-400 text-black text-xs font-black shrink-0">
-                ✓
-              </span>
-              {feature}
-            </li>
-          ))}
-        </ul>
-
-        <div className="mt-6">
-          <h4 className="text-sm font-bold text-gray-900">
-            Select your installation needs <span className="text-red-500">*</span>
-          </h4>
-          <p className="mt-1 text-xs text-gray-500">Choose one or multiple installation services you need.</p>
-          <div className="mt-4 flex flex-wrap gap-2.5">
+        <h3 className="text-xl font-bold text-gray-900">Select installation types that match your project</h3>
+        <p className="mt-1 text-xs text-gray-500">Choose one or multiple installation services you need.</p>
+        <div className="mt-4 flex flex-wrap gap-2.5">
             {INSTALLATION_TYPES.map((type) => {
               const active = selectedTypes.includes(type)
               return (
@@ -223,7 +205,6 @@ export default function InstallationBookingSection({ service }: { service: Servi
             })}
           </div>
           {errors.installations && <p className="mt-1.5 text-xs text-red-600">{errors.installations}</p>}
-        </div>
       </div>
 
       {/* Actions */}
