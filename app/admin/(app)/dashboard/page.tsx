@@ -9,6 +9,7 @@ import KpiCard from '../../../../components/admin/dashboard/KpiCard'
 import BookingTrendChart from '../../../../components/admin/dashboard/BookingTrendChart'
 import AnimatedDonut from '../../../../components/admin/dashboard/AnimatedDonut'
 import ProgressBar from '../../../../components/admin/dashboard/ProgressBar'
+import { InboxIcon, ClockIcon, GearIcon, CheckCircleIcon, CalendarIcon, BarChartIcon, BellIcon, PackageIcon, UserPlusIcon, AlertIcon, ArrowRightIcon, HammerIcon } from '../../../../components/admin/icons'
 import type { DashboardData } from '../../../../components/admin/types'
 import { formatDate } from '../../../../components/admin/types'
 
@@ -76,10 +77,10 @@ export default function AdminDashboardPage() {
     const spark = (data.bookingTrend || []).map((d) => d.count)
     const change = pctChange(data.bookingTrend || [])
     return [
-      { label: 'Total Bookings', value: data.stats.totalBookings, icon: '🧾', accent: 'yellow' as const, spark, change, description: 'All booking requests received', href: '/admin/bookings' },
-      { label: 'Pending', value: data.stats.pending, icon: '⏳', accent: 'blue' as const, spark: spark.slice(-7), change: null, description: 'Awaiting approval', href: '/admin/bookings' },
-      { label: 'In Progress', value: data.stats.inProgress, icon: '🛠️', accent: 'green' as const, spark, change: null, description: 'Active projects being worked on', href: '/admin/projects' },
-      { label: 'Completed', value: data.stats.completed, icon: '✅', accent: 'purple' as const, spark, change: null, description: 'Delivered & closed projects', href: '/admin/projects' },
+      { label: 'Total Bookings', value: data.stats.totalBookings, icon: <InboxIcon className="h-5 w-5" />, accent: 'yellow' as const, spark, change, description: 'All booking requests received', href: '/admin/bookings' },
+      { label: 'Pending', value: data.stats.pending, icon: <ClockIcon className="h-5 w-5" />, accent: 'blue' as const, spark: spark.slice(-7), change: null, description: 'Awaiting approval', href: '/admin/bookings' },
+      { label: 'In Progress', value: data.stats.inProgress, icon: <GearIcon className="h-5 w-5" />, accent: 'green' as const, spark, change: null, description: 'Active projects being worked on', href: '/admin/projects' },
+      { label: 'Completed', value: data.stats.completed, icon: <CheckCircleIcon className="h-5 w-5" />, accent: 'purple' as const, spark, change: null, description: 'Delivered & closed projects', href: '/admin/projects' },
     ]
   }, [data])
 
@@ -102,7 +103,7 @@ export default function AdminDashboardPage() {
   if (error || !data) {
     return (
       <EmptyState
-        icon="⚠️"
+        icon={<AlertIcon className="h-6 w-6" />}
         title={error || 'No data available'}
         message="Try refreshing the page."
         action={<button onClick={() => router.refresh()} className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-bold text-black">Refresh</button>}
@@ -134,7 +135,7 @@ export default function AdminDashboardPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-black text-slate-900">
-                {greeting()}, {firstName} 👋
+                {greeting()}, {firstName}
               </h1>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-600">
                 <span className="relative flex h-1.5 w-1.5">
@@ -147,7 +148,9 @@ export default function AdminDashboardPage() {
             <p className="mt-1.5 text-xs text-slate-500">Here's what's happening with your projects and team today.</p>
           </div>
           <div className="mt-5 flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-4 py-3">
-            <span className="text-lg">📅</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
+              <CalendarIcon className="h-4.5 w-4.5" />
+            </span>
             <div>
               <div className="text-sm font-black text-slate-800">
                 {now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
@@ -158,8 +161,9 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/reports"
-              className="ml-auto rounded-lg bg-black px-3 py-2 text-[11px] font-bold text-yellow-400 hover:bg-slate-800 transition-colors"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-black px-3 py-2 text-[11px] font-bold text-yellow-400 hover:bg-slate-800 transition-colors"
             >
+              <BarChartIcon className="h-3.5 w-3.5" />
               View Reports
             </Link>
           </div>
@@ -255,9 +259,10 @@ export default function AdminDashboardPage() {
                   <td className="py-3">
                     <Link
                       href={`/admin/bookings/${b.id}`}
-                      className="rounded-lg border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-600 hover:border-black hover:text-black transition-colors"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-600 hover:border-black hover:text-black transition-colors"
                     >
-                      Open →
+                      Open
+                      <ArrowRightIcon className="h-3 w-3" />
                     </Link>
                   </td>
                 </tr>
@@ -368,7 +373,10 @@ export default function AdminDashboardPage() {
               )
             })}
             {topLow.length === 0 && (
-              <div className="py-6 text-center text-xs text-slate-400">All stock levels are healthy 🎉</div>
+              <div className="flex items-center justify-center gap-2 py-6 text-xs text-slate-400">
+                <CheckCircleIcon className="h-4 w-4 text-emerald-500" />
+                All stock levels are healthy
+              </div>
             )}
           </div>
         </div>
@@ -391,8 +399,8 @@ export default function AdminDashboardPage() {
                 href={n.link || '/admin/notifications'}
                 className="flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3.5 py-2.5 transition-colors hover:bg-slate-50"
               >
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs">
-                  {iconForType(n.type)}
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                  {notificationIcon(n.type)}
                 </span>
                 <div className="min-w-0">
                   <div className="truncate text-xs font-bold text-slate-700">{n.title}</div>
@@ -411,17 +419,17 @@ export default function AdminDashboardPage() {
   )
 }
 
-function iconForType(type: string): string {
+function notificationIcon(type: string) {
   switch (type) {
-    case 'LEAVE': return '🗓️'
-    case 'BOOKING': return '🧾'
-    case 'PROJECT': return '🛠️'
-    case 'REPORT': return '📊'
-    case 'REGISTRATION': return '📋'
-    case 'INVENTORY': return '📦'
-    case 'STOCK': return '📦'
-    case 'WARNING': return '⚠️'
-    default: return '🔔'
+    case 'LEAVE': return <CalendarIcon className="h-3.5 w-3.5" />
+    case 'BOOKING': return <InboxIcon className="h-3.5 w-3.5" />
+    case 'PROJECT': return <HammerIcon className="h-3.5 w-3.5" />
+    case 'REPORT': return <BarChartIcon className="h-3.5 w-3.5" />
+    case 'REGISTRATION': return <UserPlusIcon className="h-3.5 w-3.5" />
+    case 'INVENTORY':
+    case 'STOCK': return <PackageIcon className="h-3.5 w-3.5" />
+    case 'WARNING': return <AlertIcon className="h-3.5 w-3.5" />
+    default: return <BellIcon className="h-3.5 w-3.5" />
   }
 }
 

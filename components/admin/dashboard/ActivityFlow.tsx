@@ -1,4 +1,6 @@
 'use client'
+import type { ReactNode } from 'react'
+import { InboxTrayIcon, CheckCircleIcon, UserIcon, GearIcon, CheckIcon } from '../../admin/icons'
 
 type FlowStep = {
   status: string
@@ -7,12 +9,12 @@ type FlowStep = {
   latestAt: string | null
 }
 
-const STEP_STYLE: Record<string, { icon: string; color: string; ring: string; bar: string }> = {
-  PENDING: { icon: '📥', color: 'bg-amber-500', ring: 'ring-amber-200', bar: 'bg-amber-400' },
-  APPROVED: { icon: '✅', color: 'bg-blue-500', ring: 'ring-blue-200', bar: 'bg-blue-400' },
-  ASSIGNED: { icon: '👷', color: 'bg-violet-500', ring: 'ring-violet-200', bar: 'bg-violet-400' },
-  IN_PROGRESS: { icon: '⚙️', color: 'bg-emerald-500', ring: 'ring-emerald-200', bar: 'bg-emerald-400' },
-  COMPLETED: { icon: '🎉', color: 'bg-purple-600', ring: 'ring-purple-200', bar: 'bg-purple-400' },
+const STEP_STYLE: Record<string, { icon: ReactNode; color: string; ring: string; bar: string }> = {
+  PENDING: { icon: <InboxTrayIcon className="h-5 w-5" />, color: 'bg-amber-500', ring: 'ring-amber-200', bar: 'bg-amber-400' },
+  APPROVED: { icon: <CheckIcon className="h-5 w-5" />, color: 'bg-blue-500', ring: 'ring-blue-200', bar: 'bg-blue-400' },
+  ASSIGNED: { icon: <UserIcon className="h-5 w-5" />, color: 'bg-violet-500', ring: 'ring-violet-200', bar: 'bg-violet-400' },
+  IN_PROGRESS: { icon: <GearIcon className="h-5 w-5" />, color: 'bg-emerald-500', ring: 'ring-emerald-200', bar: 'bg-emerald-400' },
+  COMPLETED: { icon: <CheckCircleIcon className="h-5 w-5" />, color: 'bg-purple-600', ring: 'ring-purple-200', bar: 'bg-purple-400' },
 }
 
 function timeAgo(iso: string | null) {
@@ -46,7 +48,7 @@ export default function ActivityFlow({ steps }: { steps: FlowStep[] }) {
               <div key={step.status} className="flex flex-1 items-start">
                 <div className="flex flex-col items-center px-1">
                   <div
-                    className={`relative flex h-12 w-12 items-center justify-center rounded-2xl text-lg shadow-md ${s.color} ring-4 ${s.ring} transition-transform duration-300 hover:scale-110`}
+                    className={`relative flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-md ${s.color} ring-4 ${s.ring} transition-transform duration-300 hover:scale-110`}
                     style={{ animation: `flow-pop 0.6s ease ${i * 0.12}s both` }}
                   >
                     {s.icon}
