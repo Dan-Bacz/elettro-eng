@@ -12,9 +12,6 @@ export default function ServiceCard({ service, imageUrl }: { service: Service; i
             {service.icon}
           </div>
         )}
-        <div className="absolute top-4 left-4 flex items-center justify-center w-11 h-11 rounded-xl bg-yellow-400 text-black shadow-lg shadow-yellow-400/30">
-          <span className="text-xl">{service.icon}</span>
-        </div>
       </div>
 
       <div className="p-6 flex flex-col flex-1">
