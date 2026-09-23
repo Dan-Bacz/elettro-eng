@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 
 type AdminHeaderProps = {
   user: { name: string; email: string; role: string; profileImageUrl?: string | null }
@@ -16,9 +16,6 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
   const [loggingOut, setLoggingOut] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-  const pathname = usePathname()
-
-  const title = deriveTitle(pathname || '')
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -80,11 +77,7 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
 
   return (
     <header className="relative sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[#2a3138] bg-[#0b0f10] px-4 sm:px-6">
-      <div>
-        <h1 className="text-lg sm:text-xl font-bold text-[#f5f7fa] tracking-wide">{title}</h1>
-      </div>
-
-      <div className="pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block">
+      <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <p className="glow-text-yellow whitespace-nowrap text-xs sm:text-sm font-black uppercase tracking-[0.22em] text-[#f5f7fa]">
           Elettro Engineering Enterprises
         </p>
@@ -179,21 +172,4 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
       </div>
     </header>
   )
-}
-
-function deriveTitle(pathname: string): string {
-  const seg = pathname.split('/').filter(Boolean)
-  const last = seg[seg.length - 1] || 'dashboard'
-  if (last === 'new') return 'New Item'
-  if (last === 'edit') return 'Edit Item'
-  if (/^[a-f0-9-]{36}$/i.test(last)) return 'Details'
-  if (!/^[a-f0-9-]{36}$/i.test(last)) {
-    const map: Record<string, string> = {
-      dashboard: 'Dashboard', bookings: 'Bookings', projects: 'Projects', registrations: 'Registrations',
-      inventory: 'Inventory', technicians: 'Technicians', clients: 'Clients', reports: 'Reports',
-      notifications: 'Notifications', settings: 'Settings'
-    }
-    if (map[last]) return map[last]
-  }
-  return 'Dashboard'
 }
