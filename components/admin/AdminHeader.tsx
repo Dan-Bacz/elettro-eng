@@ -83,7 +83,7 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
         </p>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="ml-auto flex items-center gap-2 sm:gap-3">
         {/* Notification bell */}
         <div className="relative" ref={panelRef}>
           <button
