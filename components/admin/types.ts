@@ -125,6 +125,70 @@ export type DashboardData = {
 export const BOOKING_STATUSES: BookingStatusValue[] = ['PENDING', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
 export const TECH_STATUSES: UserStatus[] = ['PENDING', 'ACTIVE', 'REJECTED', 'SUSPENDED']
 
+export type LeaveStatusValue = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+export type LeaveTypeValue =
+  | 'VACATION'
+  | 'SICK'
+  | 'MATERNITY'
+  | 'PATERNITY'
+  | 'SOLO_PARENT'
+  | 'SPECIAL_PRIVILEGE'
+  | 'STUDY'
+  | 'VAWC'
+  | 'REHABILITATION'
+  | 'SPECIAL_EMERGENCY'
+  | 'OTHER'
+
+export type LeaveObj = {
+  id: string
+  techId: string
+  tech?: Pick<UserObj, 'id' | 'name' | 'email'>
+  type: LeaveTypeValue
+  fromDate: string
+  toDate: string
+  days: number
+  commutation?: string
+  addressDuringLeave?: string | null
+  medicalCertificate?: boolean
+  reason?: string | null
+  status: LeaveStatusValue
+  adminNote?: string | null
+  approvedDays?: number | null
+  decidedBy?: string | null
+  decidedAt?: string | null
+  createdAt?: string
+}
+
+export type LeaveCreditsObj = {
+  id: string
+  techId: string
+  tech?: Pick<UserObj, 'id' | 'name' | 'email'>
+  vacation: number
+  sick: number
+  vacationUsed: number
+  sickUsed: number
+}
+
+export const LEAVE_TYPES: { value: LeaveTypeValue; label: string }[] = [
+  { value: 'VACATION', label: 'Vacation Leave' },
+  { value: 'SICK', label: 'Sick Leave' },
+  { value: 'MATERNITY', label: 'Maternity Leave' },
+  { value: 'PATERNITY', label: 'Paternity Leave' },
+  { value: 'SOLO_PARENT', label: 'Solo Parent Leave' },
+  { value: 'SPECIAL_PRIVILEGE', label: 'Special Privilege' },
+  { value: 'STUDY', label: 'Study Leave' },
+  { value: 'VAWC', label: 'VAWC Leave' },
+  { value: 'REHABILITATION', label: 'Rehabilitation Leave' },
+  { value: 'SPECIAL_EMERGENCY', label: 'Special Emergency' },
+  { value: 'OTHER', label: 'Other' },
+]
+
+export function leaveTypeLabel(type: string) {
+  const found = LEAVE_TYPES.find((t) => t.value === type)
+  if (found) return found.label
+  return String(type || '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 export const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-amber-500/15 text-amber-600 border-amber-500/30',
   APPROVED: 'bg-blue-500/15 text-blue-600 border-blue-500/30',

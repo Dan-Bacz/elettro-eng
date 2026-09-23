@@ -10,6 +10,10 @@
             android:icon="@drawable/ic_build"
             android:title="@string/nav_my_jobs" />
         <item
+            android:id="@+id/nav_leave"
+            android:icon="@drawable/ic_calendar"
+            android:title="@string/nav_apply_leave" />
+        <item
             android:id="@+id/nav_reports"
             android:icon="@drawable/ic_description"
             android:title="@string/drawer_reports_tech" />

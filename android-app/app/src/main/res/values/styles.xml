@@ -12,6 +12,26 @@
         <item name="android:windowBackground">@color/page_bg</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_muted</item>
+
+        <!-- All popups / dialogs in the app use a clean white, rounded look -->
+        <item name="alertDialogTheme">@style/Theme.Elettro.Dialog</item>
+        <item name="android:alertDialogTheme">@style/Theme.Elettro.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/Theme.Elettro.Dialog</item>
+    </style>
+
+    <!-- Light, rounded dialog used for every popup in the app -->
+    <style name="Theme.Elettro.Dialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="colorSurface">@color/white</item>
+        <item name="android:colorBackground">@color/white</item>
+        <item name="android:windowBackground">@color/white</item>
+        <item name="colorPrimary">@color/brand_800</item>
+        <item name="android:colorAccent">@color/brand_800</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:dialogCornerRadius">20dp</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <style name="Theme.Elettro.Login" parent="Theme.Elettro">

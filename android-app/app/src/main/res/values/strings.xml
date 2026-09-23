@@ -102,6 +102,9 @@
     <string name="bookings_subtitle">Verify client requests and manage the booking lifecycle</string>
     <string name="projects_title">Active Projects</string>
     <string name="projects_subtitle">Assigned electrical installation &amp; maintenance jobs</string>
+    <string name="drawer_leave">Leave Requests</string>
+    <string name="leave_title">Leave Requests</string>
+    <string name="leave_subtitle">Approve or reject technician leave applications</string>
     <string name="notifications_title">Notifications</string>
     <string name="notifications_subtitle">Pending inquiries, registrations &amp; warnings</string>
     <string name="mark_all_read">Mark all read</string>
@@ -191,6 +194,11 @@
     <string name="tech_inventory_subtitle">Available stock for your projects</string>
     <string name="tech_profile_title">My Profile</string>
     <string name="tech_profile_subtitle">Your account information</string>
+    <string name="nav_apply_leave">Apply Leave</string>
+    <string name="tech_leave_title">Apply for Leave</string>
+    <string name="tech_leave_subtitle">File a leave application (CSC Form No. 6)</string>
+    <string name="apply_for_leave">+ Apply for Leave</string>
+    <string name="leave_credits_label">Leave Credits</string>
     <string name="specialization">Specialization</string>
     <string name="experience">Experience</string>
     <string name="not_set">Not set</string>

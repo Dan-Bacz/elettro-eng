@@ -1,6 +1,7 @@
 package com.elettro.app;
 
 import android.content.Intent;
+import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
@@ -10,10 +11,13 @@ import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,7 +36,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 
 public class TechnicianDashboardActivity extends AppCompatActivity {
 
@@ -47,6 +53,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
     // Sections
     private View viewHome, viewJobs, viewReports, viewNotifications, viewMaterials, viewInventorySection, viewProfile;
+    private View viewLeave;
 
     // Home
     private TextView techName, statTodayJobs, statActiveJobs, statCompletedJobs, statPendingMaterials;
@@ -73,6 +80,10 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     // Inventory
     private LinearLayout inventoryListContainer;
 
+    // Leave
+    private TextView btnApplyLeave;
+    private LinearLayout leaveCreditsInfo, leaveHistoryContainer;
+
     // Profile
     private TextView profileName, profileEmail, profilePhone, profileSpec, profileExp, profileSkills, profileInitial;
     private TextView btnLogout, btnViewInventory, btnGotoJobs;
@@ -85,6 +96,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private JSONArray bookingsArray;
     private JSONArray notificationsArray;
     private JSONArray inventoryArray;
+    private JSONArray leaveReqsArray;
     private String techId = "";
     private String techNameStr = "";
     private int selectedPriority = 0;
@@ -125,6 +137,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         viewMaterials = findViewById(R.id.view_materials_section);
         viewInventorySection = findViewById(R.id.view_inventory_section);
         viewProfile = findViewById(R.id.view_profile_section);
+        viewLeave = findViewById(R.id.view_leave_section);
 
         techName = findViewById(R.id.tech_name);
         statTodayJobs = findViewById(R.id.stat_today_jobs);
@@ -150,6 +163,10 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
         btnRequestMaterial = findViewById(R.id.btn_request_material);
         materialsListContainer = findViewById(R.id.materials_list_container);
+
+        btnApplyLeave = findViewById(R.id.btn_apply_leave);
+        leaveCreditsInfo = findViewById(R.id.leave_credits_info);
+        leaveHistoryContainer = findViewById(R.id.leave_history_container);
 
         inventoryListContainer = findViewById(R.id.inventory_list_container);
 
@@ -192,6 +209,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_reports) { showSection("reports"); return true; }
             if (id == R.id.nav_materials) { showSection("materials"); return true; }
             if (id == R.id.nav_inventory_tech) { showSection("inventory"); return true; }
+            if (id == R.id.nav_leave) { showSection("leave"); return true; }
             if (id == R.id.nav_profile) { showSection("profile"); return true; }
             if (id == R.id.nav_logout) { logout(); return true; }
             return false;
@@ -206,6 +224,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         viewMaterials.setVisibility("materials".equals(key) ? View.VISIBLE : View.GONE);
         viewInventorySection.setVisibility("inventory".equals(key) ? View.VISIBLE : View.GONE);
         viewProfile.setVisibility("profile".equals(key) ? View.VISIBLE : View.GONE);
+        viewLeave.setVisibility("leave".equals(key) ? View.VISIBLE : View.GONE);
 
         int titleRes = R.string.drawer_dashboard;
         int subRes = R.string.tech_keep_up;
@@ -238,6 +257,12 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 subRes = R.string.tech_inventory_subtitle;
                 menuRes = R.id.nav_inventory_tech;
                 if (inventoryArray == null) loadInventory();
+                break;
+            case "leave":
+                titleRes = R.string.tech_leave_title;
+                subRes = R.string.tech_leave_subtitle;
+                menuRes = R.id.nav_leave;
+                loadLeaveData();
                 break;
             case "profile":
                 titleRes = R.string.tech_profile_title;
@@ -285,6 +310,8 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         btnMarkAllRead.setOnClickListener(v -> markAllNotificationsRead());
 
         btnRequestMaterial.setOnClickListener(v -> showMaterialDialog(null, null));
+
+        btnApplyLeave.setOnClickListener(v -> showApplyLeaveDialog());
 
         btnLogout.setOnClickListener(v -> logout());
 
@@ -1383,13 +1410,396 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         }
     }
 
-    private void addDetailTitle(LinearLayout layout, String title) {
+    // === LEAVE (CSC Form No. 6) ===
+
+    private void loadLeaveData() {
+        leaveHistoryContainer.removeAllViews();
+        leaveCreditsInfo.removeAllViews();
         TextView tv = new TextView(this);
-        tv.setText(title);
-        tv.setTextColor(Color.parseColor("#68747A"));
-        tv.setTextSize(11);
+        tv.setText("Loading…");
+        tv.setTextColor(Color.parseColor("#9EA8AC"));
+        tv.setTextSize(12);
+        leaveHistoryContainer.addView(tv);
+
+        new Thread(() -> {
+            try {
+                String resp = ApiClient.get("/leave");
+                JSONObject obj = resp != null ? new JSONObject(resp) : null;
+                if (obj != null) {
+                    leaveReqsArray = obj.optJSONArray("leaves");
+                    JSONObject credits = obj.optJSONObject("credits");
+                    renderLeaveCredits(credits);
+                    renderLeaveHistory();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    leaveHistoryContainer.removeAllViews();
+                    showEmpty(leaveHistoryContainer, R.string.network_error);
+                });
+            }
+        }).start();
+    }
+
+    private void renderLeaveCredits(JSONObject credits) {
+        runOnUiThread(() -> {
+            leaveCreditsInfo.removeAllViews();
+            int vacation = credits != null ? credits.optInt("vacation", 15) : 15;
+            int sick = credits != null ? credits.optInt("sick", 15) : 15;
+            int vacationUsed = credits != null ? credits.optInt("vacationUsed", 0) : 0;
+            int sickUsed = credits != null ? credits.optInt("sickUsed", 0) : 0;
+
+            TextView tvVL = new TextView(this);
+            tvVL.setText("Vacation\n" + Math.max(0, vacation - vacationUsed) + " / " + vacation + " days");
+            tvVL.setTextColor(Color.parseColor("#111827"));
+            tvVL.setTextSize(13);
+            tvVL.setTypeface(null, Typeface.BOLD);
+            tvVL.setGravity(Gravity.CENTER_VERTICAL);
+            tvVL.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            leaveCreditsInfo.addView(tvVL);
+
+            TextView tvSL = new TextView(this);
+            tvSL.setText("Sick\n" + Math.max(0, sick - sickUsed) + " / " + sick + " days");
+            tvSL.setTextColor(Color.parseColor("#111827"));
+            tvSL.setTextSize(13);
+            tvSL.setTypeface(null, Typeface.BOLD);
+            tvSL.setGravity(Gravity.CENTER_VERTICAL);
+            tvSL.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            leaveCreditsInfo.addView(tvSL);
+        });
+    }
+
+    private void renderLeaveHistory() {
+        runOnUiThread(() -> {
+            leaveHistoryContainer.removeAllViews();
+            if (leaveReqsArray == null || leaveReqsArray.length() == 0) {
+                showEmpty(leaveHistoryContainer, R.string.no_notifications);
+                return;
+            }
+            for (int i = 0; i < leaveReqsArray.length(); i++) {
+                JSONObject l = leaveReqsArray.optJSONObject(i);
+                if (l == null) continue;
+
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(14, 12, 14, 12);
+                card.setBackgroundResource(R.drawable.bg_card);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 8);
+                card.setLayoutParams(lp);
+
+                LinearLayout topRow = new LinearLayout(this);
+                topRow.setOrientation(LinearLayout.HORIZONTAL);
+                topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+                TextView tvType = new TextView(this);
+                tvType.setText(humanizeLeaveType(l.optString("type", "OTHER")));
+                tvType.setTextColor(Color.parseColor("#111827"));
+                tvType.setTextSize(13);
+                tvType.setTypeface(null, Typeface.BOLD);
+                topRow.addView(tvType, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+                TextView tvStatus = new TextView(this);
+                tvStatus.setText(l.optString("status", "PENDING").replace("_", " "));
+                tvStatus.setTextSize(9);
+                tvStatus.setTypeface(null, Typeface.BOLD);
+                tvStatus.setPadding(6, 3, 6, 3);
+                tvStatus.setBackgroundResource(R.drawable.bg_pill);
+                tvStatus.getBackground().setTint(leaveStatusColor(l.optString("status", "PENDING")));
+                tvStatus.setTextColor(Color.WHITE);
+                topRow.addView(tvStatus);
+                card.addView(topRow);
+
+                String from = formatLeaveDate(l.optString("fromDate", ""));
+                String to = formatLeaveDate(l.optString("toDate", ""));
+                String comm = "REQUESTED".equals(l.optString("commutation", "NOT_REQUESTED")) ? "with pay" : "without pay";
+
+                TextView tvInfo = new TextView(this);
+                tvInfo.setText(l.optInt("days", 1) + " day(s)  •  " + from + " → " + to + "  •  " + comm);
+                tvInfo.setTextColor(Color.parseColor("#475569"));
+                tvInfo.setTextSize(12);
+                tvInfo.setTypeface(null, Typeface.BOLD);
+                tvInfo.setPadding(0, 4, 0, 0);
+                card.addView(tvInfo);
+
+                String note = l.optString("adminNote", "");
+                if (!note.isEmpty()) {
+                    TextView tvNote = new TextView(this);
+                    tvNote.setText("Note: " + note);
+                    tvNote.setTextColor(Color.parseColor("#94A3B8"));
+                    tvNote.setTextSize(11);
+                    card.addView(tvNote);
+                }
+
+                leaveHistoryContainer.addView(card);
+            }
+        });
+    }
+
+    private void showApplyLeaveDialog() {
+        String[] types = {"Vacation Leave", "Sick Leave", "Maternity Leave", "Paternity Leave",
+                "Solo Parent Leave", "Special Privilege", "Study Leave", "VAWC Leave",
+                "Rehabilitation Leave", "Special Emergency", "Other"};
+        String[] typeCodes = {"VACATION", "SICK", "MATERNITY", "PATERNITY", "SOLO_PARENT",
+                "SPECIAL_PRIVILEGE", "STUDY", "VAWC", "REHABILITATION", "SPECIAL_EMERGENCY", "OTHER"};
+
+        final int[] selectedType = {0};
+        final String[] fromSel = {""};
+        final String[] toSel = {""};
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(28, 8, 28, 4);
+
+        Calendar now = Calendar.getInstance();
+        String today = String.format(Locale.US, "%04d-%02d-%02d", now.get(Calendar.YEAR),
+                now.get(Calendar.MONTH) + 1, now.get(Calendar.DAY_OF_MONTH));
+
+        addDetailTitle(layout, "Applicant");
+        addDetailText(layout, techNameStr.isEmpty() ? "Technician" : techNameStr);
+        addDetailText(layout, "Date of filing: " + today + "      Department: Engineering");
+
+        // Conditional sections toggled by leave type (declared before type picker).
+        final LinearLayout leaveConditionals = new LinearLayout(this);
+        leaveConditionals.setOrientation(LinearLayout.VERTICAL);
+
+        final EditText etLeaveAddress = new EditText(this);
+        etLeaveAddress.setHint("Address where vacation leave will be spent (CSC)");
+        etLeaveAddress.setTextSize(13);
+        etLeaveAddress.setTextColor(Color.parseColor("#111827"));
+        etLeaveAddress.setVisibility(View.GONE);
+        leaveConditionals.addView(etLeaveAddress);
+
+        final CheckBox cbMedicalCert = new CheckBox(this);
+        cbMedicalCert.setText("Medical certificate is herewith attached");
+        cbMedicalCert.setTextColor(Color.parseColor("#111827"));
+        cbMedicalCert.setTextSize(13);
+        cbMedicalCert.setVisibility(View.GONE);
+        leaveConditionals.addView(cbMedicalCert);
+
+        addDetailTitle(layout, "Type of Leave");
+        TextView tvType = new TextView(this);
+        tvType.setText(types[0]);
+        tvType.setTextColor(Color.parseColor("#111827"));
+        tvType.setTextSize(13);
+        tvType.setTypeface(null, Typeface.BOLD);
+        tvType.setPadding(0, 2, 0, 6);
+        tvType.setClickable(true);
+        tvType.setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setTitle("Type of Leave")
+                .setSingleChoiceItems(types, selectedType[0], (d, which) -> selectedType[0] = which)
+                .setPositiveButton("OK", (d, w) -> {
+                    tvType.setText(types[selectedType[0]]);
+                    boolean vacation = "VACATION".equals(typeCodes[selectedType[0]]);
+                    boolean sick = "SICK".equals(typeCodes[selectedType[0]]);
+                    etLeaveAddress.setVisibility(vacation ? View.VISIBLE : View.GONE);
+                    cbMedicalCert.setVisibility(sick ? View.VISIBLE : View.GONE);
+                })
+                .show());
+        layout.addView(tvType);
+
+        addDetailTitle(layout, "Details of Leave");
+        final TextView tvDays = new TextView(this);
+        tvDays.setText("Number of working days:  0");
+        tvDays.setTextColor(Color.parseColor("#B37700"));
+        tvDays.setTextSize(12);
+        tvDays.setTypeface(null, Typeface.BOLD);
+        tvDays.setPadding(0, 4, 0, 2);
+
+        TextView tvFrom = new TextView(this);
+        tvFrom.setTextColor(Color.parseColor("#111827"));
+        tvFrom.setTextSize(13);
+        tvFrom.setPadding(0, 2, 0, 2);
+        tvFrom.setText("From:  " + (fromSel[0].isEmpty() ? "tap to select" : fromSel[0]));
+        tvFrom.setClickable(true);
+        tvFrom.setOnClickListener(v -> pickDate((dp, y, m, d) -> {
+            fromSel[0] = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d);
+            tvFrom.setText("From:  " + fromSel[0]);
+            updateLeaveDays(fromSel[0], toSel[0], tvDays);
+        }, tvFrom));
+        layout.addView(tvFrom);
+
+        TextView tvTo = new TextView(this);
+        tvTo.setText("To:  " + (toSel[0].isEmpty() ? "tap to select" : toSel[0]));
+        tvTo.setTextColor(Color.parseColor("#111827"));
+        tvTo.setTextSize(13);
+        tvTo.setPadding(0, 2, 0, 2);
+        tvTo.setClickable(true);
+        tvTo.setOnClickListener(v -> pickDate((dp, y, m, d) -> {
+            toSel[0] = String.format(Locale.US, "%04d-%02d-%02d", y, m + 1, d);
+            tvTo.setText("To:  " + toSel[0]);
+            updateLeaveDays(fromSel[0], toSel[0], tvDays);
+        }, tvTo));
+        layout.addView(tvTo);
+
+        layout.addView(tvDays);
+
+        addDetailTitle(layout, "Commutation");
+        RadioGroup rgComm = new RadioGroup(this);
+        RadioButton rbNotRequested = new RadioButton(this);
+        rbNotRequested.setText("Not requested (without pay)");
+        rbNotRequested.setTextColor(Color.parseColor("#111827"));
+        rbNotRequested.setTextSize(13);
+        rbNotRequested.setChecked(true);
+        rgComm.addView(rbNotRequested);
+        RadioButton rbRequested = new RadioButton(this);
+        rbRequested.setText("Requested (with pay)");
+        rbRequested.setTextColor(Color.parseColor("#111827"));
+        rbRequested.setTextSize(13);
+        rgComm.addView(rbRequested);
+        layout.addView(rgComm);
+
+        layout.addView(leaveConditionals);
+
+        addDetailTitle(layout, "Reason / Remarks");
+        EditText etReason = new EditText(this);
+        etReason.setHint("Reason for leave (optional)");
+        etReason.setTextSize(13);
+        etReason.setTextColor(Color.parseColor("#111827"));
+        etReason.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        etReason.setMinLines(2);
+        layout.addView(etReason);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Apply for Leave")
+                .setView(layout)
+                .setPositiveButton("Submit", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v ->
+                submitLeave(typeCodes[selectedType[0]], fromSel[0], toSel[0],
+                        cbMedicalCert.isChecked(), etLeaveAddress.getText().toString().trim(),
+                        etReason.getText().toString().trim(), dialog,
+                        rbRequested.isChecked())));
+        dialog.show();
+    }
+
+    private void pickDate(android.content.DialogInterface.OnDateSetListener listener, TextView target) {
+        Calendar c = Calendar.getInstance();
+        new DatePickerDialog(this, listener, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    private void updateLeaveDays(String from, String to, TextView tvDays) {
+        if (from.isEmpty() || to.isEmpty()) {
+            tvDays.setText("Number of working days:  0");
+            return;
+        }
+        int days = countWorkingDays(from, to);
+        if (days <= 0) {
+            tvDays.setText("Number of working days:  invalid (\"To\" before \"From\")");
+            return;
+        }
+        tvDays.setText("Number of working days:  " + days);
+    }
+
+    private void submitLeave(String type, String from, String to, boolean medicalCert,
+                             String address, String reason, AlertDialog dialog, boolean commutationRequested) {
+        if (from.isEmpty() || to.isEmpty()) {
+            Toast.makeText(this, "Please select the inclusive dates.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        int days = countWorkingDays(from, to);
+        if (days <= 0) {
+            Toast.makeText(this, "Invalid dates — \"To\" must be on or after \"From\".", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        final int approvedDays = days;
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("type", type);
+                json.put("from", from);
+                json.put("to", to);
+                json.put("commutation", commutationRequested ? "REQUESTED" : "NOT_REQUESTED");
+                if (!address.isEmpty()) json.put("addressDuringLeave", address);
+                json.put("medicalCertificate", medicalCert);
+                if (!reason.isEmpty()) json.put("reason", reason);
+                String resp = ApiClient.post("/leave", json.toString());
+                JSONObject obj = resp != null ? new JSONObject(resp) : null;
+                runOnUiThread(() -> {
+                    if (obj != null && obj.optBoolean("success", false)) {
+                        dialog.dismiss();
+                        Toast.makeText(this, "Leave application submitted for approval.", Toast.LENGTH_LONG).show();
+                        loadLeaveData();
+                    } else {
+                        String err = obj != null ? obj.optString("error", "") : "";
+                        Toast.makeText(this, err.isEmpty() ? "Submission failed" : err, Toast.LENGTH_LONG).show();
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, R.string.network_error, Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private int countWorkingDays(String from, String to) {
+        String[] fa = from.split("-");
+        String[] ta = to.split("-");
+        if (fa.length < 3 || ta.length < 3) return -1;
+        Calendar f = Calendar.getInstance();
+        f.set(Integer.parseInt(fa[0]), Integer.parseInt(fa[1]) - 1, Integer.parseInt(fa[2]));
+        Calendar t = Calendar.getInstance();
+        t.set(Integer.parseInt(ta[0]), Integer.parseInt(ta[1]) - 1, Integer.parseInt(ta[2]));
+        if (f.after(t)) return -1;
+        int total = 0;
+        while (!f.after(t)) {
+            int day = f.get(Calendar.DAY_OF_WEEK);
+            if (day != Calendar.SATURDAY && day != Calendar.SUNDAY) total++;
+            f.add(Calendar.DAY_OF_YEAR, 1);
+        }
+        return Math.max(1, total);
+    }
+
+    private String formatLeaveDate(String iso) {
+        if (iso == null || iso.isEmpty()) return "-";
+        return iso.length() >= 10 ? iso.substring(0, 10) : iso;
+    }
+
+    private String humanizeLeaveType(String type) {
+        switch (String.valueOf(type).toUpperCase()) {
+            case "VACATION": return "Vacation Leave";
+            case "SICK": return "Sick Leave";
+            case "MATERNITY": return "Maternity Leave";
+            case "PATERNITY": return "Paternity Leave";
+            case "SOLO_PARENT": return "Solo Parent Leave";
+            case "SPECIAL_PRIVILEGE": return "Special Privilege";
+            case "STUDY": return "Study Leave";
+            case "VAWC": return "VAWC Leave";
+            case "REHABILITATION": return "Rehabilitation Leave";
+            case "SPECIAL_EMERGENCY": return "Special Emergency";
+            default: return "Other";
+        }
+    }
+
+    private int leaveStatusColor(String status) {
+        switch (String.valueOf(status)) {
+            case "PENDING": return Color.parseColor("#D97706");
+            case "APPROVED": return Color.parseColor("#22A66F");
+            case "REJECTED": return Color.parseColor("#DC2626");
+            case "CANCELLED": return Color.parseColor("#6B7280");
+            default: return Color.parseColor("#6B7280");
+        }
+    }
+
+    private void addDetailTitle(LinearLayout layout, String title) {
+        if (layout.getChildCount() > 0) {
+            View divider = new View(this);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 1);
+            dlp.setMargins(0, 14, 0, 10);
+            divider.setLayoutParams(dlp);
+            divider.setBackgroundColor(Color.parseColor("#EDF1F4"));
+            layout.addView(divider);
+        }
+        TextView tv = new TextView(this);
+        tv.setText(title.toUpperCase(Locale.US));
+        tv.setTextColor(Color.parseColor("#B37700"));
+        tv.setTextSize(10);
         tv.setTypeface(null, Typeface.BOLD);
-        tv.setPadding(0, 10, 0, 2);
+        tv.setLetterSpacing(0.08f);
+        tv.setPadding(0, 0, 0, 4);
         layout.addView(tv);
     }
 
@@ -1397,8 +1807,9 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         if (text == null) return;
         TextView tv = new TextView(this);
         tv.setText(text);
-        tv.setTextColor(Color.parseColor("#101416"));
+        tv.setTextColor(Color.parseColor("#111827"));
         tv.setTextSize(13);
+        tv.setLineSpacing(2, 1f);
         tv.setPadding(0, 0, 0, 2);
         layout.addView(tv);
     }

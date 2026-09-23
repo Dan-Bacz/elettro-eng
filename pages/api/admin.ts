@@ -115,6 +115,11 @@ export default async function handler(req: any, res: any) {
           select: { id: true, name: true, email: true, role: true, approved: true, status: true }
         })
         await notifyUser(uid, 'ACCOUNT', 'Registration Approved', `Your technician account has been approved. You can now sign in and access your dashboard.`, '/technician/login')
+        await prisma.leaveCredits.upsert({
+          where: { techId: uid },
+          create: { techId: uid, vacation: 15, sick: 15 },
+          update: {}
+        })
         await sendTechnicianApprovalNotification({ name: user.name, email: user.email })
         return res.json({ success: true, user })
       }

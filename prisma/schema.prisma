@@ -30,6 +30,8 @@ model User {
   notifications Notification[]
   materialRequests MaterialRequest[]
   projectAssignments ProjectAssignment[]
+  leaveRequests LeaveRequest[] @relation("TechLeaves")
+  leaveCredits LeaveCredits? @relation("TechLeaveCredits")
 }
 
 model Booking {
@@ -153,6 +155,45 @@ model Notification {
   createdAt DateTime @default(now())
 }
 
+// Leave management (based on CSC Form No. 6 - Application for Leave)
+model LeaveRequest {
+  id                String     @id @default(uuid())
+  techId            String
+  tech              User       @relation("TechLeaves", fields: [techId], references: [id], onDelete: Cascade)
+  type              LeaveType
+  fromDate          DateTime
+  toDate            DateTime
+  days              Int
+  // CSC commutation: REQUESTED (with pay) or NOT_REQUESTED (without pay)
+  commutation       String     @default("NOT_REQUESTED")
+  // Vacation leave - address where the leave will be spent
+  addressDuringLeave String?
+  // Sick leave - medical certificate attached flag
+  medicalCertificate Boolean   @default(false)
+  reason            String?
+  status            LeaveStatus @default(PENDING)
+  adminNote         String?
+  approvedDays      Int?
+  decidedBy         String?
+  decidedAt         DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([techId])
+  @@index([status])
+}
+
+model LeaveCredits {
+  id           String   @id @default(uuid())
+  techId       String   @unique
+  tech         User     @relation("TechLeaveCredits", fields: [techId], references: [id], onDelete: Cascade)
+  vacation     Int      @default(15)
+  sick         Int      @default(15)
+  vacationUsed Int      @default(0)
+  sickUsed     Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
 model Setting {
   key       String   @id
   value     String?
@@ -179,4 +220,25 @@ enum BookingStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum LeaveType {
+  VACATION
+  SICK
+  MATERNITY
+  PATERNITY
+  SOLO_PARENT
+  SPECIAL_PRIVILEGE
+  STUDY
+  VAWC
+  REHABILITATION
+  SPECIAL_EMERGENCY
+  OTHER
 }

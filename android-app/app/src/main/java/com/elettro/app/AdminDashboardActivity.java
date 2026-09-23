@@ -18,6 +18,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -66,10 +67,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
     // Section containers
     private View viewDashboard, viewBookings, viewProjects, viewNotifications;
     private View viewClients, viewTechnicians, viewInventory, viewReports, viewSettings, viewMore;
+    private View viewLeave;
     // List containers
     private LinearLayout recentBookingsContainer, bookingsListContainer, projectsListContainer;
     private LinearLayout registrationsListContainer, inventoryListContainer, techniciansListContainer;
     private LinearLayout clientsListContainer, reportsListContainer, notificationsListContainer;
+    private LinearLayout leaveListContainer, leaveCreditsContainer;
     // Settings fields
     private EditText settingsOrgName, settingsSupportEmail;
     private TextView btnSaveSettings;
@@ -105,6 +108,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private JSONArray pendingUsersArray;
     private JSONArray notificationsArray;
     private JSONArray projectsArray;
+    private JSONArray leaveReqsArray;
+    private JSONArray leaveCreditsArray;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -165,6 +170,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewReports = findViewById(R.id.view_reports_section);
         viewSettings = findViewById(R.id.view_settings_section);
         viewMore = findViewById(R.id.view_more_section);
+        viewLeave = findViewById(R.id.view_leave_section);
 
         recentBookingsContainer = findViewById(R.id.recent_bookings_container);
         bookingsListContainer = findViewById(R.id.bookings_list_container);
@@ -175,6 +181,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         clientsListContainer = findViewById(R.id.clients_list_container);
         reportsListContainer = findViewById(R.id.reports_list_container);
         notificationsListContainer = findViewById(R.id.notifications_list_container);
+        leaveListContainer = findViewById(R.id.leave_list_container);
+        leaveCreditsContainer = findViewById(R.id.leave_credits_container);
 
         settingsOrgName = findViewById(R.id.settings_org_name);
         settingsSupportEmail = findViewById(R.id.settings_support_email);
@@ -233,6 +241,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_home) { showSection("home"); return true; }
             if (id == R.id.nav_bookings) { showSection("bookings"); return true; }
             if (id == R.id.nav_projects) { showSection("projects"); return true; }
+            if (id == R.id.nav_leave) { showSection("leave"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_more) { showSection("more"); return true; }
             if (id == R.id.nav_technicians) { showSection("technicians"); return true; }
@@ -255,6 +264,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewReports.setVisibility("reports".equals(key) ? View.VISIBLE : View.GONE);
         viewSettings.setVisibility("settings".equals(key) ? View.VISIBLE : View.GONE);
         viewMore.setVisibility("more".equals(key) ? View.VISIBLE : View.GONE);
+        viewLeave.setVisibility("leave".equals(key) ? View.VISIBLE : View.GONE);
 
         int titleRes = R.string.drawer_dashboard;
         int subRes = R.string.welcome_admin_3;
@@ -270,6 +280,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 titleRes = R.string.projects_title;
                 subRes = R.string.projects_subtitle;
                 menuRes = R.id.nav_projects;
+                break;
+            case "leave":
+                titleRes = R.string.leave_title;
+                subRes = R.string.leave_subtitle;
+                menuRes = R.id.nav_leave;
+                loadLeaveData();
                 break;
             case "notifications":
                 titleRes = R.string.notifications_title;
@@ -809,6 +825,14 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 tvInfo.setPadding(0, 4, 0, 0);
                 card.addView(tvInfo);
 
+                int progress = getStatusProgress(status);
+                TextView tvProgress = new TextView(this);
+                tvProgress.setText("Progress: " + progress + "%");
+                tvProgress.setTextColor(Color.parseColor("#68747A"));
+                tvProgress.setTextSize(11);
+                tvProgress.setPadding(0, 2, 0, 0);
+                card.addView(tvProgress);
+
                 String clientName = "";
                 if (booking != null) {
                     JSONObject client = booking.optJSONObject("client");
@@ -823,6 +847,38 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     card.addView(tvClient);
                 }
 
+                int teamCount = 0;
+                JSONArray assignmentsArr = project.optJSONArray("assignments");
+                if (assignmentsArr != null) teamCount = assignmentsArr.length();
+                double projBudget = booking != null ? booking.optDouble("budget", -1) : -1;
+
+                LinearLayout footer = new LinearLayout(this);
+                footer.setOrientation(LinearLayout.HORIZONTAL);
+                footer.setGravity(Gravity.CENTER_VERTICAL);
+                footer.setPadding(0, 8, 0, 0);
+
+                TextView tvTeam = new TextView(this);
+                tvTeam.setText("👷 " + (teamCount > 0
+                        ? teamCount + (teamCount == 1 ? " technician" : " technicians")
+                        : (booking != null && !booking.optString("status", "").isEmpty() && "ASSIGNED".equals(booking.optString("status", "")) ? "Unassigned" : "Not assigned")));
+                tvTeam.setTextColor(Color.parseColor("#68747A"));
+                tvTeam.setTextSize(11);
+                tvTeam.setTypeface(null, Typeface.BOLD);
+                footer.addView(tvTeam);
+
+                TextView tvBudget = new TextView(this);
+                tvBudget.setText(projBudget >= 0 ? "$" + String.format(Locale.US, "%,.0f", projBudget) : "—");
+                tvBudget.setTextColor(Color.parseColor("#0F172A"));
+                tvBudget.setTextSize(11);
+                tvBudget.setTypeface(null, Typeface.BOLD);
+                LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+                tvBudget.setLayoutParams(blp);
+                tvBudget.setGravity(Gravity.END);
+                footer.addView(tvBudget);
+
+                card.addView(footer);
+
                 projectsListContainer.addView(card);
             }
         }
@@ -832,7 +888,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 JSONObject b = bookingsArray.optJSONObject(i);
                 if (b == null) continue;
                 String status = b.optString("status", "");
-                if (!("APPROVED".equals(status) || "ASSIGNED".equals(status) || "IN_PROGRESS".equals(status) || "COMPLETED".equals(status))) continue;
+                if (!("APPROVED".equals(status) || "ASSIGNED".equals(status) || "IN_PROGRESS".equals(status) || "COMPLETED".equals(status) || "CANCELLED".equals(status))) continue;
                 hasProjects = true;
 
                 LinearLayout card = new LinearLayout(this);
@@ -1314,11 +1370,18 @@ public class AdminDashboardActivity extends AppCompatActivity {
         if (booking != null && !booking.optString("status", "").isEmpty()) {
             status = booking.optString("status", status);
         }
+        if (status.isEmpty()) status = "APPROVED";
 
         String clientName = "";
+        String startDate = "";
+        String endDate = "";
+        double budget = -1;
         if (booking != null) {
             JSONObject client = booking.optJSONObject("client");
             if (client != null) clientName = client.optString("name", "");
+            startDate = booking.optString("startDate", "");
+            endDate = booking.optString("endDate", "");
+            budget = booking.optDouble("budget", -1);
         }
 
         StringBuilder team = new StringBuilder();
@@ -1333,24 +1396,190 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 }
             }
         } else {
-            team.append("No technicians assigned");
+            team.append("No technicians assigned yet");
+        }
+
+        int progress = getStatusProgress(status);
+
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(30, 16, 30, 8);
+
+        addDetailTitle(layout, "Status");
+        addDetailText(layout, status.replace("_", " ") + "  (" + progress + "%)");
+
+        ProgressBar bar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        bar.setMax(100);
+        bar.setProgress(progress);
+        LinearLayout.LayoutParams barLp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 16);
+        barLp.setMargins(0, 6, 0, 12);
+        bar.setLayoutParams(barLp);
+        bar.setProgressTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#F5C400")));
+        layout.addView(bar);
+
+        addDetailTitle(layout, "Client");
+        addDetailText(layout, clientName.isEmpty() ? "-" : clientName);
+
+        addDetailTitle(layout, "Schedule");
+        addDetailText(layout, "Start: " + formatShortDate(startDate) + "   End: " + formatShortDate(endDate));
+
+        addDetailTitle(layout, "Budget");
+        TextView tvBudgetValue = new TextView(this);
+        tvBudgetValue.setText(budget >= 0
+                ? "✎  $ " + String.format(Locale.US, "%,.2f", budget) + "   (tap to edit)"
+                : "✎  Not set — tap to add");
+        tvBudgetValue.setTextColor(Color.parseColor("#B45309"));
+        tvBudgetValue.setTextSize(13);
+        tvBudgetValue.setTypeface(null, Typeface.BOLD);
+        tvBudgetValue.setPadding(0, 2, 0, 6);
+        tvBudgetValue.setClickable(true);
+        final String fBookingId = bookingId;
+        final String fStatus = status;
+        final double fBudget = budget;
+        tvBudgetValue.setOnClickListener(v -> showEditBudgetDialog(fBookingId, title, fBudget, fStatus));
+        layout.addView(tvBudgetValue);
+
+        addDetailTitle(layout, "Project Team");
+        TextView tvTeam = new TextView(this);
+        tvTeam.setText(team.toString());
+        tvTeam.setTextColor(Color.parseColor("#0B0F10"));
+        tvTeam.setTextSize(12);
+        tvTeam.setTypeface(null, Typeface.BOLD);
+        tvTeam.setPadding(0, 2, 0, 6);
+        layout.addView(tvTeam);
+
+        JSONObject fullBooking = findBookingInArray(bookingId);
+        JSONArray acts = fullBooking != null ? fullBooking.optJSONArray("technicianActivities") : null;
+        addDetailTitle(layout, "Recent Updates");
+        if (acts == null || acts.length() == 0) {
+            addDetailText(layout, "No updates recorded yet.");
+        } else {
+            int count = Math.min(3, acts.length());
+            for (int i = 0; i < count; i++) {
+                JSONObject a = acts.optJSONObject(i);
+                if (a != null) addDetailText(layout, a.optString("message", ""));
+            }
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this)
                 .setTitle(title)
-                .setMessage("Status: " + status.replace("_", " ") + "\nClient: " + clientName + "\n\nProject Team:\n" + team)
+                .setView(layout)
                 .setPositiveButton("Close", null);
 
-        final String finalStatus = status;
         if (bookingId != null && !bookingId.isEmpty()) {
-            if (!"COMPLETED".equals(finalStatus) && !"CANCELLED".equals(finalStatus)) {
+            if (!"COMPLETED".equals(status) && !"CANCELLED".equals(status)) {
                 builder.setNeutralButton("Add Technician", (dialog, which) -> showAddTechnicianDialog(bookingId, project));
             }
-            if ("APPROVED".equals(finalStatus)) {
+            if ("APPROVED".equals(status)) {
                 builder.setNegativeButton("Decline", (dialog, which) -> declineBookingDialog(bookingId, title));
             }
         }
         builder.show();
+    }
+
+    private void showEditBudgetDialog(String bookingId, String projectTitle, double currentBudget, String currentStatus) {
+        EditText input = new EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        if (currentBudget >= 0) input.setText(String.valueOf(currentBudget));
+        input.setHint("Budget (USD)");
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(40, 16, 40, 0);
+        wrap.addView(input);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Edit Budget: " + projectTitle)
+                .setView(wrap)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String raw = input.getText().toString().trim();
+                    double value;
+                    try {
+                        value = Double.parseDouble(raw);
+                    } catch (Exception e) {
+                        Toast.makeText(this, "Enter a valid amount", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    updateProjectBudget(bookingId, currentStatus, value);
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void updateProjectBudget(String bookingId, String currentStatus, double budget) {
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("action", "update_status");
+                json.put("bookingId", bookingId);
+                json.put("status", currentStatus);
+                json.put("budget", budget);
+                ApiClient.post("/admin", json.toString());
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Budget Updated", Toast.LENGTH_SHORT).show();
+                    loadDashboardData();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(this, "Budget update failed", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private JSONObject findBookingInArray(String bookingId) {
+        if (bookingsArray == null || bookingId == null) return null;
+        for (int i = 0; i < bookingsArray.length(); i++) {
+            JSONObject b = bookingsArray.optJSONObject(i);
+            if (b != null && bookingId.equals(b.optString("id"))) return b;
+        }
+        return null;
+    }
+
+    private int getStatusProgress(String status) {
+        if (status == null) return 5;
+        switch (status) {
+            case "PENDING": return 5;
+            case "APPROVED": return 20;
+            case "ASSIGNED": return 40;
+            case "IN_PROGRESS": return 70;
+            case "COMPLETED": return 100;
+            case "CANCELLED": return 100;
+            default: return 5;
+        }
+    }
+
+    private String formatShortDate(String iso) {
+        if (iso == null || iso.isEmpty()) return "-";
+        return iso.length() >= 10 ? iso.substring(0, 10) : iso;
+    }
+
+    private void addDetailTitle(LinearLayout parent, String text) {
+        if (parent.getChildCount() > 0) {
+            View divider = new View(this);
+            LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 1);
+            dlp.setMargins(0, 14, 0, 10);
+            divider.setLayoutParams(dlp);
+            divider.setBackgroundColor(Color.parseColor("#EDF1F4"));
+            parent.addView(divider);
+        }
+        TextView tv = new TextView(this);
+        tv.setText(text.toUpperCase(Locale.US));
+        tv.setTextColor(Color.parseColor("#B37700"));
+        tv.setTextSize(10);
+        tv.setTypeface(null, Typeface.BOLD);
+        tv.setLetterSpacing(0.08f);
+        tv.setPadding(0, 0, 0, 4);
+        parent.addView(tv);
+    }
+
+    private void addDetailText(LinearLayout parent, String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextColor(Color.parseColor("#111827"));
+        tv.setTextSize(13);
+        tv.setLineSpacing(2, 1f);
+        tv.setPadding(0, 0, 0, 2);
+        parent.addView(tv);
     }
 
     private void showAddTechnicianDialog(String bookingId, JSONObject project) {
@@ -1884,6 +2113,269 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     // === HELPERS ===
+
+    // === LEAVE REQUESTS ===
+
+    private void loadLeaveData() {
+        leaveListContainer.removeAllViews();
+        leaveCreditsContainer.removeAllViews();
+        showLoadingSpinner(leaveListContainer);
+
+        new Thread(() -> {
+            try {
+                String resp = ApiClient.get("/admin/leave");
+                JSONObject obj = resp != null ? new JSONObject(resp) : null;
+                if (obj != null) {
+                    leaveReqsArray = obj.optJSONArray("leaves");
+                    leaveCreditsArray = obj.optJSONArray("credits");
+                }
+                runOnUiThread(this::renderLeaveLists);
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    leaveListContainer.removeAllViews();
+                    showEmpty(leaveListContainer, R.string.network_error);
+                });
+            }
+        }).start();
+    }
+
+    private void renderLeaveLists() {
+        leaveListContainer.removeAllViews();
+        leaveCreditsContainer.removeAllViews();
+
+        if (leaveReqsArray == null || leaveReqsArray.length() == 0) {
+            TextView tv = new TextView(this);
+            tv.setText("No leave applications yet.");
+            tv.setTextColor(Color.parseColor("#9EA8AC"));
+            tv.setTextSize(12);
+            tv.setPadding(0, 8, 0, 0);
+            leaveListContainer.addView(tv);
+        } else {
+            for (int i = 0; i < leaveReqsArray.length(); i++) {
+                JSONObject l = leaveReqsArray.optJSONObject(i);
+                if (l == null) continue;
+                leaveListContainer.addView(buildLeaveCard(l));
+            }
+        }
+
+        if (leaveCreditsArray == null || leaveCreditsArray.length() == 0) {
+            TextView tv = new TextView(this);
+            tv.setText("No technicians with credits yet.");
+            tv.setTextColor(Color.parseColor("#9EA8AC"));
+            tv.setTextSize(12);
+            tv.setPadding(0, 8, 0, 0);
+            leaveCreditsContainer.addView(tv);
+            return;
+        }
+
+        for (int i = 0; i < leaveCreditsArray.length(); i++) {
+            JSONObject c = leaveCreditsArray.optJSONObject(i);
+            if (c == null) continue;
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(12, 10, 12, 10);
+            row.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams rlp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            rlp.setMargins(0, 0, 0, 6);
+            row.setLayoutParams(rlp);
+
+            JSONObject tech = c.optJSONObject("tech");
+            String name = tech != null ? tech.optString("name", "Technician") : "Technician";
+            TextView tvName = new TextView(this);
+            tvName.setText(name);
+            tvName.setTextColor(Color.parseColor("#111827"));
+            tvName.setTextSize(13);
+            tvName.setTypeface(null, Typeface.BOLD);
+            tvName.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            row.addView(tvName);
+
+            int vacation = c.optInt("vacation", 15);
+            int sick = c.optInt("sick", 15);
+            int vacationUsed = c.optInt("vacationUsed", 0);
+            int sickUsed = c.optInt("sickUsed", 0);
+            TextView tvCred = new TextView(this);
+            tvCred.setText("VL " + Math.max(0, vacation - vacationUsed) + "/" + vacation
+                    + "   SL " + Math.max(0, sick - sickUsed) + "/" + sick);
+            tvCred.setTextColor(Color.parseColor("#64748B"));
+            tvCred.setTextSize(12);
+            tvCred.setTypeface(null, Typeface.BOLD);
+            row.addView(tvCred);
+
+            leaveCreditsContainer.addView(row);
+        }
+    }
+
+    private LinearLayout buildLeaveCard(JSONObject l) {
+        JSONObject tech = l.optJSONObject("tech");
+        String techName = tech != null ? tech.optString("name", "Technician") : "Technician";
+        String type = leaveTypeLabel(l.optString("type", "OTHER"));
+        int days = l.optInt("days", 1);
+        String from = formatShortDate(l.optString("fromDate", ""));
+        String to = formatShortDate(l.optString("toDate", ""));
+        String status = l.optString("status", "PENDING");
+        String reason = l.optString("reason", "");
+        String note = l.optString("adminNote", "");
+        String comm = "REQUESTED".equals(l.optString("commutation", "NOT_REQUESTED")) ? "with pay" : "without pay";
+
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(14, 12, 14, 12);
+        card.setBackgroundResource(R.drawable.bg_card);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.setMargins(0, 0, 0, 8);
+        card.setLayoutParams(lp);
+
+        LinearLayout topRow = new LinearLayout(this);
+        topRow.setOrientation(LinearLayout.HORIZONTAL);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView tvName = new TextView(this);
+        tvName.setText(techName);
+        tvName.setTextColor(Color.parseColor("#111827"));
+        tvName.setTextSize(13);
+        tvName.setTypeface(null, Typeface.BOLD);
+        topRow.addView(tvName, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+        TextView tvStatus = new TextView(this);
+        tvStatus.setText(status.replace("_", " "));
+        tvStatus.setTextSize(9);
+        tvStatus.setTypeface(null, Typeface.BOLD);
+        tvStatus.setPadding(6, 3, 6, 3);
+        tvStatus.setBackgroundResource(R.drawable.bg_pill);
+        tvStatus.getBackground().setTint(leaveStatusColor(status));
+        tvStatus.setTextColor(Color.WHITE);
+        topRow.addView(tvStatus);
+        card.addView(topRow);
+
+        TextView tvInfo = new TextView(this);
+        tvInfo.setText(type + "  •  " + days + " day(s)  •  " + comm);
+        tvInfo.setTextColor(Color.parseColor("#475569"));
+        tvInfo.setTextSize(12);
+        tvInfo.setTypeface(null, Typeface.BOLD);
+        tvInfo.setPadding(0, 4, 0, 0);
+        card.addView(tvInfo);
+
+        TextView tvDates = new TextView(this);
+        tvDates.setText(from + "  →  " + to);
+        tvDates.setTextColor(Color.parseColor("#94A3B8"));
+        tvDates.setTextSize(11);
+        card.addView(tvDates);
+
+        if (!reason.isEmpty()) {
+            TextView tvReason = new TextView(this);
+            tvReason.setText(reason);
+            tvReason.setTextColor(Color.parseColor("#64748B"));
+            tvReason.setTextSize(11);
+            tvReason.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.ITALIC), Typeface.ITALIC);
+            card.addView(tvReason);
+        }
+        if (!note.isEmpty()) {
+            TextView tvNote = new TextView(this);
+            tvNote.setText("Note: " + note);
+            tvNote.setTextColor(Color.parseColor("#94A3B8"));
+            tvNote.setTextSize(11);
+            card.addView(tvNote);
+        }
+
+        if ("PENDING".equals(status)) {
+            LinearLayout actionRow = new LinearLayout(this);
+            actionRow.setOrientation(LinearLayout.HORIZONTAL);
+            actionRow.setGravity(Gravity.END);
+            actionRow.setPadding(0, 8, 0, 0);
+            String leaveId = l.optString("id");
+
+            Button approve = createSmallButton("Approve", Color.parseColor("#0B0F10"), R.drawable.bg_action_green);
+            approve.setOnClickListener(v -> showLeaveDecisionDialog(leaveId, techName, true));
+            actionRow.addView(approve);
+
+            Button reject = createSmallButton("Reject", Color.parseColor("#DC2626"));
+            LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            rp.setMarginStart(8);
+            reject.setLayoutParams(rp);
+            reject.setOnClickListener(v -> showLeaveDecisionDialog(leaveId, techName, false));
+            actionRow.addView(reject);
+
+            card.addView(actionRow);
+        }
+        return card;
+    }
+
+    private void showLeaveDecisionDialog(String leaveId, String techName, boolean approve) {
+        EditText input = new EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setHint(approve ? "Optional approval remarks…" : "Reason for rejection…");
+        input.setTextSize(13);
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(24, 8, 24, 0);
+        wrap.addView(input);
+
+        new AlertDialog.Builder(this)
+                .setTitle((approve ? "Approve leave for " : "Reject leave for ") + techName + "?")
+                .setMessage("The technician will be notified by email.")
+                .setView(wrap)
+                .setPositiveButton(approve ? "Approve" : "Reject", (d, w) ->
+                        submitLeaveDecision(leaveId, approve ? "approve" : "reject",
+                                input.getText().toString().trim()))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void submitLeaveDecision(String leaveId, String action, String note) {
+        new Thread(() -> {
+            try {
+                JSONObject json = new JSONObject();
+                json.put("action", action);
+                json.put("leaveId", leaveId);
+                if (!note.isEmpty()) json.put("note", note);
+                String resp = ApiClient.post("/admin/leave", json.toString());
+                JSONObject obj = resp != null ? new JSONObject(resp) : null;
+                String error = obj != null ? obj.optString("error", "") : "";
+                runOnUiThread(() -> {
+                    if (error.isEmpty()) {
+                        Toast.makeText(this, action.equals("approve") ? "Leave approved" : "Leave rejected", Toast.LENGTH_SHORT).show();
+                        loadLeaveData();
+                    } else {
+                        Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> Toast.makeText(this, R.string.network_error, Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private String leaveTypeLabel(String type) {
+        switch (String.valueOf(type).toUpperCase()) {
+            case "VACATION": return "Vacation Leave";
+            case "SICK": return "Sick Leave";
+            case "MATERNITY": return "Maternity Leave";
+            case "PATERNITY": return "Paternity Leave";
+            case "SOLO_PARENT": return "Solo Parent Leave";
+            case "SPECIAL_PRIVILEGE": return "Special Privilege";
+            case "STUDY": return "Study Leave";
+            case "VAWC": return "VAWC Leave";
+            case "REHABILITATION": return "Rehabilitation Leave";
+            case "SPECIAL_EMERGENCY": return "Special Emergency";
+            default: return "Other";
+        }
+    }
+
+    private int leaveStatusColor(String status) {
+        switch (String.valueOf(status)) {
+            case "PENDING": return Color.parseColor("#D97706");
+            case "APPROVED": return Color.parseColor("#22A66F");
+            case "REJECTED": return Color.parseColor("#DC2626");
+            case "CANCELLED": return Color.parseColor("#6B7280");
+            default: return Color.parseColor("#6B7280");
+        }
+    }
 
     private Button createYellowSmallButton(String text) {
         return createSmallButton(text, Color.parseColor("#0B0F10"), R.drawable.bg_action_yellow);
