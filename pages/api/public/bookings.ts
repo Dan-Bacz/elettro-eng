@@ -1,6 +1,16 @@
 import { PrismaClient } from '@prisma/client'
+import { uploadToCloudinary } from '../../../lib/cloudinary'
+import { sendBookingSubmittedNotification } from '../../../lib/email'
 
 const prisma = new PrismaClient()
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '12mb',
+    },
+  },
+}
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -14,6 +24,9 @@ export default async function handler(req: any, res: any) {
     preferredTime,
     projectLocation,
     description,
+    buildingType,
+    installations,
+    attachment,
   } = req.body || {}
 
   if (!clientName || !String(clientName).trim()) {
@@ -42,12 +55,26 @@ export default async function handler(req: any, res: any) {
       })
     }
 
+    // Optional project photo -> Cloudinary
+    let attachmentUrl: string | null = null
+    const rawAttachment = attachment ? String(attachment).trim() : ''
+    if (rawAttachment && rawAttachment.startsWith('data:')) {
+      const uploaded = await uploadToCloudinary(rawAttachment, 'elettro-bookings')
+      if (uploaded) attachmentUrl = uploaded.secure_url
+    }
+
     const title = String(service).trim()
+    const installmentList = Array.isArray(installations) && installations.length
+      ? installations.map((i: string) => String(i).trim()).filter(Boolean)
+      : []
     const details = [
-      description ? String(description).trim() : '',
+      installmentList.length ? `Installation services: ${installmentList.join(', ')}` : '',
+      buildingType ? `Building type: ${String(buildingType).trim()}` : '',
       projectLocation ? `Location: ${String(projectLocation).trim()}` : '',
       preferredDate ? `Preferred date: ${String(preferredDate).trim()}` : '',
       preferredTime ? `Preferred time: ${String(preferredTime).trim()}` : '',
+      description ? String(description).trim() : '',
+      attachmentUrl ? `Attachment: ${attachmentUrl}` : '',
     ]
       .filter(Boolean)
       .join('\n')
@@ -63,6 +90,19 @@ export default async function handler(req: any, res: any) {
     })
 
     const reference = `ELT-${booking.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+
+    // Notify the client by email (non-blocking failure)
+    void sendBookingSubmittedNotification({
+      name: String(clientName).trim(),
+      email: cleanEmail,
+      service: title,
+      reference,
+      buildingType: buildingType ? String(buildingType).trim() : undefined,
+      installations: installmentList,
+      preferredDate: preferredDate ? String(preferredDate).trim() : undefined,
+      preferredTime: preferredTime ? String(preferredTime).trim() : undefined,
+      address: projectLocation ? String(projectLocation).trim() : undefined,
+    })
 
     return res.status(201).json({
       ok: true,

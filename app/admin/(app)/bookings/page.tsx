@@ -14,7 +14,7 @@ type Filter = BookingStatusValue | 'ALL'
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
-  { value: 'PENDING', label: 'Pending' },
+  { value: 'PENDING', label: 'Under Review' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'ASSIGNED', label: 'Assigned' },
   { value: 'IN_PROGRESS', label: 'In Progress' },

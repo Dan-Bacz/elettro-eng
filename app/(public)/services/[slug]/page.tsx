@@ -1,5 +1,6 @@
 import Link from "next/link"
 import CTASection from "@/components/client/CTASection"
+import InstallationBookingSection from "@/components/client/InstallationBookingSection"
 import { SERVICES } from "@/components/client/siteData"
 import { notFound } from "next/navigation"
 
@@ -52,40 +53,46 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <h2 className="text-2xl sm:text-3xl font-black text-gray-900">Overview</h2>
             <p className="mt-4 text-gray-600 leading-relaxed text-lg">{service.description}</p>
 
-            <div className="mt-10">
-              <h3 className="text-xl font-bold text-gray-900">What&apos;s Included</h3>
-              <ul className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {service.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 bg-gray-50 text-sm font-medium text-gray-800"
-                  >
-                    <span className="flex items-center justify-center w-7 h-7 rounded-full bg-yellow-400 text-black text-xs font-black shrink-0">
-                      ✓
-                    </span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {service.slug === "electrical-installation" ? (
+              <InstallationBookingSection service={service} />
+            ) : (
+              <>
+                <div className="mt-10">
+                  <h3 className="text-xl font-bold text-gray-900">What&apos;s Included</h3>
+                  <ul className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {service.features.map((feature) => (
+                      <li
+                        key={feature}
+                        className="flex items-center gap-3 p-4 rounded-xl border border-gray-100 bg-gray-50 text-sm font-medium text-gray-800"
+                      >
+                        <span className="flex items-center justify-center w-7 h-7 rounded-full bg-yellow-400 text-black text-xs font-black shrink-0">
+                          ✓
+                        </span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link
-                href="/book-service"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-400/25"
-              >
-                Book This Service
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                </svg>
-              </Link>
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-bold hover:border-gray-900 hover:text-gray-900 transition-colors"
-              >
-                Ask a Question
-              </Link>
-            </div>
+                <div className="mt-10 flex flex-wrap gap-4">
+                  <Link
+                    href="/book-service"
+                    className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-400/25"
+                  >
+                    Book This Service
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </Link>
+                  <Link
+                    href="/contact"
+                    className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg border border-gray-300 text-gray-700 text-sm font-bold hover:border-gray-900 hover:text-gray-900 transition-colors"
+                  >
+                    Ask a Question
+                  </Link>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Sidebar */}

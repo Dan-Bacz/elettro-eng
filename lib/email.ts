@@ -98,6 +98,75 @@ export async function sendAdminRegistrationNotification(user: { name: string; em
   }
 }
 
+export async function sendBookingSubmittedNotification(input: {
+  name: string
+  email: string
+  service: string
+  reference: string
+  buildingType?: string
+  installations?: string[]
+  preferredDate?: string
+  preferredTime?: string
+  address?: string
+}) {
+  for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
+    try {
+      const transporter = await getTransporter()
+      const details = [
+        input.service ? `<p style="margin: 8px 0;"><strong style="color: #333;">Service:</strong> ${input.service}</p>` : '',
+        input.buildingType ? `<p style="margin: 8px 0;"><strong style="color: #333;">Building Type:</strong> ${input.buildingType}</p>` : '',
+        input.installations && input.installations.length
+          ? `<p style="margin: 8px 0;"><strong style="color: #333;">Installation Services:</strong> ${input.installations.join(', ')}</p>`
+          : '',
+        input.address ? `<p style="margin: 8px 0;"><strong style="color: #333;">Project Address:</strong> ${input.address}</p>` : '',
+        input.preferredDate ? `<p style="margin: 8px 0;"><strong style="color: #333;">Preferred Date:</strong> ${input.preferredDate}</p>` : '',
+        input.preferredTime ? `<p style="margin: 8px 0;"><strong style="color: #333;">Preferred Time:</strong> ${input.preferredTime}</p>` : '',
+      ]
+        .filter(Boolean)
+        .join('')
+
+      await withTimeout(transporter.sendMail({
+        from: `${process.env.GMAIL_USER || 'Elettro Engineering'} <${process.env.GMAIL_USER || 'noreply@elettro.com'}>`,
+        to: input.email,
+        subject: `Booking Request Submitted - ${input.service} | Elettro`,
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #0B0F10; padding: 20px; text-align: center;">
+            <h1 style="color: #F5C400; margin: 0; font-size: 24px;">ELETTRO</h1>
+            <p style="color: #9EA8AC; margin: 4px 0 0; font-size: 11px; letter-spacing: 2px;">ENGINEERING ENTERPRISES</p>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0;">
+            <h2 style="color: #111; margin-top: 0;">Booking Request Submitted</h2>
+            <p style="color: #555; font-size: 14px;">Good day <strong>${input.name}</strong>,</p>
+            <p style="color: #555; font-size: 14px; line-height: 1.6;">
+              Your booking is currently under review. Our team will review your request and contact
+              you through your email or mobile number for confirmation.
+            </p>
+            <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <p style="margin: 8px 0;"><strong style="color: #333;">Reference Number:</strong> <span style="color: #B88A00; font-weight: bold;">${input.reference}</span></p>
+              ${details}
+            </div>
+            <p style="color: #555; font-size: 14px;">
+              Keep this reference number for any future correspondence. If you have questions, reply
+              to this email or contact our team directly.
+            </p>
+          </div>
+          <div style="background-color: #0B0F10; padding: 15px; text-align: center;">
+            <p style="color: #666; margin: 0; font-size: 11px;">Elettro Engineering Enterprises - Automated Notification</p>
+          </div>
+        </div>
+      `
+      }), 25000)
+      return
+    } catch (error: any) {
+      cachedIpv4 = null
+      if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
+        console.error(`Failed to send booking submitted notification email (attempt ${attempt}):`, error)
+      }
+    }
+  }
+}
+
 export async function sendTechnicianApprovalNotification(user: { name: string; email: string }) {
   for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
     try {
