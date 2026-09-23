@@ -26,6 +26,8 @@ const INITIAL_FORM: FormState = {
 
 export default function ServiceBookingSection({ service }: { service: Service }) {
   const [selectedOfferings, setSelectedOfferings] = useState<string[]>([])
+  const [otherSelected, setOtherSelected] = useState(false)
+  const [otherSpecified, setOtherSpecified] = useState("")
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [attachment, setAttachment] = useState<string>("")
@@ -40,6 +42,12 @@ export default function ServiceBookingSection({ service }: { service: Service })
     setSelectedOfferings((prev) =>
       prev.includes(offering) ? prev.filter((t) => t !== offering) : [...prev, offering]
     )
+  }
+
+  function selectedOfferingList(): string[] {
+    const list = [...selectedOfferings]
+    if (otherSelected && otherSpecified.trim()) list.push(`Other: ${otherSpecified.trim()}`)
+    return list
   }
 
   function updateField(field: keyof FormState, value: string) {
@@ -70,7 +78,8 @@ export default function ServiceBookingSection({ service }: { service: Service })
     if (!form.phone.trim()) next.phone = "Please enter your mobile number."
     if (!form.address.trim()) next.address = "Please enter your building / project address."
     if (!form.buildingType) next.buildingType = "Please select a building type."
-    if (selectedOfferings.length === 0) next.offerings = "Please select at least one offering."
+    if (selectedOfferings.length === 0 && !otherSelected) next.offerings = "Please select at least one offering."
+    if (otherSelected && !otherSpecified.trim()) next.other = "Please specify your requirement."
     if (!form.preferredDate) next.preferredDate = "Please choose a preferred date."
     return next
   }
@@ -97,7 +106,7 @@ export default function ServiceBookingSection({ service }: { service: Service })
           preferredTime: form.preferredTime,
           description: form.description || undefined,
           buildingType: form.buildingType,
-          offerings: selectedOfferings,
+          offerings: selectedOfferingList(),
           attachment: attachment || undefined,
         }),
       })
@@ -140,6 +149,8 @@ export default function ServiceBookingSection({ service }: { service: Service })
                 setResult(null)
                 setForm(INITIAL_FORM)
                 setSelectedOfferings([])
+                setOtherSelected(false)
+                setOtherSpecified("")
                 setAttachment("")
                 setAttachmentName("")
                 setFormOpen(false)
@@ -193,7 +204,43 @@ export default function ServiceBookingSection({ service }: { service: Service })
               </button>
             )
           })}
+          <button
+            type="button"
+            onClick={() => setOtherSelected((v) => !v)}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+              otherSelected
+                ? "border-yellow-400 bg-yellow-400 text-black shadow-md shadow-yellow-400/20"
+                : "border-gray-300 bg-white text-gray-700 hover:border-yellow-400 hover:text-yellow-600"
+            }`}
+          >
+            <span
+              className={`flex h-4 w-4 items-center justify-center rounded border ${
+                otherSelected ? "border-black bg-black text-yellow-400" : "border-gray-400 text-transparent"
+              } text-[10px] font-black`}
+            >
+              ✓
+            </span>
+            Other
+          </button>
         </div>
+        {otherSelected && (
+          <div className="mt-4 max-w-lg">
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="ib-other">
+              Please specify your requirement
+            </label>
+            <input
+              id="ib-other"
+              value={otherSpecified}
+              onChange={(e) => {
+                setOtherSpecified(e.target.value)
+                setErrors((prev) => ({ ...prev, other: "" }))
+              }}
+              placeholder="Describe the offering you need..."
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
+            />
+            {errors.other && <p className="mt-1 text-xs text-red-600">{errors.other}</p>}
+          </div>
+        )}
         {errors.offerings && <p className="mt-1.5 text-xs text-red-600">{errors.offerings}</p>}
       </div>
 
@@ -317,10 +364,10 @@ export default function ServiceBookingSection({ service }: { service: Service })
                   Selected Offerings <span className="text-red-500">*</span>
                 </label>
                 <div className="min-h-[46px] rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700">
-                  {selectedOfferings.length === 0 ? (
+                  {selectedOfferingList().length === 0 ? (
                     <span className="text-gray-400 font-normal">Select from the options above</span>
                   ) : (
-                    selectedOfferings.join(", ")
+                    selectedOfferingList().join(", ")
                   )}
                 </div>
               </div>
