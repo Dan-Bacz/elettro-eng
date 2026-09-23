@@ -259,7 +259,7 @@ export default function AdminBookingDetailPage() {
                 </select>
                 <button
                   onClick={handleTeamAdd}
-                  disabled={busy || !techId || booking.status === 'COMPLETED' || booking.status === 'CANCELLED'}
+                  disabled={busy || !techId || ['COMPLETED', 'CANCELLED'].includes(booking.status as any)}
                   className="w-full rounded-xl bg-black px-4 py-2.5 text-xs font-bold text-yellow-400 hover:bg-slate-800 transition-colors disabled:opacity-50"
                 >
                   {teamMembers.length > 0 ? 'Add Technician to Project' : 'Assign First Technician'}
