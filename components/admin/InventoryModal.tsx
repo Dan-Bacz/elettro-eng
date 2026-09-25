@@ -28,6 +28,16 @@ export type IdentifySuggestion = {
   notes: string
 }
 
+type ImageResult = {
+  id: string
+  title: string
+  thumb: string
+  url: string
+  pageUrl: string
+  artist: string
+  license: string
+}
+
 type InventoryModalProps = {
   open: boolean
   initial: InventoryItemObj | null
@@ -40,6 +50,8 @@ type InventoryModalProps = {
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_FILE_BYTES = 8 * 1024 * 1024
+const MIN_SEARCH_LENGTH = 3
+const SEARCH_DEBOUNCE_MS = 500
 
 const EMPTY_IMAGE = { url: '', dataUrl: '', preview: '' }
 
@@ -100,6 +112,11 @@ export default function InventoryModal({ open, initial, categories, submitting, 
   const [applied, setApplied] = useState(false)
   const [dragging, setDragging] = useState(false)
 
+  const [imageResults, setImageResults] = useState<ImageResult[]>([])
+  const [imagesLoading, setImagesLoading] = useState(false)
+  const [imageSearchError, setImageSearchError] = useState('')
+  const [pickedCredit, setPickedCredit] = useState<ImageResult | null>(null)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -120,7 +137,47 @@ export default function InventoryModal({ open, initial, categories, submitting, 
     setIdentifyError('')
     setSystemError('')
     setApplied(false)
+    setImageResults([])
+    setImageSearchError('')
+    setPickedCredit(null)
+    setImagesLoading(false)
   }, [open, initial])
+
+  useEffect(() => {
+    const term = name.trim()
+    if (term.length < MIN_SEARCH_LENGTH) {
+      setImageResults([])
+      setImagesLoading(false)
+      return
+    }
+    let cancelled = false
+    setImagesLoading(true)
+    setImageSearchError('')
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/admin/inventory/search-images?q=${encodeURIComponent(term)}`)
+        const json = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) {
+          setImageResults([])
+          setImageSearchError(json?.error || 'Image search failed')
+          return
+        }
+        setImageResults(Array.isArray(json?.results) ? json.results : [])
+      } catch {
+        if (!cancelled) {
+          setImageResults([])
+          setImageSearchError('Image search failed')
+        }
+      } finally {
+        if (!cancelled) setImagesLoading(false)
+      }
+    }, SEARCH_DEBOUNCE_MS)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [name])
 
   if (!open) return null
 
@@ -138,6 +195,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
     downscaleDataUrl(file)
       .then((dataUrl) => {
         setImage({ url: dataUrl, dataUrl, preview: dataUrl })
+        setPickedCredit(null)
         setSuggestion(null)
         setIdentifyError('')
         setApplied(false)
@@ -178,6 +236,15 @@ export default function InventoryModal({ open, initial, categories, submitting, 
     } finally {
       setIdentifying(false)
     }
+  }
+
+  function pickSearchImage(result: ImageResult) {
+    setImage({ url: result.url, dataUrl: '', preview: result.thumb })
+    setPickedCredit(result)
+    setSystemError('')
+    setSuggestion(null)
+    setIdentifyError('')
+    setApplied(false)
   }
 
   function applySuggestions() {
@@ -276,6 +343,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
                     onClick={() => {
                       setImage(EMPTY_IMAGE)
                       setSuggestion(null)
+                      setPickedCredit(null)
                     }}
                     aria-label="Remove image"
                     className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/60 text-white transition-colors hover:bg-black/80"
@@ -313,6 +381,58 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <input ref={fileInputRef} type="file" accept={ACCEPTED_TYPES.join(',')} className="hidden" onChange={handleFileInput} />
               {systemError && <div className="mt-2 text-xs font-bold text-red-600">{systemError}</div>}
             </div>
+
+            {(imagesLoading || imageResults.length > 0 || imageSearchError) && (
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Or pick a photo</span>
+                  {imagesLoading && (
+                    <span className="h-3 w-3 animate-spin rounded-full border-2 border-slate-200 border-t-yellow-500" />
+                  )}
+                </div>
+
+                {imageSearchError && !imagesLoading && (
+                  <p className="mt-2 text-[11px] font-medium text-slate-400">{imageSearchError}</p>
+                )}
+
+                {!imagesLoading && imageResults.length === 0 && !imageSearchError && (
+                  <p className="mt-2 text-[11px] font-medium text-slate-400">No matching photos found.</p>
+                )}
+
+                {imageResults.length > 0 && (
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {imageResults.map((r) => {
+                      const selected = pickedCredit?.id === r.id
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => pickSearchImage(r)}
+                          title={r.title}
+                          className={`relative aspect-square overflow-hidden rounded-lg border-2 transition-colors ${
+                            selected ? 'border-yellow-400' : 'border-transparent hover:border-yellow-300'
+                          }`}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={r.thumb} alt={r.title} className="h-full w-full object-cover" loading="lazy" />
+                          {selected && (
+                            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-400 text-[9px] font-black text-black">
+                              ✓
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {pickedCredit && (
+                  <p className="mt-2 text-[10px] font-medium leading-relaxed text-slate-400">
+                    Photo: {pickedCredit.artist} · {pickedCredit.license}
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Identify with AI */}
             <button
