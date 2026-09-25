@@ -104,6 +104,10 @@ model InventoryItem {
   unit        String?
   buyPrice    Float?
   sellPrice   Float?
+  // Storefront merchandising (additive, optional):
+  originalPrice Float?  // list / reference price used to compute sale percentage badges
+  rating        Float?  // 0-5 star rating shown on the storefront
+  ratingCount   Int?    // number of reviews backing the rating
   reorderLevel Int     @default(10)
   imageUrl    String?
   imagePublicId String?
@@ -211,8 +215,18 @@ model Order {
   clientName  String
   email       String
   phone       String
+  // Delivery information collected at checkout
   address     String?
+  barangay    String?
+  city        String?
+  province    String?
+  postalCode  String?
+  deliveryNotes String?
   notes       String?
+  // Payment information selected at checkout
+  paymentMethod String   @default("CASH_ON_DELIVERY")
+  paymentStatus String   @default("UNPAID")
+  shipping    Float       @default(0)
   status      OrderStatus @default(PENDING)
   total       Float       @default(0)
   createdAt   DateTime    @default(now())

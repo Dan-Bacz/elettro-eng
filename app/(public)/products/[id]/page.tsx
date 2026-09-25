@@ -1,44 +1,59 @@
 "use client"
+
 import Link from "next/link"
-import { useEffect, useState } from "react"
-import { useParams, notFound } from "next/navigation"
-import type { InventoryProduct } from "@/components/client/ProductCard"
+import { notFound, useParams } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 import CTASection from "@/components/client/CTASection"
-import OrderForm from "@/components/client/OrderForm"
+import { CartProvider, useCart } from "@/components/client/store/CartContext"
+import CartDrawer from "@/components/client/store/CartDrawer"
+import CheckoutModal from "@/components/client/store/CheckoutModal"
+import ProductImage from "@/components/client/store/ProductImage"
+import StarRating from "@/components/client/store/StarRating"
+import { CartIcon, CheckIcon, MinusIcon, PlusIcon } from "@/components/client/store/storeIcons"
+import { BADGE_TONE_CLASSES, formatPeso, isDiscounted, productBadges, type StoreProduct } from "@/components/client/store/storeUtils"
 
 function SpecRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-gray-100">
+    <div className="flex items-center justify-between gap-4 py-3">
       <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-semibold text-gray-900 text-right">{value}</span>
+      <span className="text-right text-sm font-semibold text-gray-900">{value}</span>
     </div>
   )
 }
 
-export default function ProductDetailPage() {
+function ProductDetail() {
   const rawParams = useParams<{ id: string }>()
   const id = rawParams?.id
-  const [product, setProduct] = useState<InventoryProduct | null>(null)
+  const { addItem, openCheckout } = useCart()
+
+  const [product, setProduct] = useState<StoreProduct | null>(null)
   const [loading, setLoading] = useState(true)
-  const [orderOpen, setOrderOpen] = useState(false)
+  const [qty, setQty] = useState(1)
+  const [added, setAdded] = useState(false)
 
   useEffect(() => {
     if (!id) return
-    fetch("/api/inventory")
+    fetch("/api/public/products")
       .then((res) => (res.ok ? res.json() : []))
-      .then((items: InventoryProduct[]) => {
-        setProduct(items.find((p) => p.id === id) || null)
+      .then((data: { products?: StoreProduct[] }) => {
+        const match = (data?.products || []).find((p) => p.id === id)
+        setProduct(match ? { ...match, categoryGroup: match.categoryGroup || "Other" } : null)
       })
       .catch(() => setProduct(null))
       .finally(() => setLoading(false))
   }, [id])
 
+  const imageSrc = product && (product.imageUrl || product.imageData)
+  const outOfStock = product ? Number(product.quantity || 0) <= 0 : true
+  const hasPrice = product != null && product.sellPrice != null && Number(product.sellPrice) > 0
+  const badges = useMemo(() => (product ? productBadges(product) : []), [product])
+
   if (loading) {
     return (
-      <div className="min-h-[60vh] bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-500">Loading product...</p>
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-yellow-400 border-t-transparent" />
+          <p className="text-sm text-gray-500">Loading product…</p>
         </div>
       </div>
     )
@@ -49,104 +64,208 @@ export default function ProductDetailPage() {
     return null
   }
 
-  const imageSrc = product.imageUrl || product.imageData
-  const outOfStock = product.quantity <= 0
+  const addPayload = {
+    id: product.id,
+    name: product.name,
+    image: imageSrc,
+    model: product.model,
+    unit: product.unit,
+    unitPrice: Number(product.sellPrice || 0),
+  }
+
+  function flashAdded() {
+    setAdded(true)
+    window.setTimeout(() => setAdded(false), 1400)
+  }
+
+  function handleAdd() {
+    addItem(addPayload, qty)
+    flashAdded()
+  }
+
+  function handleBuyNow() {
+    if (outOfStock || !hasPrice) return
+    addItem(addPayload, qty)
+    openCheckout()
+  }
 
   return (
     <>
-      <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <nav className="text-sm text-gray-500 mb-8">
-            <Link href="/" className="hover:text-yellow-600 transition-colors">Home</Link>
+      <section className="bg-gray-50">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          {/* Breadcrumb */}
+          <nav className="text-sm text-gray-500" aria-label="Breadcrumb">
+            <Link href="/" className="hover:text-yellow-600 transition-colors">
+              Home
+            </Link>
             <span className="mx-2">/</span>
-            <Link href="/products" className="hover:text-yellow-600 transition-colors">Products</Link>
+            <Link href="/products" className="hover:text-yellow-600 transition-colors">
+              Products
+            </Link>
             <span className="mx-2">/</span>
-            <span className="text-gray-900 font-medium">{product.name}</span>
+            <span className="font-medium text-gray-900">{product.name}</span>
           </nav>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
+          <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12">
             {/* Image */}
-            <div className="rounded-2xl overflow-hidden border border-gray-200 bg-gray-100">
-              <div className="w-full aspect-square">
-                {imageSrc ? (
-                  <img src={imageSrc} alt={product.name} className="w-full h-full object-cover" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-                    <span className="text-8xl opacity-30">⚡</span>
+            <div className="relative">
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="relative">
+                  {badges.length > 0 && (
+                    <div className="absolute left-2 top-2 z-10 flex flex-col items-start gap-1">
+                      {badges.map((b) => (
+                        <span
+                          key={b.label}
+                          className={`rounded px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${BADGE_TONE_CLASSES[b.tone]}`}
+                        >
+                          {b.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <div className="aspect-square">
+                    <ProductImage src={imageSrc} alt={product.name} className="h-full w-full" iconSize={110} />
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
             {/* Info */}
             <div>
               {product.category && (
-                <span className="inline-block px-3 py-1 bg-yellow-400/10 text-yellow-700 text-xs font-bold uppercase tracking-wider rounded-full">
-                  {product.category}
+                <span className="inline-block rounded-full bg-yellow-400/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-yellow-700">
+                  {product.categoryGroup}
                 </span>
               )}
-              <h1 className="mt-3 text-3xl sm:text-4xl font-black text-gray-900">{product.name}</h1>
+
+              <h1 className="mt-3 text-3xl font-black leading-tight text-gray-900 sm:text-4xl">{product.name}</h1>
+
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
+                <StarRating rating={product.rating} count={product.ratingCount} starClass="w-4 h-4" />
+                {product.brand && (
+                  <span className="text-sm text-gray-500">
+                    Brand: <strong className="text-gray-900">{product.brand}</strong>
+                  </span>
+                )}
+              </div>
+
               <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-                {product.brand && <span>Brand: <strong className="text-gray-900">{product.brand}</strong></span>}
-                {product.model && <span>Model: <strong className="text-gray-900">{product.model}</strong></span>}
-                {product.sku && <span>Product #: <strong className="text-gray-900">{product.sku}</strong></span>}
+                {product.model && (
+                  <span>
+                    Model: <strong className="font-semibold text-gray-900">{product.model}</strong>
+                  </span>
+                )}
+                {product.sku && (
+                  <span>
+                    Product #: <span className="font-semibold text-gray-900">{product.sku}</span>
+                  </span>
+                )}
+              </div>
+
+              {/* Price */}
+              <div className="mt-5 flex flex-wrap items-end gap-3">
+                <span className="text-3xl font-black text-gray-900">
+                  {hasPrice ? formatPeso(product.sellPrice) : "Price on request"}
+                </span>
+                {isDiscounted(product) && (
+                  <span className="pb-1 text-base font-medium text-gray-400 line-through">{formatPeso(product.originalPrice)}</span>
+                )}
               </div>
 
               {/* Availability */}
-              <div className="mt-5 inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50">
-                <span className={`w-3 h-3 rounded-full ${outOfStock ? "bg-red-500" : "bg-green-500"}`} />
-                <span className={`text-sm font-bold ${outOfStock ? "text-red-600" : "text-green-700"}`}>
+              <div className="mt-4 inline-flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white px-4 py-2.5">
+                <span className={`h-3 w-3 rounded-full ${outOfStock ? "bg-red-500" : "bg-emerald-500"}`} />
+                <span className={`text-sm font-bold ${outOfStock ? "text-red-600" : "text-emerald-700"}`}>
                   {outOfStock
                     ? "Currently Unavailable"
-                    : product.quantity <= 5
-                    ? `Low stock — ${product.quantity} ${product.unit || "pcs"} left`
-                    : `In Stock — ${product.quantity} ${product.unit || "pcs"} available`}
+                    : Number(product.quantity) <= 5
+                    ? `Low stock — ${Number(product.quantity).toLocaleString()} ${product.unit || "pcs"} left`
+                    : `In Stock — ${Number(product.quantity).toLocaleString()} ${product.unit || "pcs"} available`}
                 </span>
               </div>
 
               {/* Description */}
               <div className="mt-6">
                 <h2 className="text-lg font-bold text-gray-900">Description</h2>
-                <p className="mt-2 text-gray-600 leading-relaxed">
-                  {product.description || "High-quality electrical material supplied by Elettro Engineering Enterprises. Contact us for specifications, pricing, and availability."}
+                <p className="mt-2 leading-relaxed text-gray-600">
+                  {product.description ||
+                    "High-quality electrical material supplied by Elettro Engineering Enterprises. Contact us for specifications, pricing, and availability."}
                 </p>
               </div>
 
-              {/* Specifications */}
-              <div className="mt-8">
-                <h2 className="text-lg font-bold text-gray-900 mb-2">Specifications</h2>
-                <div className="rounded-xl border border-gray-200 divide-y divide-gray-100 px-4">
-                  <SpecRow label="Category" value={product.category || "—"} />
-                  <SpecRow label="Brand" value={product.brand || "—"} />
-                  <SpecRow label="Model" value={product.model || "—"} />
-                  <SpecRow label="Product Number / SKU" value={product.sku || "—"} />
-                  <SpecRow label="Stock" value={`${product.quantity} ${product.unit || "pcs"}`} />
+              {/* Quantity + actions */}
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex w-fit items-center rounded-xl border border-gray-300 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    aria-label="Decrease quantity"
+                    className="flex h-12 w-12 items-center justify-center text-gray-600 transition-colors hover:bg-gray-50"
+                  >
+                    <MinusIcon className="w-4 h-4" />
+                  </button>
+                  <span className="w-12 text-center text-base font-black text-gray-900">{qty}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQty((q) => Math.min(Number(product.quantity) || 1, q + 1))}
+                    aria-label="Increase quantity"
+                    className="flex h-12 w-12 items-center justify-center text-gray-600 transition-colors hover:bg-gray-50"
+                  >
+                    <PlusIcon className="w-4 h-4" />
+                  </button>
                 </div>
+                <span className="text-xs text-gray-400">
+                  {product.unit || "pcs"} per unit · {formatPeso(Number(product.sellPrice || 0) * qty, 2)} total
+                </span>
               </div>
 
-              {/* Actions */}
-              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                 <button
-                  onClick={() => setOrderOpen(true)}
-                  disabled={outOfStock}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-400/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                  type="button"
+                  onClick={handleAdd}
+                  disabled={outOfStock || !hasPrice}
+                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-8 py-4 text-sm font-black transition-all sm:flex-none ${
+                    added
+                      ? "bg-emerald-500 text-white"
+                      : "bg-white text-gray-900 ring-1 ring-gray-300 hover:ring-yellow-400 hover:text-yellow-700"
+                  } disabled:cursor-not-allowed disabled:opacity-50`}
                 >
-                  Order / Request Product
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
+                  {added ? <CheckIcon className="w-4 h-4" /> : <CartIcon className="w-4 h-4" />}
+                  {added ? "Added to Cart" : "Add to Cart"}
                 </button>
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg border border-gray-300 text-gray-700 text-sm font-bold hover:border-gray-900 hover:text-gray-900 transition-colors"
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={outOfStock || !hasPrice}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-400 px-8 py-4 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Ask About This Product
-                </Link>
+                  Buy Now
+                </button>
+              </div>
+
+              {/* Specs */}
+              <div className="mt-8 rounded-xl border border-gray-200 bg-white px-5">
+                <div className="divide-y divide-gray-100">
+                  {(
+                    [
+                      ["Category", product.category || product.categoryGroup || "—"],
+                      ["Brand", product.brand || "—"],
+                      ["Model", product.model || "—"],
+                      ["Product Number / SKU", product.sku || "—"],
+                      ["Stock", `${Number(product.quantity).toLocaleString()} ${product.unit || "pcs"}`],
+                    ] as const
+                  ).map(([label, value]) => (
+                    <SpecRow key={label} label={label} value={value} />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      <CartDrawer />
+      <CheckoutModal />
 
       <CTASection
         heading="Ready to Order?"
@@ -156,13 +275,14 @@ export default function ProductDetailPage() {
         secondaryLabel="Contact Us"
         secondaryHref="/contact"
       />
-
-      {orderOpen && product && (
-        <OrderForm
-          product={{ id: product.id, name: product.name, unit: product.unit, quantity: product.quantity }}
-          onClose={() => setOrderOpen(false)}
-        />
-      )}
     </>
+  )
+}
+
+export default function ProductDetailPage() {
+  return (
+    <CartProvider>
+      <ProductDetail />
+    </CartProvider>
   )
 }

@@ -109,6 +109,13 @@ export type OrderObj = {
   email: string
   phone: string
   address?: string | null
+  barangay?: string | null
+  city?: string | null
+  province?: string | null
+  postalCode?: string | null
+  deliveryNotes?: string | null
+  paymentMethod?: string
+  paymentStatus?: string
   notes?: string | null
   status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'
   total: number
