@@ -10,6 +10,15 @@ const OPENROUTER_MODEL = 'openrouter/free'
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 const REQUEST_TIMEOUT_MS = 45000
 
+// Allow room for the base64 product image payload in the JSON request body.
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+}
+
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const CONFIDENCE_LEVELS = ['confirmed', 'likely', 'unknown'] as const
 
@@ -223,22 +232,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ],
     }
 
-    // 5. Call OpenRouter with a timeout. No automatic paid-model fallback.
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
-    let resp: Response
-    try {
-      resp = await fetch(OPENROUTER_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      })
-    } finally {
-      clearTimeout(timer)
+    // 5. Call OpenRouter with a timeout. Only the free router is used — there
+    // is NO automatic paid-model fallback. Transient provider errors
+    // (429/500/502/503) are retried once with a short backoff.
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+    async function callOpenRouter(): Promise<Response> {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+      try {
+        return await fetch(OPENROUTER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        })
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+
+    let resp = await callOpenRouter()
+    if (!resp.ok && [429, 500, 502, 503].includes(resp.status)) {
+      await sleep(1500)
+      resp = await callOpenRouter()
     }
 
     if (!resp.ok) {
@@ -249,17 +269,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } catch {
         // ignore
       }
-      console.error(`Identify-product: OpenRouter returned ${status}${detail ? ` — ${detail}` : ''}`)
       if (status === 401) {
+        console.error('Identify-product: OpenRouter 401 (invalid/revoked API key).', detail)
         return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
       }
       if (status === 402) {
-        console.error('Identify-product: OpenRouter reported insufficient credits (402). Free model blocked; not switching to a paid model.')
+        console.error('Identify-product: OpenRouter 402 (insufficient credits / negative balance). Free model blocked; not switching to a paid model.', detail)
         return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
       }
       if (status === 429) {
+        console.error('Identify-product: OpenRouter 429 (free-tier rate limit reached: ~50 req/day, 20/min).', detail)
         return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
       }
+      if (status === 408 || status === 504) {
+        console.error('Identify-product: OpenRouter timed out.', detail)
+        return res.status(504).json({ error: FRIENDLY_UNAVAILABLE })
+      }
+      console.error(`Identify-product: OpenRouter returned ${status}.`, detail)
       return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
     }
 
