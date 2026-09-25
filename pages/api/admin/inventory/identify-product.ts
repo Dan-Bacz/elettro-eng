@@ -11,18 +11,45 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024
 const REQUEST_TIMEOUT_MS = 45000
 
 // Allow room for the base64 product image payload in the JSON request body.
+// maxDuration must exceed REQUEST_TIMEOUT_MS, otherwise the hosting platform
+// kills the function before this route can report a real timeout error.
 export const config = {
   api: {
     bodyParser: {
       sizeLimit: '10mb',
     },
   },
+  maxDuration: 60,
 }
 
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const CONFIDENCE_LEVELS = ['confirmed', 'likely', 'unknown'] as const
 
-const FRIENDLY_UNAVAILABLE = 'AI identification is temporarily unavailable. Please try again later or enter the product details manually.'
+// Maps an OpenRouter HTTP failure to a message that names the actual cause.
+// Never includes credentials.
+function openRouterErrorMessage(status: number, detail: string): string {
+  switch (status) {
+    case 400:
+      return `OpenRouter rejected the request (400)${detail ? `: ${detail}` : '.'} The selected model may not support image input.`
+    case 401:
+      return 'OpenRouter API key is invalid or unavailable.'
+    case 402:
+      return 'OpenRouter rejected the request (402). Verify the account has free-tier credit.'
+    case 403:
+      return `OpenRouter denied the request (403)${detail ? `: ${detail}` : '.'}`
+    case 404:
+      return `OpenRouter could not find the model "${OPENROUTER_MODEL}" (404)${detail ? `: ${detail}` : '.'}`
+    case 429:
+      return 'OpenRouter free-model rate limit reached. Please try again later.'
+    case 408:
+    case 504:
+      return 'OpenRouter timed out while identifying the product. Please try again.'
+    case 500:
+      return 'OpenRouter is temporarily unavailable.'
+    default:
+      return `OpenRouter request failed (HTTP ${status})${detail ? `: ${detail}` : '.'}`
+  }
+}
 
 function cleanString(value: unknown, max = 500): string {
   if (value === null || value === undefined) return ''
@@ -159,8 +186,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 3. Ensure the key exists (server-side only).
     const apiKey = process.env.OPENROUTER_API_KEY
     if (!apiKey) {
-      console.error('Identify-product: process.env.OPENROUTER_API_KEY is missing (server-side only)')
-      return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
+      console.error('Identify-product: process.env.OPENROUTER_API_KEY is not set on the server.')
+      return res.status(500).json({ error: 'OPENROUTER_API_KEY is not configured on the server.' })
     }
 
     // 4. Build the identification prompt + image content block.
@@ -216,8 +243,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const payload = {
       model: OPENROUTER_MODEL,
-      max_tokens: 1200,
+      max_tokens: 2000,
       temperature: 0.2,
+      // Ask for raw JSON. OpenRouter treats `response_format` as a routing
+      // preference, so this biases selection towards free models that can
+      // produce structured output without ever rejecting the request.
+      response_format: { type: 'json_object' },
+      provider: {
+        // Hard guarantee that a paid model is never selected.
+        max_price: { prompt: '0', completion: '0', image: '0' },
+      },
       messages: [
         {
           role: 'user',
@@ -233,9 +268,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 5. Call OpenRouter with a timeout. Only the free router is used — there
-    // is NO automatic paid-model fallback. Transient provider errors
-    // (429/500/502/503) are retried once with a short backoff.
+    // is NO automatic paid-model fallback.
+    //
+    // `openrouter/free` picks a free model AT RANDOM, and the free pool also
+    // contains models that accept images but cannot describe products (for
+    // example a content-safety classifier that only ever replies "User Safety:
+    // safe"). Two guards prevent those from being selected:
+    //   - `response_format: json_object` + `provider.require_parameters` makes
+    //     OpenRouter prefer free models that genuinely support JSON output.
+    //   - `provider.max_price` pinned to 0 guarantees a paid model is never
+    //     used, even if the free pool changes.
+    // A response that is not usable JSON is retried, which makes the router
+    // draw a different free model.
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    // 404 is retryable: the pool of free models changes constantly, so a
+    // "no endpoints available" result is often resolved by simply asking again.
+    const RETRYABLE_STATUS = [404, 408, 429, 500, 502, 503]
+    const MAX_ATTEMPTS = 4
 
     async function callOpenRouter(): Promise<Response> {
       const controller = new AbortController()
@@ -255,54 +304,88 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    let resp = await callOpenRouter()
-    if (!resp.ok && [429, 500, 502, 503].includes(resp.status)) {
-      await sleep(1500)
-      resp = await callOpenRouter()
+    type Attempt = { response: Response; content: string; finishReason: string }
+
+    async function attempt(): Promise<Attempt> {
+      const response = await callOpenRouter()
+      if (!response.ok) return { response, content: '', finishReason: '' }
+      let content = ''
+      let finishReason = ''
+      try {
+        const json = await response.json()
+        finishReason = String(json?.choices?.[0]?.finish_reason || '')
+        const raw = json?.choices?.[0]?.message?.content
+        // `content` is a string for most models but an array of parts for others.
+        if (typeof raw === 'string') {
+          content = raw
+        } else if (Array.isArray(raw)) {
+          content = raw
+            .map((part: any) => (typeof part === 'string' ? part : part?.text || ''))
+            .join('')
+        }
+      } catch {
+        content = ''
+      }
+      return { response, content, finishReason }
+    }
+
+    let resp: Response | null = null
+    let rawSuggestion: any = null
+    let lastDetail = ''
+    let lastStatus = 0
+    let lastFinishReason = ''
+
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      if (i > 0) await sleep(1500)
+      const result = await attempt()
+      resp = result.response
+
+      if (!resp.ok) {
+        lastStatus = resp.status
+        lastDetail = ''
+        try {
+          const raw: any = await resp.clone().json()
+          lastDetail = cleanString(raw?.error?.message || raw?.message || '', 300)
+        } catch {
+          // ignore
+        }
+        // Only transient provider-side failures are worth another attempt.
+        if (!RETRYABLE_STATUS.includes(lastStatus) || i === MAX_ATTEMPTS - 1) break
+        continue
+      }
+
+      lastFinishReason = result.finishReason
+      const parsed = result.content.trim() ? extractJson(result.content.replace(/\\n/g, '\n')) : null
+      if (parsed) {
+        rawSuggestion = parsed
+        break
+      }
+      // HTTP 200 but unusable output: ask the router for a different free model.
+      console.error(
+        `Identify-product: attempt ${i + 1}/${MAX_ATTEMPTS} returned unusable content` +
+          `${lastFinishReason ? ` (finish_reason: ${lastFinishReason})` : ''}. Preview:`,
+        result.content.slice(0, 200),
+      )
+    }
+
+    if (!resp) {
+      return res.status(504).json({ error: 'OpenRouter timed out while identifying the product. Please try again.' })
     }
 
     if (!resp.ok) {
-      const status = resp.status
-      let detail = ''
-      try {
-        detail = ((await resp.json()) as any)?.error?.message || ''
-      } catch {
-        // ignore
+      const message = openRouterErrorMessage(lastStatus, lastDetail)
+      console.error(`Identify-product: OpenRouter HTTP ${lastStatus} - ${message}`)
+      if (lastStatus === 408 || lastStatus === 504) {
+        return res.status(504).json({ error: message })
       }
-      if (status === 401) {
-        console.error('Identify-product: OpenRouter 401 (invalid/revoked API key).', detail)
-        return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
-      }
-      if (status === 402) {
-        console.error('Identify-product: OpenRouter 402 (insufficient credits / negative balance). Free model blocked; not switching to a paid model.', detail)
-        return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
-      }
-      if (status === 429) {
-        console.error('Identify-product: OpenRouter 429 (free-tier rate limit reached: ~50 req/day, 20/min).', detail)
-        return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
-      }
-      if (status === 408 || status === 504) {
-        console.error('Identify-product: OpenRouter timed out.', detail)
-        return res.status(504).json({ error: FRIENDLY_UNAVAILABLE })
-      }
-      console.error(`Identify-product: OpenRouter returned ${status}.`, detail)
-      return res.status(503).json({ error: FRIENDLY_UNAVAILABLE })
+      return res.status(502).json({ error: message })
     }
 
-    // 6. Parse the assistant message.
-    let content = ''
-    try {
-      const json = await resp.json()
-      content = json?.choices?.[0]?.message?.content || ''
-    } catch (e) {
-      console.error('Identify-product: failed to parse OpenRouter response', e)
-      return res.status(502).json({ error: FRIENDLY_UNAVAILABLE })
-    }
-
-    const rawSuggestion = extractJson(cleanString(content, 20000).replace(/\\n/g, '\n'))
     if (!rawSuggestion) {
-      console.error('Identify-product: could not extract a JSON object from the model output')
-      return res.status(502).json({ error: FRIENDLY_UNAVAILABLE })
+      const reason = lastFinishReason ? ` (finish_reason: ${lastFinishReason})` : ''
+      return res
+        .status(502)
+        .json({ error: `The AI model did not return valid product data${reason}. Please try again.` })
     }
 
     // 7. Sanitize + validate before returning to the browser.
@@ -310,10 +393,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ ok: true, suggestion })
   } catch (e: any) {
     if (e?.name === 'AbortError' || e?.message === 'The user aborted a request.') {
-      console.error('Identify-product: request timed out')
-      return res.status(504).json({ error: FRIENDLY_UNAVAILABLE })
+      console.error(`Identify-product: OpenRouter timed out after ${REQUEST_TIMEOUT_MS}ms.`)
+      return res.status(504).json({ error: 'OpenRouter timed out while identifying the product. Please try again.' })
     }
     console.error('Identify-product: unexpected error', e)
-    return res.status(500).json({ error: FRIENDLY_UNAVAILABLE })
+    return res
+      .status(500)
+      .json({ error: `AI identification failed unexpectedly: ${cleanString(e?.message, 200) || 'unknown error'}` })
   }
 }
