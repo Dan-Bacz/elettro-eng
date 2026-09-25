@@ -92,6 +92,31 @@ export type InventoryItemObj = {
   createdAt?: string
 }
 
+export type OrderItemObj = {
+  id: string
+  name: string
+  quantity: number
+  unit?: string | null
+  unitPrice: number
+  inventoryItemId?: string | null
+  createdAt?: string
+}
+
+export type OrderObj = {
+  id: string
+  reference: string
+  clientName: string
+  email: string
+  phone: string
+  address?: string | null
+  notes?: string | null
+  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'
+  total: number
+  createdAt: string
+  items: OrderItemObj[]
+  client?: { id: string; name: string; email: string; phone?: string | null }
+}
+
 export type DashboardData = {
   stats: {
     totalBookings: number

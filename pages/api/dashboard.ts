@@ -54,7 +54,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const [bookings, inventory, users, projects, admin, recentNotifications, pendingLeaves, activeLeaves, activities] = await Promise.all([
+    const [bookings, inventory, users, projects, admin, recentNotifications, pendingLeaves, activeLeaves, activities, orders] = await Promise.all([
       prisma.booking.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
@@ -97,6 +97,13 @@ export default async function handler(req, res) {
       prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
       prisma.leaveRequest.findMany({ where: { status: 'APPROVED' }, select: { techId: true, fromDate: true, toDate: true } }),
       prisma.technicianActivity.findMany({ where: { createdAt: { gte: new Date(Date.now() - 6 * 86400000) } }, select: { createdAt: true } }),
+      prisma.order.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          items: { orderBy: { createdAt: 'asc' } },
+          client: { select: { id: true, name: true, email: true, phone: true } },
+        },
+      }),
     ])
 
     const techUsers = users.filter((user) => user.role === 'TECH')
@@ -265,6 +272,17 @@ export default async function handler(req, res) {
       pendingUsers: pendingRegs,
       suspendedUsers: suspendedTechs,
       rejectedUsers: rejectedTechs,
+      orders: orders.map((order) => ({
+        id: order.id,
+        reference: `ORD-${order.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+        clientName: order.clientName,
+        email: order.email,
+        phone: order.phone,
+        status: order.status,
+        total: order.total,
+        createdAt: order.createdAt,
+        items: order.items.map((it) => ({ id: it.id, name: it.name, quantity: it.quantity, unit: it.unit, unitPrice: it.unitPrice })),
+      })),
       clients: users.filter((u) => u.role === 'CLIENT'),
       admins: users.filter((u) => u.role === 'ADMIN'),
       admin: admin ? { name: admin.name, email: admin.email } : null,

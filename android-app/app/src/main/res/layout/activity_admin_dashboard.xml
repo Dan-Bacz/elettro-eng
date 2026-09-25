@@ -910,6 +910,68 @@
                             android:orientation="vertical" />
                     </LinearLayout>
 
+                    <!-- ===== ORDERS ===== -->
+                    <LinearLayout
+                        android:id="@+id/view_orders_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:orientation="horizontal">
+
+                            <Button
+                                android:id="@+id/order_filter_all"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_chip_selected"
+                                android:text="ALL"
+                                android:textColor="@color/el_ink" />
+
+                            <Button
+                                android:id="@+id/order_filter_pending"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_chip_unselected"
+                                android:text="PENDING"
+                                android:textColor="@color/text_secondary" />
+
+                            <Button
+                                android:id="@+id/order_filter_approved"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_chip_unselected"
+                                android:text="APPROVED"
+                                android:textColor="@color/text_secondary" />
+
+                            <Button
+                                android:id="@+id/order_filter_completed"
+                                style="@style/Widget.Chip"
+                                android:layout_width="wrap_content"
+                                android:layout_height="36dp"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_chip_unselected"
+                                android:text="COMPLETED"
+                                android:textColor="@color/text_secondary" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/orders_list_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:orientation="vertical" />
+                    </LinearLayout>
+
                     <!-- ===== PROJECTS ===== -->
                     <LinearLayout
                         android:id="@+id/view_projects_section"

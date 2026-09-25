@@ -2,11 +2,12 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { GridIcon, InboxIcon, HammerIcon, CalendarIcon, UserPlusIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon } from './icons'
+import { GridIcon, InboxIcon, HammerIcon, CalendarIcon, UserPlusIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon, CartIcon } from './icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/admin/dashboard' },
   { key: 'bookings', label: 'Bookings', icon: InboxIcon, href: '/admin/bookings' },
+  { key: 'orders', label: 'Orders', icon: CartIcon, href: '/admin/orders' },
   { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
   { key: 'leave', label: 'Leave Requests', icon: CalendarIcon, href: '/admin/leave' },
   { key: 'registrations', label: 'Registrations', icon: UserPlusIcon, href: '/admin/registrations' },

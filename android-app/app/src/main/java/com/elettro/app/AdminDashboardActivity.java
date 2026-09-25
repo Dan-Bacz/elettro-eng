@@ -68,11 +68,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private View viewDashboard, viewBookings, viewProjects, viewNotifications;
     private View viewClients, viewTechnicians, viewInventory, viewReports, viewSettings, viewMore;
     private View viewLeave;
+    private View viewOrders;
     // List containers
     private LinearLayout recentBookingsContainer, bookingsListContainer, projectsListContainer;
     private LinearLayout registrationsListContainer, inventoryListContainer, techniciansListContainer;
     private LinearLayout clientsListContainer, reportsListContainer, notificationsListContainer;
     private LinearLayout leaveListContainer, leaveCreditsContainer;
+    private LinearLayout ordersListContainer;
     // Settings fields
     private EditText settingsOrgName, settingsSupportEmail;
     private TextView btnSaveSettings;
@@ -89,6 +91,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
     // Filter chips
     private Button filterAll, filterPending, filterApproved, filterAssigned, filterCompleted;
     private String currentBookingFilter = "ALL";
+    private Button orderFilterAll, orderFilterPending, orderFilterApproved, orderFilterCompleted;
+    private String currentOrderFilter = "ALL";
 
     // Camera
     private static final int REQ_CAMERA = 1001;
@@ -110,6 +114,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private JSONArray projectsArray;
     private JSONArray leaveReqsArray;
     private JSONArray leaveCreditsArray;
+    private JSONArray ordersArray;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -171,6 +176,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewSettings = findViewById(R.id.view_settings_section);
         viewMore = findViewById(R.id.view_more_section);
         viewLeave = findViewById(R.id.view_leave_section);
+        viewOrders = findViewById(R.id.view_orders_section);
 
         recentBookingsContainer = findViewById(R.id.recent_bookings_container);
         bookingsListContainer = findViewById(R.id.bookings_list_container);
@@ -183,6 +189,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         notificationsListContainer = findViewById(R.id.notifications_list_container);
         leaveListContainer = findViewById(R.id.leave_list_container);
         leaveCreditsContainer = findViewById(R.id.leave_credits_container);
+        ordersListContainer = findViewById(R.id.orders_list_container);
 
         settingsOrgName = findViewById(R.id.settings_org_name);
         settingsSupportEmail = findViewById(R.id.settings_support_email);
@@ -210,6 +217,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
         filterApproved = findViewById(R.id.filter_approved);
         filterAssigned = findViewById(R.id.filter_assigned);
         filterCompleted = findViewById(R.id.filter_completed);
+
+        orderFilterAll = findViewById(R.id.order_filter_all);
+        orderFilterPending = findViewById(R.id.order_filter_pending);
+        orderFilterApproved = findViewById(R.id.order_filter_approved);
+        orderFilterCompleted = findViewById(R.id.order_filter_completed);
 
         headerUserName.setText("Admin");
         headerUserRole.setText(R.string.role_admin);
@@ -240,6 +252,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
             drawerLayout.closeDrawer(GravityCompat.START);
             if (id == R.id.nav_home) { showSection("home"); return true; }
             if (id == R.id.nav_bookings) { showSection("bookings"); return true; }
+            if (id == R.id.nav_orders) { showSection("orders"); return true; }
             if (id == R.id.nav_projects) { showSection("projects"); return true; }
             if (id == R.id.nav_leave) { showSection("leave"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
@@ -256,6 +269,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private void showSection(String key) {
         viewDashboard.setVisibility("home".equals(key) ? View.VISIBLE : View.GONE);
         viewBookings.setVisibility("bookings".equals(key) ? View.VISIBLE : View.GONE);
+        viewOrders.setVisibility("orders".equals(key) ? View.VISIBLE : View.GONE);
         viewProjects.setVisibility("projects".equals(key) ? View.VISIBLE : View.GONE);
         viewNotifications.setVisibility("notifications".equals(key) ? View.VISIBLE : View.GONE);
         viewClients.setVisibility("clients".equals(key) ? View.VISIBLE : View.GONE);
@@ -275,6 +289,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 titleRes = R.string.bookings_title;
                 subRes = R.string.bookings_subtitle;
                 menuRes = R.id.nav_bookings;
+                break;
+            case "orders":
+                titleRes = R.string.orders_title;
+                subRes = R.string.orders_subtitle;
+                menuRes = R.id.nav_orders;
+                renderOrdersList();
                 break;
             case "projects":
                 titleRes = R.string.projects_title;
@@ -378,6 +398,110 @@ public class AdminDashboardActivity extends AppCompatActivity {
         filterApproved.setVisibility(View.GONE);
         filterAssigned.setVisibility(View.GONE);
         filterCompleted.setVisibility(View.GONE);
+
+        orderFilterAll.setOnClickListener(v -> { currentOrderFilter = "ALL"; updateOrderFilterChips(); renderOrdersList(); });
+        orderFilterPending.setOnClickListener(v -> { currentOrderFilter = "PENDING"; updateOrderFilterChips(); renderOrdersList(); });
+        orderFilterApproved.setOnClickListener(v -> { currentOrderFilter = "APPROVED"; updateOrderFilterChips(); renderOrdersList(); });
+        orderFilterCompleted.setOnClickListener(v -> { currentOrderFilter = "COMPLETED"; updateOrderFilterChips(); renderOrdersList(); });
+    }
+
+    private void updateOrderFilterChips() {
+        int selectedColor = Color.parseColor("#0B0F10");
+        int defaultText = Color.parseColor("#68747A");
+
+        Button[] chips = {orderFilterAll, orderFilterPending, orderFilterApproved, orderFilterCompleted};
+        String[] keys = {"ALL", "PENDING", "APPROVED", "COMPLETED"};
+
+        for (int i = 0; i < chips.length; i++) {
+            if (keys[i].equals(currentOrderFilter)) {
+                chips[i].setBackgroundResource(R.drawable.bg_chip_selected);
+                chips[i].setTextColor(selectedColor);
+                chips[i].setTypeface(null, Typeface.BOLD);
+            } else {
+                chips[i].setBackgroundResource(R.drawable.bg_chip_unselected);
+                chips[i].setTextColor(defaultText);
+                chips[i].setTypeface(null, Typeface.NORMAL);
+            }
+        }
+    }
+
+    private void renderOrdersList() {
+        ordersListContainer.removeAllViews();
+        if (ordersArray == null || ordersArray.length() == 0) {
+            showEmpty(ordersListContainer, R.string.empty);
+            return;
+        }
+
+        for (int i = 0; i < ordersArray.length(); i++) {
+            JSONObject order = ordersArray.optJSONObject(i);
+            if (order == null) continue;
+
+            String status = order.optString("status", "PENDING");
+            if (!"ALL".equals(currentOrderFilter) && !currentOrderFilter.equals(status)) continue;
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(14, 14, 14, 14);
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            lp.setMargins(0, 0, 0, 6);
+            card.setLayoutParams(lp);
+
+            String reference = order.optString("reference", order.optString("id", "ORDER"));
+            String clientName = order.optString("clientName", "Client");
+            String email = order.optString("email", "");
+            String phone = order.optString("phone", "");
+            double total = order.optDouble("total", 0);
+
+            TextView tvTop = new TextView(this);
+            tvTop.setText(reference + "  ·  " + status);
+            tvTop.setTextColor(Color.parseColor("#101416"));
+            tvTop.setTypeface(null, Typeface.BOLD);
+            tvTop.setTextSize(13);
+            card.addView(tvTop);
+
+            TextView tvClient = new TextView(this);
+            tvClient.setText(clientName);
+            tvClient.setTextColor(Color.parseColor("#68747A"));
+            tvClient.setTextSize(12);
+            card.addView(tvClient);
+
+            TextView tvContact = new TextView(this);
+            tvContact.setText(email + "  ·  " + phone);
+            tvContact.setTextColor(Color.parseColor("#68747A"));
+            tvContact.setTextSize(11);
+            card.addView(tvContact);
+
+            JSONArray items = order.optJSONArray("items");
+            if (items != null && items.length() > 0) {
+                TextView tvItems = new TextView(this);
+                StringBuilder sb = new StringBuilder();
+                for (int j = 0; j < items.length(); j++) {
+                    JSONObject it = items.optJSONObject(j);
+                    if (it == null) continue;
+                    if (sb.length() > 0) sb.append(", ");
+                    sb.append(it.optInt("quantity", 1)).append("x ").append(it.optString("name", ""));
+                }
+                tvItems.setText(sb.toString());
+                tvItems.setTextColor(Color.parseColor("#68747A"));
+                tvItems.setTextSize(11);
+                card.addView(tvItems);
+            }
+
+            TextView tvTotal = new TextView(this);
+            tvTotal.setText("Total: ₱" + String.format(Locale.US, "%,.2f", total));
+            tvTotal.setTextColor(Color.parseColor("#B88A00"));
+            tvTotal.setTypeface(null, Typeface.BOLD);
+            tvTotal.setTextSize(12);
+            LinearLayout.LayoutParams totalLp = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            totalLp.topMargin = 4;
+            tvTotal.setLayoutParams(totalLp);
+            card.addView(tvTotal);
+
+            ordersListContainer.addView(card);
+        }
     }
 
     private void updateFilterChips() {
@@ -414,6 +538,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     clientsArray = dashboardData.optJSONArray("clients");
                     pendingUsersArray = dashboardData.optJSONArray("pendingUsers");
                     projectsArray = dashboardData.optJSONArray("projects");
+                    ordersArray = dashboardData.optJSONArray("orders");
                 }
 
                 String reportsResp = ApiClient.get("/reports");
@@ -450,6 +575,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         renderRecentBookings();
         renderBookingsList();
+        renderOrdersList();
         renderProjectsList();
         renderRegistrationsList();
         renderInventoryList();

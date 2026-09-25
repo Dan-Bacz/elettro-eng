@@ -167,6 +167,89 @@ export async function sendBookingSubmittedNotification(input: {
   }
 }
 
+export async function sendOrderSubmittedNotification(input: {
+  name: string
+  email: string
+  reference: string
+  items: { name: string; quantity: number; unit?: string; unitPrice: number }[]
+  total: number
+}) {
+  for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
+    try {
+      const transporter = await getTransporter()
+      const rows = (input.items || [])
+        .map((it) => {
+          const price = Number(it.unitPrice || 0)
+          const lineTotal = price * Number(it.quantity || 0)
+          return `<tr>
+            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #333; font-size: 13px;">${it.name}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #333; font-size: 13px; text-align: center;">${it.quantity} ${it.unit || 'pcs'}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #333; font-size: 13px; text-align: right;">₱${price.toLocaleString()}</td>
+            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; color: #333; font-size: 13px; text-align: right;">₱${lineTotal.toLocaleString()}</td>
+          </tr>`
+        })
+        .join('')
+
+      await withTimeout(transporter.sendMail({
+        from: `${process.env.GMAIL_USER || 'Elettro Engineering'} <${process.env.GMAIL_USER || 'noreply@elettro.com'}>`,
+        to: input.email,
+        subject: `Order Received - ${input.reference} | Elettro`,
+        html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #0B0F10; padding: 20px; text-align: center;">
+            <h1 style="color: #F5C400; margin: 0; font-size: 24px;">ELETTRO</h1>
+            <p style="color: #9EA8AC; margin: 4px 0 0; font-size: 11px; letter-spacing: 2px;">ENGINEERING ENTERPRISES</p>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0;">
+            <h2 style="color: #111; margin-top: 0;">Order Received</h2>
+            <p style="color: #555; font-size: 14px;">Good day <strong>${input.name}</strong>,</p>
+            <p style="color: #555; font-size: 14px; line-height: 1.6;">
+              We have received your product order. Our team will review it and contact you through
+              your email or mobile number to confirm availability and the next steps.
+            </p>
+            <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <p style="margin: 8px 0;"><strong style="color: #333;">Order Reference:</strong> <span style="color: #B88A00; font-weight: bold;">${input.reference}</span></p>
+              <table style="width: 100%; border-collapse: collapse; margin-top: 12px;">
+                <thead>
+                  <tr>
+                    <th style="padding: 8px; border-bottom: 2px solid #e0e0e0; text-align: left; color: #555; font-size: 12px;">Item</th>
+                    <th style="padding: 8px; border-bottom: 2px solid #e0e0e0; text-align: center; color: #555; font-size: 12px;">Qty</th>
+                    <th style="padding: 8px; border-bottom: 2px solid #e0e0e0; text-align: right; color: #555; font-size: 12px;">Unit Price</th>
+                    <th style="padding: 8px; border-bottom: 2px solid #e0e0e0; text-align: right; color: #555; font-size: 12px;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td colspan="3" style="padding: 10px 8px; text-align: right; color: #333; font-weight: bold; font-size: 14px;">Total</td>
+                    <td style="padding: 10px 8px; text-align: right; color: #B88A00; font-weight: bold; font-size: 14px;">₱${Number(input.total || 0).toLocaleString()}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <p style="color: #555; font-size: 14px;">
+              Keep this order reference for any future correspondence. If you have questions, reply
+              to this email or contact our team directly.
+            </p>
+          </div>
+          <div style="background-color: #0B0F10; padding: 15px; text-align: center;">
+            <p style="color: #666; margin: 0; font-size: 11px;">Elettro Engineering Enterprises - Automated Notification</p>
+          </div>
+        </div>
+      `
+      }), 25000)
+      return
+    } catch (error: any) {
+      cachedIpv4 = null
+      if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
+        console.error(`Failed to send order submitted notification email (attempt ${attempt}):`, error)
+      }
+    }
+  }
+}
+
 export async function sendLeaveDecisionNotification(input: {
   name: string
   email: string

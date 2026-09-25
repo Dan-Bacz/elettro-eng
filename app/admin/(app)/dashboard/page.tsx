@@ -9,7 +9,7 @@ import KpiCard from '../../../../components/admin/dashboard/KpiCard'
 import BookingTrendChart from '../../../../components/admin/dashboard/BookingTrendChart'
 import AnimatedDonut from '../../../../components/admin/dashboard/AnimatedDonut'
 import ProgressBar from '../../../../components/admin/dashboard/ProgressBar'
-import { InboxIcon, ClockIcon, GearIcon, CheckCircleIcon, CalendarIcon, BarChartIcon, BellIcon, PackageIcon, UserPlusIcon, AlertIcon, ArrowRightIcon, HammerIcon } from '../../../../components/admin/icons'
+import { InboxIcon, ClockIcon, GearIcon, CheckCircleIcon, CalendarIcon, BarChartIcon, BellIcon, PackageIcon, UserPlusIcon, AlertIcon, ArrowRightIcon, HammerIcon, CartIcon } from '../../../../components/admin/icons'
 import type { DashboardData } from '../../../../components/admin/types'
 import { formatDate } from '../../../../components/admin/types'
 
@@ -426,6 +426,7 @@ function notificationIcon(type: string) {
     case 'PROJECT': return <HammerIcon className="h-3.5 w-3.5" />
     case 'REPORT': return <BarChartIcon className="h-3.5 w-3.5" />
     case 'REGISTRATION': return <UserPlusIcon className="h-3.5 w-3.5" />
+    case 'ORDER': return <CartIcon className="h-3.5 w-3.5" />
     case 'INVENTORY':
     case 'STOCK': return <PackageIcon className="h-3.5 w-3.5" />
     case 'WARNING': return <AlertIcon className="h-3.5 w-3.5" />

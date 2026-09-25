@@ -1,4 +1,7 @@
+"use client"
 import Link from "next/link"
+import { useState } from "react"
+import OrderForm from "./OrderForm"
 
 export type InventoryProduct = {
   id: string
@@ -18,6 +21,7 @@ export type InventoryProduct = {
 export default function ProductCard({ product }: { product: InventoryProduct }) {
   const imageSrc = product.imageUrl || product.imageData
   const outOfStock = product.quantity <= 0
+  const [orderOpen, setOrderOpen] = useState(false)
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col">
@@ -61,16 +65,30 @@ export default function ProductCard({ product }: { product: InventoryProduct }) 
           </span>
         </div>
 
-        <Link
-          href={`/products/${product.id}`}
-          className="mt-4 inline-flex items-center justify-center gap-1.5 w-full px-4 py-2.5 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors"
-        >
-          View Details
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-          </svg>
-        </Link>
+        <div className="mt-4 flex gap-2">
+          <Link
+            href={`/products/${product.id}`}
+            className="inline-flex items-center justify-center gap-1.5 flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-bold hover:border-gray-900 hover:text-gray-900 transition-colors"
+          >
+            Details
+          </Link>
+          {!outOfStock && (
+            <button
+              onClick={() => setOrderOpen(true)}
+              className="inline-flex items-center justify-center gap-1.5 flex-1 px-4 py-2.5 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors"
+            >
+              Order
+            </button>
+          )}
+        </div>
       </div>
+
+      {orderOpen && (
+        <OrderForm
+          product={{ id: product.id, name: product.name, unit: product.unit, quantity: product.quantity }}
+          onClose={() => setOrderOpen(false)}
+        />
+      )}
     </div>
   )
 }

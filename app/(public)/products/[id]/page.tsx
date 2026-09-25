@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useParams, notFound } from "next/navigation"
 import type { InventoryProduct } from "@/components/client/ProductCard"
 import CTASection from "@/components/client/CTASection"
+import OrderForm from "@/components/client/OrderForm"
 
 function SpecRow({ label, value }: { label: string; value: string }) {
   return (
@@ -19,6 +20,7 @@ export default function ProductDetailPage() {
   const id = rawParams?.id
   const [product, setProduct] = useState<InventoryProduct | null>(null)
   const [loading, setLoading] = useState(true)
+  const [orderOpen, setOrderOpen] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -124,15 +126,16 @@ export default function ProductDetailPage() {
 
               {/* Actions */}
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <Link
-                  href={`/book-service?product=${encodeURIComponent(product.name)}`}
-                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-400/25"
+                <button
+                  onClick={() => setOrderOpen(true)}
+                  disabled={outOfStock}
+                  className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors shadow-lg shadow-yellow-400/25 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Order / Request Product
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                   </svg>
-                </Link>
+                </button>
                 <Link
                   href="/contact"
                   className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg border border-gray-300 text-gray-700 text-sm font-bold hover:border-gray-900 hover:text-gray-900 transition-colors"
@@ -153,6 +156,13 @@ export default function ProductDetailPage() {
         secondaryLabel="Contact Us"
         secondaryHref="/contact"
       />
+
+      {orderOpen && product && (
+        <OrderForm
+          product={{ id: product.id, name: product.name, unit: product.unit, quantity: product.quantity }}
+          onClose={() => setOrderOpen(false)}
+        />
+      )}
     </>
   )
 }

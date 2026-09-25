@@ -109,7 +109,7 @@ export default function AdminNotificationsPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm">{n.type === 'ASSIGNMENT' ? '🛠️' : n.type === 'ACCOUNT' ? '👤' : n.type === 'REGISTRATION' ? '📋' : 'ℹ️'}</span>
+                    <span className="text-sm">{n.type === 'ASSIGNMENT' ? '🛠️' : n.type === 'ACCOUNT' ? '👤' : n.type === 'REGISTRATION' ? '📋' : n.type === 'ORDER' ? '🛒' : 'ℹ️'}</span>
                     <span className="text-sm font-black text-slate-900">{n.title}</span>
                     {!n.read && <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[9px] font-black text-black">NEW</span>}
                   </div>

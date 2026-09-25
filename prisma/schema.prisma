@@ -32,6 +32,7 @@ model User {
   projectAssignments ProjectAssignment[]
   leaveRequests LeaveRequest[] @relation("TechLeaves")
   leaveCredits LeaveCredits? @relation("TechLeaveCredits")
+  orders Order[]
 }
 
 model Booking {
@@ -109,6 +110,7 @@ model InventoryItem {
   imageData   String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  orderItems  OrderItem[]
 }
 
 model Report {
@@ -198,6 +200,49 @@ model Setting {
   key       String   @id
   value     String?
   updatedAt DateTime @updatedAt
+}
+
+// Client product/material orders. A client submits from the public catalog with
+// a validated email and phone; admins manage the order lifecycle.
+model Order {
+  id          String      @id @default(uuid())
+  clientId    String
+  client      User        @relation(fields: [clientId], references: [id])
+  clientName  String
+  email       String
+  phone       String
+  address     String?
+  notes       String?
+  status      OrderStatus @default(PENDING)
+  total       Float       @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       OrderItem[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model OrderItem {
+  id              String        @id @default(uuid())
+  orderId         String
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  name            String
+  quantity        Int
+  unit            String?
+  unitPrice       Float
+  createdAt       DateTime      @default(now())
+
+  @@index([orderId])
+}
+
+enum OrderStatus {
+  PENDING
+  APPROVED
+  COMPLETED
+  CANCELLED
 }
 
 enum Role {

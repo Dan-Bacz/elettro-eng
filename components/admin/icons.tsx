@@ -277,3 +277,14 @@ export function LogoutIcon(props: IconProps) {
     </>
   )
 }
+
+export function CartIcon(props: IconProps) {
+  return base(
+    props,
+    <>
+      <circle cx="9" cy="20" r="1.4" />
+      <circle cx="17" cy="20" r="1.4" />
+      <path d="M3 4h2l2.4 11.2a1.5 1.5 0 0 0 1.46 1.18h7.8a1.5 1.5 0 0 0 1.46-1.18L19.5 9H6" />
+    </>
+  )
+}

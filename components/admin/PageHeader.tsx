@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 type PageHeaderProps = {
   title: string
   subtitle?: string
-  icon?: string
+  icon?: ReactNode
   actions?: ReactNode
 }
 

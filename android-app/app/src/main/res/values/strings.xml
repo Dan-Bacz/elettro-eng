@@ -54,6 +54,7 @@
     <string name="drawer_dashboard">Dashboard</string>
     <string name="drawer_clients">Clients</string>
     <string name="drawer_bookings">Bookings</string>
+    <string name="drawer_orders">Orders</string>
     <string name="drawer_projects">Projects</string>
     <string name="drawer_technicians">Technicians</string>
     <string name="drawer_inventory">Inventory</string>
@@ -107,6 +108,8 @@
     <string name="leave_subtitle">Approve or reject technician leave applications</string>
     <string name="notifications_title">Notifications</string>
     <string name="notifications_subtitle">Pending inquiries, registrations &amp; warnings</string>
+    <string name="orders_title">Orders</string>
+    <string name="orders_subtitle">Client product &amp; material orders</string>
     <string name="mark_all_read">Mark all read</string>
     <string name="no_notifications">No notifications yet.</string>
     <string name="clients_title">Clients</string>
