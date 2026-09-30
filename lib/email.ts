@@ -54,6 +54,15 @@ function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || 'https://elettro-eng-one.vercel.app'
 }
 
+function escapeHtml(value: string) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export async function sendAdminRegistrationNotification(user: { name: string; email: string; phone?: string | null }) {
   for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
     try {
@@ -348,4 +357,63 @@ export async function sendTechnicianApprovalNotification(user: { name: string; e
       }
     }
   }
+}
+
+// One-time 6-digit code emailed to a technician who asked to reset their password.
+export type PasswordResetEmail = {
+  name: string
+  code: string
+  expiresInMinutes: number
+}
+
+export function buildPasswordResetEmail(input: PasswordResetEmail) {
+  const subject = `${input.code} is your Elettro password reset code`
+  const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #0B0F10; padding: 20px; text-align: center;">
+            <h1 style="color: #F5C400; margin: 0; font-size: 24px;">ELETTRO</h1>
+            <p style="color: #9EA8AC; margin: 4px 0 0; font-size: 11px; letter-spacing: 2px;">ENGINEERING ENTERPRISES</p>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0;">
+            <h2 style="color: #111; margin-top: 0;">Password Reset Code</h2>
+            <p style="color: #555; font-size: 14px;">Good day <strong>${escapeHtml(input.name)}</strong>,</p>
+            <p style="color: #555; font-size: 14px;">We received a request to reset the password for your technician account. Use the code below in the Elettro app to choose a new password.</p>
+            <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 26px; margin: 22px 0; text-align: center;">
+              <div style="font-size: 34px; letter-spacing: 10px; font-weight: bold; color: #111; font-family: 'Courier New', monospace;">${escapeHtml(input.code)}</div>
+            </div>
+            <p style="color: #555; font-size: 13px;">This code expires in <strong>${input.expiresInMinutes} minutes</strong> and can only be used once.</p>
+            <p style="color: #888; font-size: 12px;">If you did not request a password reset, you can safely ignore this email. Your password will not change.</p>
+          </div>
+          <div style="background-color: #0B0F10; padding: 15px; text-align: center;">
+            <p style="color: #666; margin: 0; font-size: 11px;">Elettro Engineering Enterprises - Automated Notification</p>
+          </div>
+        </div>
+      `
+  const text = `Your Elettro password reset code is ${input.code}. It expires in ${input.expiresInMinutes} minutes. If you did not request this, you can ignore this email.`
+  return { subject, html, text }
+}
+
+export async function sendPasswordResetCodeEmail(input: PasswordResetEmail & { email: string }) {
+  const message = buildPasswordResetEmail(input)
+
+  for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
+    try {
+      const transporter = await getTransporter()
+      await withTimeout(transporter.sendMail({
+        from: `${process.env.GMAIL_USER || 'Elettro Engineering'} <${process.env.GMAIL_USER || 'noreply@elettro.com'}>`,
+        to: input.email,
+        subject: message.subject,
+        text: message.text,
+        html: message.html
+      }), 25000)
+      return
+    } catch (error: any) {
+      cachedIpv4 = null
+      if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
+        console.error(`Failed to send password reset code email (attempt ${attempt}):`, error)
+      }
+    }
+  }
+
+  throw new Error('Could not send the reset email. Please try again later.')
 }

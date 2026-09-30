@@ -19,6 +19,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -2003,27 +2004,91 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
     // === INVENTORY DIALOG ===
 
+    private TextView createFieldLabel(String text, boolean required) {
+        TextView label = new TextView(this);
+        label.setText(required ? text + " *" : text);
+        label.setTextColor(Color.parseColor("#5B6770"));
+        label.setTextSize(11);
+        label.setTypeface(null, Typeface.BOLD);
+        label.setPadding(0, 0, 0, 4);
+        return label;
+    }
+
+    private EditText createInput(String hint, String value, int inputType) {
+        EditText input = new EditText(this);
+        input.setHint(hint);
+        if (value != null) input.setText(value);
+        if (inputType != 0) input.setInputType(inputType);
+        input.setTextSize(14);
+        input.setTextColor(Color.parseColor("#11181C"));
+        input.setHintTextColor(Color.parseColor("#9EA8AC"));
+        input.setBackgroundResource(R.drawable.bg_input);
+        input.setPadding(24, 18, 24, 18);
+        return input;
+    }
+
+    private void addField(LinearLayout parent, String label, EditText input, boolean required, boolean last) {
+        LinearLayout group = new LinearLayout(this);
+        group.setOrientation(LinearLayout.VERTICAL);
+        group.addView(createFieldLabel(label, required));
+        group.addView(input);
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        if (!last) p.setMargins(0, 0, 0, 12);
+        group.setLayoutParams(p);
+        parent.addView(group);
+    }
+
     private void showAddInventoryDialog() {
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(content);
+
         LinearLayout layout = new LinearLayout(this);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(40, 20, 40, 20);
+        layout.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        final EditText etName = new EditText(this);
-        etName.setHint("Item Name (e.g. 20A Circuit Breaker)");
-        layout.addView(etName);
+        final EditText etName = createInput("e.g. 20A Circuit Breaker", null, android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        addField(content, "Item Name", etName, true, false);
 
-        final EditText etCategory = new EditText(this);
-        etCategory.setHint("Category (Wiring / Breakers / Lighting)");
-        layout.addView(etCategory);
+        final EditText etCategory = createInput("e.g. Circuit Breakers", null, android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        addField(content, "Category", etCategory, false, false);
 
-        final EditText etQty = new EditText(this);
-        etQty.setHint("Quantity");
-        etQty.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        layout.addView(etQty);
+        final EditText etBrand = createInput("e.g. Schneider", null, android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        addField(content, "Brand", etBrand, false, false);
 
-        final EditText etUnit = new EditText(this);
-        etUnit.setHint("Unit (pcs / meters / rolls)");
-        layout.addView(etUnit);
+        final EditText etModel = createInput("e.g. iC60N-20A", null, android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        addField(content, "Model Number", etModel, false, false);
+
+        final EditText etSku = createInput("e.g. WH-001", null, android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        addField(content, "SKU / Product Number", etSku, false, false);
+
+        final EditText etQty = createInput("0", "0", android.text.InputType.TYPE_CLASS_NUMBER);
+        addField(content, "Initial Stock", etQty, true, false);
+
+        final EditText etUnit = createInput("pcs / meters / rolls", "pcs", android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        addField(content, "Unit", etUnit, true, false);
+
+        final EditText etBuyPrice = createInput("0.00", "", android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        addField(content, "Buy Price", etBuyPrice, false, false);
+
+        final EditText etSellPrice = createInput("0.00", "", android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        addField(content, "Sell Price", etSellPrice, false, false);
+
+        final EditText etMinStock = createInput("10", "10", android.text.InputType.TYPE_CLASS_NUMBER);
+        addField(content, "Minimum Stock", etMinStock, false, false);
+
+        final EditText etDescription = createInput("Optional notes or specs", null, android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        etDescription.setMinLines(3);
+        etDescription.setGravity(android.view.Gravity.TOP | android.view.Gravity.START);
+        addField(content, "Description", etDescription, false, false);
+
+        TextView imageLabel = createFieldLabel("Product Image", false);
+        content.addView(imageLabel);
 
         LinearLayout photoActions = new LinearLayout(this);
         photoActions.setOrientation(LinearLayout.HORIZONTAL);
@@ -2032,6 +2097,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         Button btnImport = new Button(this);
         btnImport.setText("Import Image");
         btnImport.setTextSize(12);
+        btnImport.setTypeface(null, Typeface.BOLD);
         btnImport.setBackgroundResource(R.drawable.bg_action_yellow);
         btnImport.setTextColor(Color.parseColor("#0B0F10"));
         photoActions.addView(btnImport, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -2039,6 +2105,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         Button btnCapture = new Button(this);
         btnCapture.setText("Capture Photo");
         btnCapture.setTextSize(12);
+        btnCapture.setTypeface(null, Typeface.BOLD);
         btnCapture.setBackgroundResource(R.drawable.bg_action_yellow);
         btnCapture.setTextColor(Color.parseColor("#0B0F10"));
         LinearLayout.LayoutParams paramsCapture = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
@@ -2047,15 +2114,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         LinearLayout.LayoutParams paramsBtn = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        paramsBtn.setMargins(0, 14, 0, 4);
+        paramsBtn.setMargins(0, 4, 0, 4);
         photoActions.setLayoutParams(paramsBtn);
-        layout.addView(photoActions);
+        content.addView(photoActions);
 
         final TextView photoStatus = new TextView(this);
         photoStatus.setText(capturedImageBase64 == null ? "No photo attached" : "Photo attached");
         photoStatus.setTextColor(Color.GRAY);
         photoStatus.setTextSize(12);
-        layout.addView(photoStatus);
+        content.addView(photoStatus);
 
         final ImageView preview = new ImageView(this);
         LinearLayout.LayoutParams paramsPreview = new LinearLayout.LayoutParams(
@@ -2064,7 +2131,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         preview.setLayoutParams(paramsPreview);
         preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
         preview.setBackgroundResource(R.drawable.bg_dashboard_card);
-        layout.addView(preview);
+        content.addView(preview);
 
         inventoryPhotoPreview = preview;
         inventoryPhotoStatus = photoStatus;
@@ -2074,10 +2141,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
         Button btnRemovePhoto = new Button(this);
         btnRemovePhoto.setText("Remove Photo");
         btnRemovePhoto.setTextSize(12);
+        btnRemovePhoto.setTypeface(null, Typeface.BOLD);
         btnRemovePhoto.setBackgroundResource(R.drawable.bg_dashboard_card);
         btnRemovePhoto.setTextColor(Color.parseColor("#0B0F10"));
         btnRemovePhoto.setOnClickListener(v -> clearInventoryPhoto());
-        layout.addView(btnRemovePhoto);
+        content.addView(btnRemovePhoto);
 
         if (capturedImageBase64 != null) {
             try {
@@ -2087,29 +2155,70 @@ public class AdminDashboardActivity extends AppCompatActivity {
             } catch (Exception ignored) {}
         }
 
-        new AlertDialog.Builder(this)
+        final AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Add Stock Item")
                 .setView(layout)
-                .setPositiveButton("Save Item", (dialog, which) -> {
-                    String name = etName.getText().toString().trim();
-                    String cat = etCategory.getText().toString().trim();
-                    String unit = etUnit.getText().toString().trim();
-                    int qty = 1;
-                    try { qty = Integer.parseInt(etQty.getText().toString().trim()); } catch (Exception ignored) {}
-                    if (!name.isEmpty()) saveInventoryItem(name, cat, qty, unit.isEmpty() ? "pcs" : unit);
-                })
+                .setPositiveButton("Save Item", null)
                 .setNegativeButton("Cancel", null)
-                .show();
+                .create();
+
+        dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String name = etName.getText().toString().trim();
+            if (name.isEmpty()) {
+                etName.setError("Item name is required");
+                return;
+            }
+            int qty = 0;
+            try { qty = Integer.parseInt(etQty.getText().toString().trim()); } catch (Exception ignored) {}
+            int minStock = 10;
+            try { minStock = Integer.parseInt(etMinStock.getText().toString().trim()); } catch (Exception ignored) {}
+            String unit = etUnit.getText().toString().trim();
+            Double buyPrice = parseDouble(etBuyPrice.getText().toString());
+            Double sellPrice = parseDouble(etSellPrice.getText().toString());
+
+            saveInventoryItem(
+                    name,
+                    etCategory.getText().toString().trim(),
+                    etBrand.getText().toString().trim(),
+                    etModel.getText().toString().trim(),
+                    etSku.getText().toString().trim(),
+                    qty,
+                    unit.isEmpty() ? "pcs" : unit,
+                    buyPrice,
+                    sellPrice,
+                    minStock,
+                    etDescription.getText().toString().trim()
+            );
+            dialog.dismiss();
+        }));
+
+        dialog.show();
     }
 
-    private void saveInventoryItem(String name, String category, int qty, String unit) {
+    private Double parseDouble(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim();
+        if (value.isEmpty()) return null;
+        try { return Double.parseDouble(value); } catch (Exception e) { return null; }
+    }
+
+    private void saveInventoryItem(String name, String category, String brand, String model, String sku,
+                                   int qty, String unit, Double buyPrice, Double sellPrice,
+                                   int minStock, String description) {
         new Thread(() -> {
             try {
                 JSONObject json = new JSONObject();
                 json.put("name", name);
-                json.put("category", category);
+                if (!category.isEmpty()) json.put("category", category);
+                if (!brand.isEmpty()) json.put("brand", brand);
+                if (!model.isEmpty()) json.put("model", model);
+                if (!sku.isEmpty()) json.put("sku", sku);
+                if (!description.isEmpty()) json.put("description", description);
                 json.put("quantity", qty);
                 json.put("unit", unit);
+                json.put("reorderLevel", minStock);
+                if (buyPrice != null) json.put("buyPrice", buyPrice);
+                if (sellPrice != null) json.put("sellPrice", sellPrice);
                 if (capturedImageBase64 != null && !capturedImageBase64.isEmpty()) {
                     json.put("imageData", capturedImageBase64);
                 }
@@ -2118,6 +2227,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     Toast.makeText(this, "Item Saved to Inventory", Toast.LENGTH_SHORT).show();
                     capturedImageBase64 = null;
                     capturedImageUri = null;
+                    inventoryPhotoPreview = null;
+                    inventoryPhotoStatus = null;
                     loadDashboardData();
                 });
             } catch (Exception e) {

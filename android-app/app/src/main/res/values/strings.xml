@@ -15,7 +15,7 @@
     <string name="or">or</string>
     <string name="continue_as_guest">Continue as Guest</string>
     <string name="guest_footer">You can also browse services and products without an account.</string>
-    <string name="forgot_password_message">Password reset is not available yet. Contact your administrator.</string>
+    <string name="forgot_password_message">Enter your technician email and we\'ll send you a reset code.</string>
     <string name="guest_message">Guest browsing is not available in the app yet.</string>
     <string name="signup_link">Don\'t have an account? Sign up</string>
     <string name="signup_title">Create Account</string>
@@ -215,4 +215,29 @@
     <string name="tech_skills_hint">Skills</string>
     <string name="tech_register_button">Submit Registration</string>
     <string name="tech_register_link">Register as Technician</string>
+
+    <!-- Forgot password (technician only) -->
+    <string name="forgot_password_title">Reset Password</string>
+    <string name="forgot_password_step1_title">Enter your email</string>
+    <string name="forgot_password_step1_subtitle">We\'ll email a 6-digit reset code to your technician account.</string>
+    <string name="forgot_password_step2_title">Enter the code</string>
+    <string name="forgot_password_step2_subtitle">We sent a 6-digit code to your email. It expires in 15 minutes.</string>
+    <string name="forgot_password_step3_title">Choose a new password</string>
+    <string name="forgot_password_step3_subtitle">Enter a new password of at least 6 characters.</string>
+    <string name="reset_code_label">Reset Code</string>
+    <string name="new_password_label">New Password</string>
+    <string name="send_code">Send Code</string>
+    <string name="sending_code">Sending…</string>
+    <string name="verify_code">Verify Code</string>
+    <string name="verifying_code">Verifying…</string>
+    <string name="reset_password">Reset Password</string>
+    <string name="resetting_password">Saving…</string>
+    <string name="resend_code">Resend Code</string>
+    <string name="change_email">Change Email</string>
+    <string name="back_to_login">Back to Login</string>
+    <string name="code_sent_to">Code sent to %1$s</string>
+    <string name="password_reset_done">Password reset. Please sign in with your new password.</string>
+    <string name="forgot_password_tech_only">Password reset is available for technician accounts only.</string>
+    <string name="forgot_password_enter_email">Enter the email you use to sign in.</string>
+    <string name="error_invalid_code">That code is not correct</string>
 </resources>

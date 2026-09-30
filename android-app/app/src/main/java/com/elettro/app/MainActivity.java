@@ -23,6 +23,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_PASSWORD = "password";
     private static final String KEY_REMEMBER = "remember";
     public static final String KEY_TOKEN = "token";
+    public static final String EXTRA_EMAIL = "extra_email";
+    public static final String EXTRA_EMAIL_FOCUS = "extra_email_focus";
 
     private TextInputEditText emailInput;
     private TextInputEditText passwordInput;
@@ -40,14 +42,43 @@ public class MainActivity extends AppCompatActivity {
         loginBtn = findViewById(R.id.login_button);
 
         restoreRememberedCredentials();
+        applyPrefillFromIntent(getIntent());
 
         loginBtn.setOnClickListener(v -> handleLogin());
-        findViewById(R.id.forgot_password).setOnClickListener(v ->
-                Toast.makeText(this, R.string.forgot_password_message, Toast.LENGTH_SHORT).show());
+        findViewById(R.id.forgot_password).setOnClickListener(v -> openForgotPassword());
         findViewById(R.id.guest_button).setOnClickListener(v ->
                 Toast.makeText(this, R.string.guest_message, Toast.LENGTH_SHORT).show());
         findViewById(R.id.signup_link).setOnClickListener(v ->
                 startActivity(new Intent(this, SignupActivity.class)));
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        applyPrefillFromIntent(intent);
+    }
+
+    // Used when returning from the password reset flow so the user only has to
+    // type the new password.
+    private void applyPrefillFromIntent(Intent intent) {
+        if (intent == null) return;
+        String email = intent.getStringExtra(EXTRA_EMAIL);
+        if (email != null) {
+            emailInput.setText(email);
+        }
+        if (intent.getBooleanExtra(EXTRA_EMAIL_FOCUS, false)) {
+            passwordInput.requestFocus();
+        }
+        intent.removeExtra(EXTRA_EMAIL);
+        intent.removeExtra(EXTRA_EMAIL_FOCUS);
+    }
+
+    private void openForgotPassword() {
+        Intent intent = new Intent(this, ForgotPasswordActivity.class);
+        String current = emailInput.getText() == null ? "" : emailInput.getText().toString().trim();
+        if (!current.isEmpty()) intent.putExtra(EXTRA_EMAIL, current);
+        startActivity(intent);
     }
 
     private void restoreRememberedCredentials() {

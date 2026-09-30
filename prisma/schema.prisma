@@ -33,6 +33,23 @@ model User {
   leaveRequests LeaveRequest[] @relation("TechLeaves")
   leaveCredits LeaveCredits? @relation("TechLeaveCredits")
   orders Order[]
+  passwordResetCodes PasswordResetCode[]
+}
+
+// One-time 6-digit codes emailed to technicians for "Forgot Password".
+// Codes are stored hashed, expire after 15 minutes, and are single-use.
+model PasswordResetCode {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Booking {
