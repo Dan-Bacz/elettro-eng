@@ -1,12 +1,17 @@
 package com.elettro.app;
 
+import android.content.ClipData;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.Manifest;
 import android.app.DatePickerDialog;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.Gravity;
 import android.view.View;
@@ -23,6 +28,9 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -33,14 +41,23 @@ import com.elettro.app.network.ApiClient;
 import com.google.android.material.navigation.NavigationView;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 
 public class TechnicianDashboardActivity extends AppCompatActivity {
+
+    private static final int REQ_PROFILE_CAMERA = 1101;
+    private static final int REQ_PROFILE_GALLERY = 1102;
+    private static final int REQ_PROFILE_CAMERA_PERMISSION = 1103;
+    private Uri profilePhotoUri;
 
     // Shell & drawer
     private DrawerLayout drawerLayout;
@@ -86,6 +103,9 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
     // Profile
     private TextView profileName, profileEmail, profilePhone, profileSpec, profileExp, profileSkills, profileInitial;
+    private ImageView profileImage;
+    private View btnChangePhoto;
+    private String profileImageUrl = "";
     private TextView btnLogout, btnViewInventory, btnGotoJobs;
 
     // Quick actions
@@ -183,6 +203,12 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         profileExp = findViewById(R.id.profile_exp);
         profileSkills = findViewById(R.id.profile_skills);
         profileInitial = findViewById(R.id.profile_initial);
+        profileImage = findViewById(R.id.profile_image);
+        View profileBadge = findViewById(R.id.profile_image_badge);
+        btnChangePhoto = findViewById(R.id.btn_change_photo);
+
+        profileBadge.setOnClickListener(v -> showPhotoSourceDialog());
+        btnChangePhoto.setOnClickListener(v -> showPhotoSourceDialog());
         btnLogout = findViewById(R.id.btn_logout);
         btnViewInventory = findViewById(R.id.btn_view_inventory);
 
@@ -1219,6 +1245,185 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         profileSpec.setText(techData.optString("specialization", getString(R.string.not_set)));
         profileExp.setText(techData.optString("yearsOfExperience", getString(R.string.not_set)) + " years");
         profileSkills.setText(techData.optString("skills", getString(R.string.not_set)));
+        profileImageUrl = techData.optString("profileImageUrl", "");
+        applyProfilePhoto();
+    }
+
+    private void applyProfilePhoto() {
+        boolean hasPhoto = profileImageUrl != null && !profileImageUrl.trim().isEmpty();
+        if (hasPhoto) {
+            Glide.with(this)
+                    .load(profileImageUrl)
+                    .placeholder(R.drawable.bg_avatar_photo)
+                    .error(R.drawable.bg_avatar_photo)
+                    .into(profileImage);
+            profileImage.setVisibility(View.VISIBLE);
+            profileInitial.setVisibility(View.GONE);
+        } else {
+            profileImage.setVisibility(View.GONE);
+            profileInitial.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void showPhotoSourceDialog() {
+        List<String> options = new ArrayList<>();
+        options.add(getString(R.string.tech_profile_take_photo));
+        options.add(getString(R.string.tech_profile_pick_gallery));
+        if (profileImageUrl != null && !profileImageUrl.trim().isEmpty()) {
+            options.add(getString(R.string.tech_profile_remove_photo));
+        }
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.tech_profile_choose_source)
+                .setItems(options.toArray(new String[0]), (dialog, which) -> {
+                    if (which == 0) openProfileCamera();
+                    else if (which == 1) openProfileGallery();
+                    else removeProfilePhoto();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void openProfileCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQ_PROFILE_CAMERA_PERMISSION);
+            return;
+        }
+        Intent takePicture = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        File photo = createProfilePhotoFile();
+        if (photo == null || takePicture.resolveActivity(getPackageManager()) == null) {
+            Toast.makeText(this, R.string.tech_profile_no_gallery, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        profilePhotoUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photo);
+        takePicture.putExtra(MediaStore.EXTRA_OUTPUT, profilePhotoUri);
+        takePicture.setClipData(ClipData.newRawUri("", profilePhotoUri));
+        takePicture.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        try {
+            startActivityForResult(takePicture, REQ_PROFILE_CAMERA);
+        } catch (Exception e) {
+            Toast.makeText(this, R.string.tech_profile_no_gallery, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void openProfileGallery() {
+        Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+        pick.setType("image/*");
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        if (pick.resolveActivity(getPackageManager()) == null) {
+            Toast.makeText(this, R.string.tech_profile_no_gallery, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        startActivityForResult(pick, REQ_PROFILE_GALLERY);
+    }
+
+    private File createProfilePhotoFile() {
+        try {
+            File dir = new File(getCacheDir(), "profile_photos");
+            if (!dir.exists() && !dir.mkdirs()) return null;
+            return new File(dir, "profile_" + System.currentTimeMillis() + ".jpg");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void removeProfilePhoto() {
+        if (profileImageUrl.trim().isEmpty()) return;
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("removeImage", true);
+        } catch (JSONException ignored) {
+        }
+        setPhotoBusy(true);
+        new Thread(() -> {
+            String resp = null;
+            try {
+                resp = ApiClient.patch("/tech", payload.toString());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            boolean ok = resp != null && resp.contains("\"success\":true");
+            runOnUiThread(() -> {
+                setPhotoBusy(false);
+                if (!ok) {
+                    Toast.makeText(this, R.string.tech_profile_photo_failed, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                profileImageUrl = "";
+                applyProfilePhoto();
+                Toast.makeText(this, R.string.tech_profile_photo_saved, Toast.LENGTH_SHORT).show();
+            });
+        }).start();
+    }
+
+    private void uploadProfilePhoto(Uri source) {
+        if (source == null) return;
+        final String dataUrl;
+        try (InputStream is = getContentResolver().openInputStream(source)) {
+            Bitmap bitmap = BitmapFactory.decodeStream(is);
+            if (bitmap == null) return;
+            int maxDim = 600;
+            int w = bitmap.getWidth();
+            int h = bitmap.getHeight();
+            if (Math.max(w, h) > maxDim) {
+                float scale = (float) maxDim / Math.max(w, h);
+                bitmap = Bitmap.createScaledBitmap(bitmap, (int) (w * scale), (int) (h * scale), true);
+            }
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+            byte[] bytes = baos.toByteArray();
+            if (bytes.length == 0) return;
+            dataUrl = "data:image/jpeg;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP);
+        } catch (Exception e) {
+            runOnUiThread(() -> {
+                setPhotoBusy(false);
+                Toast.makeText(this, R.string.tech_profile_photo_failed, Toast.LENGTH_LONG).show();
+            });
+            return;
+        }
+
+        JSONObject payload = new JSONObject();
+        try {
+            payload.put("profileImage", dataUrl);
+        } catch (JSONException e) {
+            return;
+        }
+        setPhotoBusy(true);
+        new Thread(() -> {
+            String resp = null;
+            try {
+                resp = ApiClient.patch("/tech", payload.toString());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            final boolean ok = resp != null && resp.contains("\"success\":true");
+            final String savedUrl = ok ? extractProfileImageUrl(resp) : "";
+            runOnUiThread(() -> {
+                setPhotoBusy(false);
+                if (!ok) {
+                    Toast.makeText(this, R.string.tech_profile_photo_failed, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (!savedUrl.isEmpty()) profileImageUrl = savedUrl;
+                applyProfilePhoto();
+                Toast.makeText(this, R.string.tech_profile_photo_saved, Toast.LENGTH_SHORT).show();
+            });
+        }).start();
+    }
+
+    private String extractProfileImageUrl(String response) {
+        try {
+            return new JSONObject(response).optString("profileImageUrl", "");
+        } catch (JSONException e) {
+            return "";
+        }
+    }
+
+    private void setPhotoBusy(boolean busy) {
+        if (!(btnChangePhoto instanceof TextView)) return;
+        TextView btn = (TextView) btnChangePhoto;
+        btn.setEnabled(!busy);
+        btn.setAlpha(busy ? 0.6f : 1f);
+        btn.setText(busy ? R.string.tech_profile_uploading : R.string.tech_profile_change_photo);
     }
 
     // === NOTIFICATIONS ===
@@ -1830,5 +2035,31 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         tv.setPadding(0, 24, 0, 0);
         tv.setTextSize(13);
         container.addView(tv);
+    }
+
+    // === PROFILE PHOTO RESULTS ===
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK) return;
+        if (requestCode == REQ_PROFILE_CAMERA) {
+            if (profilePhotoUri == null) return;
+            uploadProfilePhoto(profilePhotoUri);
+            profilePhotoUri = null;
+        } else if (requestCode == REQ_PROFILE_GALLERY && data != null && data.getData() != null) {
+            uploadProfilePhoto(data.getData());
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode != REQ_PROFILE_CAMERA_PERMISSION) return;
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            openProfileCamera();
+        } else {
+            Toast.makeText(this, R.string.tech_profile_camera_required, Toast.LENGTH_LONG).show();
+        }
     }
 }

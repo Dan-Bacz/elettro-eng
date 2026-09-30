@@ -197,6 +197,17 @@
     <string name="tech_inventory_subtitle">Available stock for your projects</string>
     <string name="tech_profile_title">My Profile</string>
     <string name="tech_profile_subtitle">Your account information</string>
+    <string name="tech_profile_photo">Profile photo</string>
+    <string name="tech_profile_change_photo">Change Photo</string>
+    <string name="tech_profile_choose_source">Choose a photo</string>
+    <string name="tech_profile_take_photo">Take photo</string>
+    <string name="tech_profile_pick_gallery">Choose from gallery</string>
+    <string name="tech_profile_remove_photo">Remove photo</string>
+    <string name="tech_profile_uploading">Uploading photo…</string>
+    <string name="tech_profile_photo_saved">Profile photo updated</string>
+    <string name="tech_profile_photo_failed">Could not update your photo. Please try again.</string>
+    <string name="tech_profile_no_gallery">No gallery app found</string>
+    <string name="tech_profile_camera_required">Camera permission required</string>
     <string name="nav_apply_leave">Apply Leave</string>
     <string name="tech_leave_title">Apply for Leave</string>
     <string name="tech_leave_subtitle">File a leave application (CSC Form No. 6)</string>
