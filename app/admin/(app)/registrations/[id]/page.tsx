@@ -81,7 +81,7 @@ export default function AdminRegistrationDetailPage() {
       <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
         <div className="text-2xl">⚠️</div>
         <div className="mt-2 text-sm font-bold text-slate-700">{error || 'Not found'}</div>
-        <Link href="/admin/registrations" className="text-xs font-bold text-yellow-600 hover:underline">← Back to registrations</Link>
+        <Link href="/admin/technicians" className="text-xs font-bold text-yellow-600 hover:underline">← Back to technicians</Link>
       </div>
     )
   }
@@ -92,7 +92,7 @@ export default function AdminRegistrationDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/admin/registrations" className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-yellow-600">←</Link>
+          <Link href="/admin/technicians" className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-yellow-600">←</Link>
           <div className="flex items-center gap-3">
             {user.profileImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

@@ -76,7 +76,7 @@ export default async function handler(req: any, res: any) {
           type: 'REGISTRATION',
           title: 'New Technician Registration',
           message: `${user.name} (${user.email}) registered for a technician account and is awaiting approval.`,
-          link: '/admin/registrations'
+          link: '/admin/technicians'
         }))
       })
     }

@@ -1,0 +1,4 @@
+⚠ Warning: Next.js ignored package-lock.json in C:\Users\danie because it is outside the current Git repository (C:\Users\danie\AndroidStudioProjects\elettro).
+ To use this directory, set `outputFileTracingRoot` in your Next.js config.
+
+warn(prisma-client) This is the 10th instance of Prisma Client being started. Make sure this is intentional.

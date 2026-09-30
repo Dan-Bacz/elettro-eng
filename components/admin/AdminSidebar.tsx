@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { GridIcon, InboxIcon, HammerIcon, CalendarIcon, UserPlusIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon, CartIcon } from './icons'
+import { GridIcon, InboxIcon, HammerIcon, CalendarIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon, CartIcon } from './icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/admin/dashboard' },
@@ -10,8 +10,7 @@ const NAV_ITEMS = [
   { key: 'orders', label: 'Orders', icon: CartIcon, href: '/admin/orders' },
   { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
   { key: 'leave', label: 'Leave Requests', icon: CalendarIcon, href: '/admin/leave' },
-  { key: 'registrations', label: 'Registrations', icon: UserPlusIcon, href: '/admin/registrations' },
-  { key: 'inventory', label: 'Inventory', icon: PackageIcon, href: '/admin/inventory' },
+    { key: 'inventory', label: 'Inventory', icon: PackageIcon, href: '/admin/inventory' },
   { key: 'technicians', label: 'Technicians', icon: UsersIcon, href: '/admin/technicians' },
   { key: 'reports', label: 'Reports', icon: BarChartIcon, href: '/admin/reports' },
   { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/admin/notifications' },

@@ -62,7 +62,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private SwipeRefreshLayout swipeRefresh;
 
     // Stat views
-    private TextView statTotalBookings, statActiveProjects, statRegistrations, statLowStock;
+    private TextView statTotalBookings, statActiveProjects, statLowStock;
     private TextView tileApproved, tileAssigned, tileStockUnits, tileSuspended;
 
     // Section containers
@@ -159,7 +159,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         statTotalBookings = findViewById(R.id.stat_total_bookings);
         statActiveProjects = findViewById(R.id.stat_active_projects);
-        statRegistrations = findViewById(R.id.stat_registrations);
         statLowStock = findViewById(R.id.stat_low_stock);
 
         tileApproved = findViewById(R.id.tile_approved);
@@ -566,9 +565,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         JSONObject stats = dashboardData.optJSONObject("stats");
         if (stats != null) {
             statTotalBookings.setText(String.valueOf(stats.optInt("totalBookings")));
-            statActiveProjects.setText(String.valueOf(stats.optInt("inProgress")));
-            statRegistrations.setText(String.valueOf(stats.optInt("pendingRegistrations")));
-            statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
+statActiveProjects.setText(String.valueOf(stats.optInt("inProgress")));
+statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
             tileApproved.setText(String.valueOf(stats.optInt("approved")));
             tileAssigned.setText(String.valueOf(stats.optInt("assigned")));
             tileStockUnits.setText(String.valueOf(stats.optInt("totalInventory")));

@@ -71,7 +71,6 @@
     <!-- Admin stats -->
     <string name="stat_total_bookings">Total Bookings</string>
     <string name="stat_active_projects">Active Projects</string>
-    <string name="stat_registrations">Pending Technician Registrations</string>
     <string name="stat_low_stock">Low Stock Items</string>
     <string name="stat_technicians">Technicians</string>
     <string name="stat_clients">Clients</string>
@@ -79,7 +78,6 @@
     <string name="stat_total_inventory">Total Inventory</string>
     <string name="hint_total_bookings">All service requests</string>
     <string name="hint_active_projects">In design &amp; execution</string>
-    <string name="hint_registrations">Awaiting review</string>
     <string name="hint_low_stock">Needs restock</string>
 
     <!-- Admin home sections -->

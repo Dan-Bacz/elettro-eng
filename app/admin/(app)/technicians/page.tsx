@@ -7,6 +7,7 @@ import SearchBar from '../../../../components/admin/SearchBar'
 import FilterBar from '../../../../components/admin/FilterBar'
 import StatusBadge from '../../../../components/admin/StatusBadge'
 import EmptyState from '../../../../components/admin/EmptyState'
+import ConfirmDialog from '../../../../components/admin/ConfirmDialog'
 import type { UserObj, UserStatus } from '../../../../components/admin/types'
 import { formatDate } from '../../../../components/admin/types'
 
@@ -14,11 +15,13 @@ type Filter = UserStatus | 'ALL'
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
-  { value: 'ACTIVE', label: 'Active' },
   { value: 'PENDING', label: 'Pending' },
+  { value: 'ACTIVE', label: 'Active' },
   { value: 'SUSPENDED', label: 'Suspended' },
   { value: 'REJECTED', label: 'Rejected' },
 ]
+
+const STATUS_ORDER: Record<string, number> = { PENDING: 0, ACTIVE: 1, SUSPENDED: 2, REJECTED: 3 }
 
 export default function AdminTechniciansPage() {
   const router = useRouter()
@@ -27,6 +30,9 @@ export default function AdminTechniciansPage() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('ALL')
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [showReject, setShowReject] = useState<UserObj | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -49,9 +55,35 @@ export default function AdminTechniciansPage() {
     return () => { cancelled = true }
   }, [router])
 
+  async function act(userId: string, action: string, extra: Record<string, any> = {}) {
+    setBusyId(userId)
+    setError('')
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, userId, ...extra }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || 'Action failed')
+      }
+      setShowReject(null)
+      setRejectReason('')
+      const up = await fetch('/api/admin')
+      if (up.ok) setTechs((await up.json()).registrations || [])
+    } catch (e: any) {
+      setError(e.message || 'Action failed')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   function effectiveStatus(u: UserObj) {
     return u.status || (u.approved ? 'ACTIVE' : 'PENDING')
   }
+
+  const pendingCount = techs.filter((u) => effectiveStatus(u) === 'PENDING').length
 
   const visible = techs
     .map((u) => ({ ...u, __status: effectiveStatus(u) }))
@@ -61,19 +93,38 @@ export default function AdminTechniciansPage() {
       const matchesQuery = !q || (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.specialization || '').toLowerCase().includes(q)
       return matchesFilter && matchesQuery
     })
+    .sort((a: any, b: any) => (STATUS_ORDER[a.__status] ?? 9) - (STATUS_ORDER[b.__status] ?? 9))
 
   return (
     <div className="space-y-6">
       <PageHeader
         icon="👷"
         title="Technicians"
-        subtitle={`${techs.filter((u) => effectiveStatus(u) === 'ACTIVE').length} active technicians`}
+        subtitle={
+          pendingCount > 0
+            ? `${pendingCount} registration${pendingCount > 1 ? 's' : ''} pending approval · ${techs.filter((u) => effectiveStatus(u) === 'ACTIVE').length} active`
+            : `${techs.filter((u) => effectiveStatus(u) === 'ACTIVE').length} active technicians`
+        }
         actions={
           <Link href="/technician/register" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 hover:border-yellow-400 hover:text-yellow-700 transition-colors">
             + Add Technician
           </Link>
         }
       />
+
+      {pendingCount > 0 && (
+        <button
+          onClick={() => setFilter(filter === 'PENDING' ? 'ALL' : 'PENDING')}
+          className="flex w-full items-center gap-3 rounded-2xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-left transition-colors hover:bg-yellow-100"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-sm font-black text-black">{pendingCount}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-black text-slate-900">Pending registration{pendingCount > 1 ? 's' : ''} awaiting approval</span>
+            <span className="block text-[11px] text-slate-500">Approve or reject new technician applications below.</span>
+          </span>
+          <span className="shrink-0 text-[11px] font-bold text-yellow-700">{filter === 'PENDING' ? 'Show all →' : 'Review →'}</span>
+        </button>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SearchBar value={query} onChange={setQuery} placeholder="Search technicians…" />
@@ -100,12 +151,12 @@ export default function AdminTechniciansPage() {
                 <th className="px-4 py-3.5 font-bold">Experience</th>
                 <th className="px-4 py-3.5 font-bold">Status</th>
                 <th className="px-4 py-3.5 font-bold">Joined</th>
-                <th className="px-5 py-3.5 font-bold text-right">View</th>
+                <th className="px-5 py-3.5 font-bold text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {(visible as any[]).map((u) => (
-                <tr key={u.id} className="border-t border-slate-100 hover:bg-yellow-50/40 transition-colors">
+                <tr key={u.id} className={`border-t border-slate-100 transition-colors hover:bg-yellow-50/40 ${u.__status === 'PENDING' ? 'bg-yellow-50/50' : ''}`}>
                   <td className="px-5 py-3.5">
                     <Link href={`/admin/technicians/${u.id}`} className="flex items-center gap-3">
                       {u.profileImageUrl ? (
@@ -124,10 +175,49 @@ export default function AdminTechniciansPage() {
                   <td className="px-4 py-3.5 text-xs font-medium text-slate-600">{u.yearsOfExperience != null ? `${u.yearsOfExperience} yrs` : '—'}</td>
                   <td className="px-4 py-3.5"><StatusBadge status={u.__status} /></td>
                   <td className="px-4 py-3.5 text-xs text-slate-400">{formatDate(u.createdAt)}</td>
-                  <td className="px-5 py-3.5 text-right">
-                    <Link href={`/admin/technicians/${u.id}`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:border-yellow-400 hover:text-yellow-700 transition-colors">
-                      Profile →
-                    </Link>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center justify-end gap-2">
+                      {u.__status === 'PENDING' ? (
+                        <>
+                          <button
+                            onClick={() => act(u.id, 'approve_user')}
+                            disabled={busyId === u.id}
+                            className="rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                          >
+                            {busyId === u.id ? '…' : 'Approve'}
+                          </button>
+                          <button
+                            onClick={() => setShowReject(u)}
+                            disabled={busyId === u.id}
+                            className="rounded-lg bg-red-500 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-red-600 transition-colors disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                          <Link
+                            href={`/admin/registrations/${u.id}`}
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:border-yellow-400 hover:text-yellow-700 transition-colors"
+                          >
+                            Review →
+                          </Link>
+                        </>
+                      ) : (
+                        <>
+                          {u.__status === 'ACTIVE' && (
+                            <button onClick={() => act(u.id, 'suspend_user')} disabled={busyId === u.id} className="rounded-lg border border-red-200 px-3 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50">
+                              {busyId === u.id ? '…' : 'Suspend'}
+                            </button>
+                          )}
+                          {(u.__status === 'SUSPENDED' || u.__status === 'REJECTED') && (
+                            <button onClick={() => act(u.id, 'activate_user')} disabled={busyId === u.id} className="rounded-lg border border-emerald-200 px-3 py-1.5 text-[11px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors disabled:opacity-50">
+                              {busyId === u.id ? '…' : (u.__status === 'REJECTED' ? 'Reinstate' : 'Reactivate')}
+                            </button>
+                          )}
+                          <Link href={`/admin/technicians/${u.id}`} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600 hover:border-yellow-400 hover:text-yellow-700 transition-colors">
+                            Profile →
+                          </Link>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -135,6 +225,28 @@ export default function AdminTechniciansPage() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!showReject}
+        title={`Reject ${showReject?.name || 'technician'}?`}
+        message="Leave a reason the technician will see when they next try to sign in."
+        confirmLabel="Reject Application"
+        danger
+        busy={busyId === showReject?.id}
+        onConfirm={() => showReject && act(showReject.id, 'reject_user', { reason: rejectReason || 'Your application was not approved at this time.' })}
+        onCancel={() => setShowReject(null)}
+      >
+        <div className="mt-4">
+          <label className="block text-xs font-bold text-slate-500 mb-1">Rejection reason</label>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            rows={3}
+            placeholder="Optional reason for rejection…"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          />
+        </div>
+      </ConfirmDialog>
     </div>
   )
 }
