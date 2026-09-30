@@ -1,133 +1,618 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import PageHeader from '../../../../components/admin/PageHeader'
 import SearchBar from '../../../../components/admin/SearchBar'
-import FilterBar from '../../../../components/admin/FilterBar'
-import StatusBadge from '../../../../components/admin/StatusBadge'
 import EmptyState from '../../../../components/admin/EmptyState'
-import { statusProgress, formatDate } from '../../../../components/admin/types'
-import type { BookingObj } from '../../../../components/admin/types'
+import ConfirmDialog from '../../../../components/admin/ConfirmDialog'
+import { formatDate, statusProgress, STATUS_COLORS } from '../../../../components/admin/types'
+import type { BookingStatusValue } from '../../../../components/admin/types'
+import {
+  HammerIcon,
+  SearchIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  PauseIcon,
+  FlagIcon,
+  UsersIcon,
+  DocumentIcon,
+  InboxTrayIcon,
+  ActivityIcon,
+  UserPlusIcon,
+  ArrowRightIcon,
+} from '../../../../components/admin/icons'
 
-type Filter = 'ALL' | 'APPROVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+// A project row as returned by /api/dashboard (prisma.project.findMany with
+// booking + assignments included). Everything rendered below comes from these
+// real database records.
+type ProjectRow = {
+  id: string
+  bookingId: string
+  title: string
+  description?: string | null
+  status: BookingStatusValue
+  startDate?: string | null
+  endDate?: string | null
+  createdAt?: string
+  updatedAt?: string
+  booking?: {
+    id: string
+    title?: string
+    status?: BookingStatusValue
+    startDate?: string | null
+    endDate?: string | null
+    budget?: number | null
+    reports?: { progress?: number | null }[]
+    client?: { id: string; name: string; email: string } | null
+  } | null
+  assignments?: { id: string; techId: string; tech?: { id: string; name: string } | null }[]
+}
+
+type NotificationRow = {
+  id: string
+  type: string
+  title: string
+  message?: string | null
+  link?: string | null
+  createdAt: string
+}
+
+// One row in the Recent Activity list. Every entry comes from a real record:
+// the admin's own notifications, or the project rows themselves.
+type ActivityItem = {
+  id: string
+  type: string
+  title: string
+  detail?: string | null
+  createdAt: string
+}
+
+// Project statuses come straight from the BookingStatus enum in prisma/schema.prisma.
+const PROJECT_STATUSES: BookingStatusValue[] = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: 'Pending',
+  APPROVED: 'Approved',
+  ASSIGNED: 'Assigned',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+}
+
+type Filter = BookingStatusValue | 'ALL'
 
 const FILTERS: { value: Filter; label: string }[] = [
-  { value: 'ALL', label: 'All' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'ASSIGNED', label: 'Assigned' },
-  { value: 'IN_PROGRESS', label: 'In Progress' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'ALL', label: 'All Statuses' },
+  ...PROJECT_STATUSES.map((s) => ({ value: s as Filter, label: STATUS_LABEL[s] })),
 ]
 
-const PROJECT_STATUSES = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
+const STATUS_DOT: Record<string, string> = {
+  PENDING: 'bg-amber-400',
+  APPROVED: 'bg-blue-500',
+  ASSIGNED: 'bg-violet-500',
+  IN_PROGRESS: 'bg-yellow-400',
+  COMPLETED: 'bg-emerald-500',
+  CANCELLED: 'bg-red-500',
+}
+
+// Mirrors classifyService() in pages/api/dashboard.ts, which is the app's
+// existing definition of a booking's service type (derived from the real title).
+function classifyService(title: string): string {
+  const t = (title || '').toLowerCase()
+  if (t.includes('install')) return 'Installation'
+  if (t.includes('mainten')) return 'Maintenance'
+  if (t.includes('inspect')) return 'Inspection'
+  if (t.includes('repair') || t.includes('fault') || t.includes('outage') || t.includes('short circuit')) return 'Repair'
+  return 'Other'
+}
+
+const PAGE_SIZE = 8
+
+function relativeTime(iso?: string | null) {
+  if (!iso) return ''
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ''
+  const diff = Date.now() - then
+  const min = Math.round(diff / 60000)
+  if (min < 1) return 'just now'
+  if (min < 60) return `${min}m ago`
+  const hours = Math.round(min / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.round(hours / 24)
+  if (days < 30) return `${days}d ago`
+  return formatDate(iso)
+}
+
+// Real progress: the latest progress reported by the technician (Report.progress).
+// Falls back to the same status-derived value the rest of the admin UI uses.
+function projectProgress(p: ProjectRow): number {
+  const reported = Math.max(0, ...(p.booking?.reports || []).map((r) => Number(r.progress || 0)))
+  if (reported > 0) return Math.min(100, reported)
+  return statusProgress(p.status)
+}
+
+function StatusPill({ status }: { status: string }) {
+  const color = STATUS_COLORS[status] || STATUS_COLORS.PENDING
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${color}`}>
+      {STATUS_LABEL[status] || status}
+    </span>
+  )
+}
 
 export default function AdminProjectsPage() {
   const router = useRouter()
-  const [bookings, setBookings] = useState<BookingObj[]>([])
+  const [projects, setProjects] = useState<ProjectRow[]>([])
+  const [notifications, setNotifications] = useState<NotificationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('ALL')
+  const [page, setPage] = useState(1)
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<ProjectRow | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      try {
-        const res = await fetch('/api/dashboard')
-        if (!res.ok) {
-          if (res.status === 401) { router.push('/admin/login'); return }
-          throw new Error('Failed to load projects')
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dashboard')
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push('/admin/login')
+          return
         }
-        const payload = await res.json()
-        if (!cancelled) setBookings((payload.bookings || []).filter((b: BookingObj) => PROJECT_STATUSES.includes(b.status)))
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || 'Failed to load projects')
-      } finally {
-        if (!cancelled) setLoading(false)
+        throw new Error('Failed to load projects')
       }
+      const payload = await res.json()
+      setProjects((payload.projects || []) as ProjectRow[])
+      setNotifications((payload.notifications || []) as NotificationRow[])
+    } catch (e: any) {
+      setError(e.message || 'Failed to load projects')
+    } finally {
+      setLoading(false)
     }
-    load()
-    return () => { cancelled = true }
   }, [router])
 
-  const visible = bookings.filter((b) => {
-    const matchesFilter = filter === 'ALL' || b.status === filter
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Close the row action menu on any outside click.
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenu(null)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [])
+
+  // Real counts, derived from the loaded project records.
+  const counts = useMemo(() => {
+    const base: Record<string, number> = { total: projects.length, APPROVED: 0, ASSIGNED: 0, IN_PROGRESS: 0, COMPLETED: 0, CANCELLED: 0 }
+    for (const p of projects) {
+      if (base[p.status] != null) base[p.status] += 1
+    }
+    return base
+  }, [projects])
+
+  const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    const matchesQuery = !q || (b.title || '').toLowerCase().includes(q) || (b.client?.name || '').toLowerCase().includes(q)
-    return matchesFilter && matchesQuery
-  })
+    return projects.filter((p) => {
+      const matchesStatus = filter === 'ALL' || p.status === filter
+      if (!matchesStatus) return false
+      if (!q) return true
+      const client = p.booking?.client?.name || ''
+      const shortId = p.id.slice(0, 8)
+      return (
+        p.title.toLowerCase().includes(q) ||
+        client.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q) ||
+        shortId.toLowerCase().includes(q) ||
+        p.bookingId.toLowerCase().includes(q) ||
+        shortId.toLowerCase().startsWith(q)
+      )
+    })
+  }, [projects, query, filter])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, filter])
+
+  // /api/admin is the existing project endpoint. Admin may only change status
+  // while the booking is APPROVED and no technicians are assigned, so the UI
+  // hides the control in every other state.
+  const statusEditable = (p: ProjectRow) =>
+    p.status === 'APPROVED' && (p.assignments || []).length === 0
+
+  async function runAction(action: string, row: ProjectRow, extra: Record<string, unknown> = {}) {
+    setBusyId(row.id)
+    setActionError('')
+    try {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, bookingId: row.bookingId, ...extra }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Action failed')
+      setOpenMenu(null)
+      await load()
+    } catch (e: any) {
+      setActionError(e.message || 'Action failed')
+      setOpenMenu(null)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const summaryCards = [
+    { label: 'Total Projects', value: counts.total, icon: <HammerIcon className="h-4 w-4" />, accent: 'text-slate-900 bg-slate-100' },
+    { label: 'Approved', value: counts.APPROVED, icon: <FlagIcon className="h-4 w-4" />, accent: 'text-blue-600 bg-blue-500/10' },
+    { label: 'In Progress', value: counts.IN_PROGRESS, icon: <ClockIcon className="h-4 w-4" />, accent: 'text-yellow-600 bg-yellow-500/10' },
+    { label: 'Completed', value: counts.COMPLETED, icon: <CheckCircleIcon className="h-4 w-4" />, accent: 'text-emerald-600 bg-emerald-500/10' },
+  ]
+
+  const statusList = PROJECT_STATUSES.map((s) => ({ status: s, count: counts[s] || 0 }))
+
+  // Recent activity is built from real records only: the admin's own
+  // notifications, plus the creation of each real project row.
+  const activity = useMemo<ActivityItem[]>(() => {
+    const fromNotifications: ActivityItem[] = notifications.map((n) => ({
+      id: n.id,
+      type: n.type,
+      title: n.title,
+      detail: n.message || null,
+      createdAt: n.createdAt,
+    }))
+    const fromProjects: ActivityItem[] = projects.map((p) => ({
+      id: `${p.id}-created`,
+      type: 'PROJECT',
+      title: 'New project created',
+      detail: [p.title, p.booking?.client?.name].filter(Boolean).join(' · ') || null,
+      createdAt: p.createdAt || '',
+    }))
+    return [...fromNotifications, ...fromProjects]
+      .filter((a) => a.createdAt)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 6)
+  }, [projects, notifications])
+
+  const quickActions = [
+    { label: 'New Project', icon: <HammerIcon className="h-4 w-4" />, onClick: () => router.push('/admin/bookings'), hint: 'Approve a booking to create a project' },
+    { label: 'View All Projects', icon: <SearchIcon className="h-4 w-4" />, onClick: () => { setQuery(''); setFilter('ALL'); setPage(1) } },
+    { label: 'Manage Bookings', icon: <InboxTrayIcon className="h-4 w-4" />, onClick: () => router.push('/admin/bookings') },
+    { label: 'Project Reports', icon: <DocumentIcon className="h-4 w-4" />, onClick: () => router.push('/admin/reports') },
+  ]
+
+  function notificationIcon(type: string) {
+    if (type === 'ASSIGNMENT') return <UserPlusIcon className="h-4 w-4" />
+    if (type === 'BOOKING') return <InboxTrayIcon className="h-4 w-4" />
+    if (type === 'LEAVE') return <CalendarIcon className="h-4 w-4" />
+    if (type === 'PROJECT') return <HammerIcon className="h-4 w-4" />
+    return <ActivityIcon className="h-4 w-4" />
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        icon="🛠️"
+        icon={<HammerIcon className="h-5 w-5" />}
         title="Projects"
-        subtitle={`${visible.length} active / completed projects from bookings`}
+        subtitle="Manage and track all electrical projects from booking to completion."
+        actions={
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <SearchBar value={query} onChange={setQuery} placeholder="Search projects…" />
+            <div className="relative">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as Filter)}
+                aria-label="Filter projects by status"
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-slate-700 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-colors sm:w-44"
+              >
+                {FILTERS.map((f) => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">▾</span>
+            </div>
+            <button
+              onClick={() => router.push('/admin/bookings')}
+              title="Projects are created when an admin approves a booking"
+              className="rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black shadow-sm transition-colors hover:bg-yellow-500 active:bg-yellow-600 disabled:opacity-60"
+            >
+              + New Project
+            </button>
+          </div>
+        }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <SearchBar value={query} onChange={setQuery} placeholder="Search projects…" />
-        <FilterBar options={FILTERS} value={filter} onChange={(v) => setFilter(v)} />
-      </div>
-
-      {loading ? (
-        <div className="space-y-2">{[...Array(4)].map((_, i) => <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-200/70" />)}</div>
-      ) : error ? (
-        <EmptyState icon="⚠️" title={error} message="Try refreshing the page." />
-      ) : visible.length === 0 ? (
-        <EmptyState
-          icon="🛠️"
-          title="No projects yet"
-          message="Projects are created automatically once a booking is approved by an admin."
-        />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {visible.map((b) => {
-            const progress = statusProgress(b.status)
-            return (
-              <Link key={b.id} href={`/admin/projects/${b.id}`} className="rounded-2xl border border-slate-200 bg-white p-5 hover:shadow-lg hover:border-yellow-300 transition-all">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">{b.title}</h3>
-                    <div className="mt-0.5 text-xs font-medium text-slate-400">
-                      {b.client?.name || 'Client'} · {formatDate(b.startDate)} → {formatDate(b.endDate)}
-                    </div>
-                  </div>
-                  <StatusBadge status={b.status} />
-                </div>
-
-                <div className="mt-4">
-                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                    <span>Progress</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between text-xs">
-                  <span className="font-semibold text-slate-600" title={b.project?.assignments?.map((a) => a.tech?.name).join(', ')}>
-                    👷 {b.project?.assignments?.length
-                      ? b.project.assignments.length === 1
-                        ? b.project.assignments[0].tech?.name || '1 technician'
-                        : `${b.project.assignments.length} technicians`
-                      : b.assignedTo?.name || 'Unassigned'}
-                  </span>
-                  <span className="font-bold text-slate-800">
-                    {b.budget != null ? `$${Number(b.budget).toLocaleString()}` : '—'}
-                  </span>
-                </div>
-              </Link>
-            )
-          })}
+      {actionError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-600">
+          ⚠ {actionError}
+          <button onClick={() => setActionError('')} className="ml-3 font-black text-red-500 hover:underline">Dismiss</button>
         </div>
       )}
+
+      {/* Management counters — real database counts, no trend data. */}
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {summaryCards.map((card) => (
+          <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{card.label}</span>
+              <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${card.accent}`}>{card.icon}</span>
+            </div>
+            <div className="mt-2 text-2xl font-black text-slate-900">{card.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Main table */}
+        <div className="lg:col-span-2">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+              <h2 className="text-sm font-black text-slate-900">Projects</h2>
+              <span className="text-[11px] font-bold text-slate-400">
+                {filtered.length} of {projects.length}
+              </span>
+            </div>
+
+            {loading ? (
+              <div className="space-y-2 p-5">
+                {[...Array(5)].map((_, i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-slate-100" />)}
+              </div>
+            ) : error ? (
+              <div className="p-5">
+                <EmptyState icon="⚠️" title={error} message="Try refreshing the page." />
+              </div>
+            ) : pageRows.length === 0 ? (
+              <div className="p-5">
+                <EmptyState
+                  icon={<HammerIcon className="h-7 w-7" />}
+                  title={projects.length === 0 ? 'No projects yet' : 'No projects match your filters'}
+                  message={
+                    projects.length === 0
+                      ? 'Projects created from approved bookings will appear here.'
+                      : 'Try adjusting the search term or status filter.'
+                  }
+                  action={
+                    projects.length === 0 ? (
+                      <button
+                        onClick={() => router.push('/admin/bookings')}
+                        className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-black transition-colors hover:bg-yellow-500"
+                      >
+                        + Create Project
+                      </button>
+                    ) : undefined
+                  }
+                />
+              </div>
+            ) : (
+              <div ref={menuRef} className="overflow-x-auto">
+                <table className="w-full min-w-[920px] text-left">
+                  <thead>
+                    <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-400">
+                      <th className="px-4 py-3 font-bold">ID</th>
+                      <th className="px-4 py-3 font-bold">Project Name</th>
+                      <th className="px-4 py-3 font-bold">Client</th>
+                      <th className="px-4 py-3 font-bold">Type</th>
+                      <th className="px-4 py-3 font-bold">Status</th>
+                      <th className="px-4 py-3 font-bold">Progress</th>
+                      <th className="px-4 py-3 font-bold">Start Date</th>
+                      <th className="px-4 py-3 font-bold">End Date</th>
+                      <th className="px-4 py-3 text-right font-bold">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((p) => {
+                      const progress = projectProgress(p)
+                      const client = p.booking?.client?.name || '—'
+                      const techCount = (p.assignments || []).length
+                      const detailHref = `/admin/projects/${p.bookingId}`
+                      return (
+                        <tr key={p.id} className="border-t border-slate-100 align-middle transition-colors hover:bg-yellow-50/40">
+                          <td className="px-4 py-3.5 font-mono text-[11px] text-slate-400">#{p.id.slice(0, 8)}</td>
+                          <td className="max-w-[240px] px-4 py-3.5">
+                            <Link href={detailHref} className="text-xs font-bold text-slate-800 hover:text-yellow-600">
+                              {p.title}
+                            </Link>
+                            {(p.description || p.booking?.title) && (
+                              <div className="mt-0.5 line-clamp-1 max-w-[220px] text-[10px] text-slate-400">
+                                {(p.description || p.booking?.title || '').slice(0, 80)}
+                              </div>
+                            )}
+                          </td>
+                          <td className="max-w-[160px] px-4 py-3.5 text-xs font-medium text-slate-600">
+                            <span className="block truncate">{client}</span>
+                            {techCount > 0 && (
+                              <span className="mt-0.5 block text-[10px] text-slate-400">
+                                {techCount} technician{techCount === 1 ? '' : 's'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 text-xs font-medium text-slate-600">{classifyService(p.title)}</td>
+                          <td className="px-4 py-3.5"><StatusPill status={p.status} /></td>
+                          <td className="px-4 py-3.5">
+                            <div className="flex items-center gap-2">
+                              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                  className={`h-full rounded-full transition-all ${p.status === 'COMPLETED' ? 'bg-emerald-500' : p.status === 'CANCELLED' ? 'bg-slate-300' : 'bg-yellow-400'}`}
+                                  style={{ width: `${progress}%` }}
+                                />
+                              </div>
+                              <span className="w-9 text-right text-[11px] font-bold text-slate-600">{progress}%</span>
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{formatDate(p.startDate || p.booking?.startDate)}</td>
+                          <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{formatDate(p.endDate || p.booking?.endDate)}</td>
+                          <td className="relative px-4 py-3.5 text-right">
+                            <button
+                              onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}
+                              disabled={busyId === p.id}
+                              aria-label={`Actions for ${p.title}`}
+                              className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-bold text-slate-500 transition-colors hover:border-yellow-400 hover:text-yellow-600 active:bg-slate-50 disabled:opacity-50"
+                            >
+                              ⋯
+                            </button>
+                            {openMenu === p.id && (
+                              <div className="absolute right-4 top-11 z-20 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white text-left shadow-lg">
+                                <Link href={detailHref} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+                                  <SearchIcon className="h-3.5 w-3.5 text-slate-400" /> View Details
+                                </Link>
+                                <Link href={detailHref} className="flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+                                  <UsersIcon className="h-3.5 w-3.5 text-slate-400" /> Manage Team &amp; Dates
+                                </Link>
+                                <div className="border-t border-slate-100 px-3 py-2">
+                                  <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    Update Status
+                                  </div>
+                                  <select
+                                    disabled={!statusEditable(p)}
+                                    value={p.status}
+                                    onChange={(e) => runAction('update_status', p, { status: e.target.value })}
+                                    className="w-full rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-700 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                                  >
+                                    {PROJECT_STATUSES.map((s) => (
+                                      <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                                    ))}
+                                  </select>
+                                  {!statusEditable(p) && (
+                                    <p className="mt-1 text-[10px] leading-snug text-slate-400">
+                                      {techCount > 0
+                                        ? 'Status is managed by the assigned technicians.'
+                                        : 'Status can only be changed while approved.'}
+                                    </p>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => { setOpenMenu(null); setConfirmDelete(p) }}
+                                  className="flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-xs font-semibold text-red-600 transition-colors hover:bg-red-50"
+                                >
+                                  <PauseIcon className="h-3.5 w-3.5" /> Delete Project
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {!loading && !error && filtered.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">
+                <span className="text-[11px] font-medium text-slate-400">
+                  Page {safePage} of {totalPages} · {filtered.length} project{filtered.length === 1 ? '' : 's'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage((n) => Math.max(1, n - 1))}
+                    disabled={safePage <= 1}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition-colors hover:border-yellow-400 hover:text-yellow-600 active:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setPage((n) => Math.min(totalPages, n + 1))}
+                    disabled={safePage >= totalPages}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-bold text-slate-600 transition-colors hover:border-yellow-400 hover:text-yellow-600 active:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-slate-200 disabled:hover:text-slate-600"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right-side management panel */}
+        <div className="space-y-4 lg:col-span-1">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Quick Actions</h2>
+            <div className="mt-3 space-y-2">
+              {quickActions.map((a, i) => (
+                <button
+                  key={a.label}
+                  onClick={a.onClick}
+                  title={a.hint}
+                  className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors ${
+                    i === 0
+                      ? 'border-yellow-400 bg-yellow-400 text-black hover:bg-yellow-500 active:bg-yellow-600'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-yellow-400 hover:text-yellow-600 active:bg-slate-50'
+                  }`}
+                >
+                  <span className="shrink-0">{a.icon}</span>
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Project Status</h2>
+            <ul className="mt-3 space-y-2.5">
+              {statusList.map((s) => (
+                <li key={s.status} className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-2 font-medium text-slate-600">
+                    <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[s.status]}`} />
+                    {STATUS_LABEL[s.status]}
+                  </span>
+                  <span className="font-black text-slate-900">{s.count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recent Activity</h2>
+            {activity.length === 0 ? (
+              <p className="mt-3 text-xs text-slate-400">No recent activity.</p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {activity.map((a) => (
+                  <li key={a.id} className="flex gap-2.5">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                      {notificationIcon(a.type)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate text-xs font-bold text-slate-800">{a.title}</div>
+                      {a.detail && <div className="line-clamp-2 text-[11px] leading-snug text-slate-400">{a.detail}</div>}
+                      <div className="mt-0.5 text-[10px] font-medium text-slate-300">{relativeTime(a.createdAt)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link href="/admin/notifications" className="mt-4 inline-flex items-center gap-1 text-[11px] font-bold text-yellow-600 hover:underline">
+              View all <ArrowRightIcon className="h-3 w-3" />
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        danger
+        title="Delete project"
+        message={`This permanently deletes "${confirmDelete?.title}" together with its booking, reports and activity log. This cannot be undone.`}
+        confirmLabel="Delete"
+        busy={busyId === confirmDelete?.id}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={async () => {
+          if (!confirmDelete) return
+          await runAction('delete_booking', confirmDelete)
+          setConfirmDelete(null)
+        }}
+      />
     </div>
   )
 }
