@@ -36,9 +36,6 @@ export default function InventoryForm({ initial, onSubmit, submitting, error }: 
   const streamRef = useRef<MediaStream | null>(null)
   const [cameraActive, setCameraActive] = useState(false)
   const [cameraError, setCameraError] = useState('')
-  const [aiQuery, setAiQuery] = useState('')
-  const [aiSuggestions, setAiSuggestions] = useState<any[]>([])
-  const [aiLoading, setAiLoading] = useState(false)
 
   function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -91,39 +88,6 @@ export default function InventoryForm({ initial, onSubmit, submitting, error }: 
     e.target.value = ''
   }
 
-  async function fetchAiSuggestions() {
-    if (!aiQuery.trim()) return
-    setAiLoading(true)
-    try {
-      const res = await fetch('/api/ai/recommend', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: aiQuery }),
-      })
-      if (res.ok) setAiSuggestions(await res.json())
-    } catch (e) {
-      // ignore
-    } finally {
-      setAiLoading(false)
-    }
-  }
-
-  function applySuggestion(s: any) {
-    setForm((prev) => ({
-      ...prev,
-      name: s.title || prev.name,
-      category: s.category || prev.category,
-      brand: s.brand || prev.brand,
-      model: s.model || prev.model,
-      description: s.description || prev.description,
-      quantity: Number(s.quantity) || prev.quantity,
-      unit: s.unit || prev.unit,
-      imageUrl: s.image || prev.imageUrl,
-    }))
-    setAiSuggestions([])
-    setAiQuery('')
-  }
-
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     if (!form.name.trim()) return
@@ -151,6 +115,7 @@ export default function InventoryForm({ initial, onSubmit, submitting, error }: 
       {/* Image */}
       <div className="rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-sm font-black text-slate-900">Product Image</h2>
+        <p className="mt-1 text-xs text-slate-400">Import an image from your device or capture one with the camera.</p>
         <div className="mt-4 flex flex-col gap-4 sm:flex-row">
           {/* Preview */}
           <div className="shrink-0">
@@ -168,7 +133,7 @@ export default function InventoryForm({ initial, onSubmit, submitting, error }: 
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={startCamera} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:border-yellow-400 hover:text-yellow-700">📷 Camera</button>
               <label className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:border-yellow-400 hover:text-yellow-700">
-                🖼️ Upload File
+                🖼️ Import Image
                 <input type="file" accept="image/*" className="sr-only" onChange={handleFileSelected} />
               </label>
               <button type="button" onClick={() => { setField('imageUrl', ''); setField('imageData', '') }} className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50">✕ Clear</button>
@@ -189,29 +154,6 @@ export default function InventoryForm({ initial, onSubmit, submitting, error }: 
             <canvas ref={canvasRef} className="hidden" />
           </div>
         </div>
-      </div>
-
-      {/* AI Recommendations */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="text-sm font-black text-slate-900">🤖 AI Inventory Assist</h2>
-        <p className="mt-1 text-xs text-slate-400">Describe the item and let AI fill in the details.</p>
-        <div className="mt-3 flex gap-2">
-          <input value={aiQuery} onChange={(e) => setAiQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), fetchAiSuggestions())} placeholder="e.g. LED panel light 60cm…" className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
-          <button type="button" onClick={fetchAiSuggestions} disabled={aiLoading} className="rounded-lg bg-black px-4 py-2 text-xs font-bold text-yellow-400 hover:bg-slate-800 transition-colors disabled:opacity-50">
-            {aiLoading ? '…' : 'Suggest'}
-          </button>
-        </div>
-        {aiSuggestions.length > 0 && (
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-            {aiSuggestions.map((s, idx) => (
-              <button key={idx} type="button" onClick={() => applySuggestion(s)} className="rounded-xl border border-slate-200 p-3 text-left hover:border-yellow-400 hover:bg-yellow-50/40 transition-colors">
-                {s.image && <img src={s.image} alt="" className="mb-2 h-16 w-full rounded-lg object-cover" />}
-                <div className="text-xs font-bold text-slate-800">{s.title}</div>
-                <div className="text-[10px] text-slate-400">{s.category || ''}{s.brand ? ` · ${s.brand}` : ''}</div>
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* Details */}

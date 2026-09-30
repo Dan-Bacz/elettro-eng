@@ -97,6 +97,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     // Camera
     private static final int REQ_CAMERA = 1001;
     private static final int REQ_CAMERA_PERMISSION = 1002;
+    private static final int REQ_GALLERY = 1003;
     private Uri capturedImageUri;
     private String capturedImageBase64;
     private ImageView inventoryPhotoPreview;
@@ -2024,19 +2025,34 @@ public class AdminDashboardActivity extends AppCompatActivity {
         etUnit.setHint("Unit (pcs / meters / rolls)");
         layout.addView(etUnit);
 
+        LinearLayout photoActions = new LinearLayout(this);
+        photoActions.setOrientation(LinearLayout.HORIZONTAL);
+        photoActions.setGravity(Gravity.CENTER_VERTICAL);
+
+        Button btnImport = new Button(this);
+        btnImport.setText("Import Image");
+        btnImport.setTextSize(12);
+        btnImport.setBackgroundResource(R.drawable.bg_action_yellow);
+        btnImport.setTextColor(Color.parseColor("#0B0F10"));
+        photoActions.addView(btnImport, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
         Button btnCapture = new Button(this);
         btnCapture.setText("Capture Photo");
         btnCapture.setTextSize(12);
         btnCapture.setBackgroundResource(R.drawable.bg_action_yellow);
         btnCapture.setTextColor(Color.parseColor("#0B0F10"));
+        LinearLayout.LayoutParams paramsCapture = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        paramsCapture.setMargins(8, 0, 0, 0);
+        photoActions.addView(btnCapture, paramsCapture);
+
         LinearLayout.LayoutParams paramsBtn = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         paramsBtn.setMargins(0, 14, 0, 4);
-        btnCapture.setLayoutParams(paramsBtn);
-        layout.addView(btnCapture);
+        photoActions.setLayoutParams(paramsBtn);
+        layout.addView(photoActions);
 
         final TextView photoStatus = new TextView(this);
-        photoStatus.setText(capturedImageBase64 == null ? "No photo captured" : "Photo captured");
+        photoStatus.setText(capturedImageBase64 == null ? "No photo attached" : "Photo attached");
         photoStatus.setTextColor(Color.GRAY);
         photoStatus.setTextSize(12);
         layout.addView(photoStatus);
@@ -2052,7 +2068,16 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
         inventoryPhotoPreview = preview;
         inventoryPhotoStatus = photoStatus;
+        btnImport.setOnClickListener(v -> openGallery());
         btnCapture.setOnClickListener(v -> openCamera());
+
+        Button btnRemovePhoto = new Button(this);
+        btnRemovePhoto.setText("Remove Photo");
+        btnRemovePhoto.setTextSize(12);
+        btnRemovePhoto.setBackgroundResource(R.drawable.bg_dashboard_card);
+        btnRemovePhoto.setTextColor(Color.parseColor("#0B0F10"));
+        btnRemovePhoto.setOnClickListener(v -> clearInventoryPhoto());
+        layout.addView(btnRemovePhoto);
 
         if (capturedImageBase64 != null) {
             try {
@@ -2158,7 +2183,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         }).start();
     }
 
-    // === CAMERA ===
+    // === CAMERA / IMAGE IMPORT ===
 
     private void openCamera() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -2166,6 +2191,28 @@ public class AdminDashboardActivity extends AppCompatActivity {
             return;
         }
         dispatchTakePictureIntent();
+    }
+
+    private void openGallery() {
+        capturedImageUri = null;
+        Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
+        pick.setType("image/*");
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        try {
+            startActivityForResult(pick, REQ_GALLERY);
+        } catch (Exception e) {
+            Toast.makeText(this, "No gallery app found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void clearInventoryPhoto() {
+        capturedImageBase64 = null;
+        capturedImageUri = null;
+        if (inventoryPhotoPreview != null) inventoryPhotoPreview.setImageDrawable(null);
+        if (inventoryPhotoStatus != null) {
+            inventoryPhotoStatus.setText("No photo attached");
+            inventoryPhotoStatus.setTextColor(Color.GRAY);
+        }
     }
 
     private void dispatchTakePictureIntent() {
@@ -2209,7 +2256,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             if (inventoryPhotoPreview != null) inventoryPhotoPreview.setImageBitmap(bitmap);
             if (inventoryPhotoStatus != null) {
-                inventoryPhotoStatus.setText("Photo captured (" + Math.round(bytes.length / 1024f) + " KB)");
+                inventoryPhotoStatus.setText("Photo attached (" + Math.round(bytes.length / 1024f) + " KB)");
                 inventoryPhotoStatus.setTextColor(Color.parseColor("#22A66F"));
             }
         } catch (Exception e) {
@@ -2232,9 +2279,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQ_CAMERA && resultCode == RESULT_OK) {
+        if (resultCode != RESULT_OK) return;
+        if (requestCode == REQ_CAMERA) {
             if (capturedImageUri != null) processCapturedImage(capturedImageUri);
             else if (data != null && data.getData() != null) processCapturedImage(data.getData());
+        } else if (requestCode == REQ_GALLERY) {
+            if (data != null && data.getData() != null) processCapturedImage(data.getData());
         }
     }
 
