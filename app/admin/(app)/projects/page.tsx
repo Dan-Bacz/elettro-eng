@@ -17,7 +17,6 @@ import {
   PauseIcon,
   FlagIcon,
   UsersIcon,
-  DocumentIcon,
   InboxTrayIcon,
   ActivityIcon,
   UserPlusIcon,
@@ -285,13 +284,6 @@ export default function AdminProjectsPage() {
       .slice(0, 6)
   }, [projects, notifications])
 
-  const quickActions = [
-    { label: 'New Project', icon: <HammerIcon className="h-4 w-4" />, onClick: () => router.push('/admin/bookings'), hint: 'Approve a booking to create a project' },
-    { label: 'View All Projects', icon: <SearchIcon className="h-4 w-4" />, onClick: () => { setQuery(''); setFilter('ALL'); setPage(1) } },
-    { label: 'Manage Bookings', icon: <InboxTrayIcon className="h-4 w-4" />, onClick: () => router.push('/admin/bookings') },
-    { label: 'Project Reports', icon: <DocumentIcon className="h-4 w-4" />, onClick: () => router.push('/admin/reports') },
-  ]
-
   function notificationIcon(type: string) {
     if (type === 'ASSIGNMENT') return <UserPlusIcon className="h-4 w-4" />
     if (type === 'BOOKING') return <InboxTrayIcon className="h-4 w-4" />
@@ -535,30 +527,10 @@ export default function AdminProjectsPage() {
         </div>
 
         {/* Right-side management panel */}
-        <div className="space-y-4 lg:col-span-1">
-          <div>
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Quick Actions</h2>
-            <div className="mt-3 space-y-2">
-              {quickActions.map((a, i) => (
-                <button
-                  key={a.label}
-                  onClick={a.onClick}
-                  title={a.hint}
-                  className={`flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-xs font-bold transition-colors ${
-                    i === 0
-                      ? 'border-yellow-400 bg-yellow-400 text-black hover:bg-yellow-500 active:bg-yellow-600'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-yellow-400 hover:text-yellow-600 active:bg-slate-50'
-                  }`}
-                >
-                  <span className="shrink-0">{a.icon}</span>
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Project Status</h2>
+        <aside aria-label="Project status and recent activity" className="space-y-5 border-t border-slate-200 pt-5 lg:col-span-1 lg:border-l lg:border-t-0 lg:pt-0 lg:pl-5">
+          <section className="pb-5 lg:border-b lg:border-slate-200">
+            <h2 className="text-sm font-extrabold text-slate-900">Project Status</h2>
+            <p className="mt-1 text-xs text-slate-500">Current workload by stage</p>
             <ul className="mt-3 space-y-2.5">
               {statusList.map((s) => (
                 <li key={s.status} className="flex items-center justify-between text-xs">
@@ -570,12 +542,12 @@ export default function AdminProjectsPage() {
                 </li>
               ))}
             </ul>
-          </div>
+          </section>
 
-<div>
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recent Activity</h2>
+          <section>
+            <h2 className="text-sm font-extrabold text-slate-900">Recent Activity</h2>
             {activity.length === 0 ? (
-              <p className="mt-3 text-xs text-slate-400">No recent activity.</p>
+              <p className="mt-3 text-xs text-slate-500">No recent activity.</p>
             ) : (
               <ul className="mt-3 space-y-3">
                 {activity.map((a) => (
@@ -584,9 +556,9 @@ export default function AdminProjectsPage() {
                       {notificationIcon(a.type)}
                     </span>
                     <div className="min-w-0">
-                      <div className="truncate text-xs font-bold text-slate-800">{a.title}</div>
-                      {a.detail && <div className="line-clamp-2 text-[11px] leading-snug text-slate-400">{a.detail}</div>}
-                      <div className="mt-0.5 text-[10px] font-medium text-slate-300">{relativeTime(a.createdAt)}</div>
+                      <div className="break-words text-xs font-bold text-slate-800">{a.title}</div>
+                      {a.detail && <div className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-500">{a.detail}</div>}
+                      <div className="mt-1 text-[10px] font-medium text-slate-400">{relativeTime(a.createdAt)}</div>
                     </div>
                   </li>
                 ))}
@@ -595,8 +567,8 @@ export default function AdminProjectsPage() {
             <Link href="/admin/notifications" className="mt-4 inline-flex items-center gap-1 text-[11px] font-bold text-yellow-600 hover:underline">
               View all <ArrowRightIcon className="h-3 w-3" />
             </Link>
-          </div>
-        </div>
+          </section>
+        </aside>
       </div>
 
       <ConfirmDialog
