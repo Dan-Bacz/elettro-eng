@@ -216,31 +216,6 @@ export default function AdminProjectsPage() {
         icon={<HammerIcon className="h-5 w-5" />}
         title="Projects"
         subtitle="Manage and track all electrical projects from booking to completion."
-        actions={
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
-            <SearchBar value={query} onChange={setQuery} placeholder="Search projects…" />
-            <div className="relative">
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value as Filter)}
-                aria-label="Filter projects by status"
-                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-slate-700 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 transition-colors sm:w-44"
-              >
-                {FILTERS.map((f) => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">▾</span>
-            </div>
-            <button
-              onClick={() => router.push('/admin/bookings')}
-              title="Projects are created when an admin approves a booking"
-              className="rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black shadow-sm transition-colors hover:bg-yellow-500 active:bg-yellow-600 disabled:opacity-60"
-            >
-              + New Project
-            </button>
-          </div>
-        }
       />
 
       {actionError && (
@@ -261,6 +236,32 @@ export default function AdminProjectsPage() {
             <div className="mt-2 text-2xl font-black text-slate-900">{card.value}</div>
           </div>
         ))}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1">
+          <SearchBar value={query} onChange={setQuery} placeholder="Search projects…" />
+        </div>
+        <div className="relative w-full sm:w-44 sm:shrink-0">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as Filter)}
+            aria-label="Filter projects by status"
+            className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-slate-700 transition-colors focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+          >
+            {FILTERS.map((f) => (
+              <option key={f.value} value={f.value}>{f.label}</option>
+            ))}
+          </select>
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">▾</span>
+        </div>
+        <button
+          onClick={() => router.push('/admin/bookings')}
+          title="Projects are created when an admin approves a booking"
+          className="w-full shrink-0 rounded-xl bg-yellow-400 px-4 py-2 text-sm font-black text-black shadow-sm transition-colors hover:bg-yellow-500 active:bg-yellow-600 disabled:opacity-60 sm:w-auto"
+        >
+          + New Project
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
