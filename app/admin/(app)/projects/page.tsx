@@ -17,10 +17,6 @@ import {
   PauseIcon,
   FlagIcon,
   UsersIcon,
-  InboxTrayIcon,
-  ActivityIcon,
-  UserPlusIcon,
-  ArrowRightIcon,
 } from '../../../../components/admin/icons'
 
 // A project row as returned by /api/dashboard (prisma.project.findMany with
@@ -49,25 +45,6 @@ type ProjectRow = {
   assignments?: { id: string; techId: string; tech?: { id: string; name: string } | null }[]
 }
 
-type NotificationRow = {
-  id: string
-  type: string
-  title: string
-  message?: string | null
-  link?: string | null
-  createdAt: string
-}
-
-// One row in the Recent Activity list. Every entry comes from a real record:
-// the admin's own notifications, or the project rows themselves.
-type ActivityItem = {
-  id: string
-  type: string
-  title: string
-  detail?: string | null
-  createdAt: string
-}
-
 // Project statuses come straight from the BookingStatus enum in prisma/schema.prisma.
 const PROJECT_STATUSES: BookingStatusValue[] = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
 
@@ -87,15 +64,6 @@ const FILTERS: { value: Filter; label: string }[] = [
   ...PROJECT_STATUSES.map((s) => ({ value: s as Filter, label: STATUS_LABEL[s] })),
 ]
 
-const STATUS_DOT: Record<string, string> = {
-  PENDING: 'bg-amber-400',
-  APPROVED: 'bg-blue-500',
-  ASSIGNED: 'bg-violet-500',
-  IN_PROGRESS: 'bg-yellow-400',
-  COMPLETED: 'bg-emerald-500',
-  CANCELLED: 'bg-red-500',
-}
-
 // Mirrors classifyService() in pages/api/dashboard.ts, which is the app's
 // existing definition of a booking's service type (derived from the real title).
 function classifyService(title: string): string {
@@ -108,21 +76,6 @@ function classifyService(title: string): string {
 }
 
 const PAGE_SIZE = 8
-
-function relativeTime(iso?: string | null) {
-  if (!iso) return ''
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ''
-  const diff = Date.now() - then
-  const min = Math.round(diff / 60000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min}m ago`
-  const hours = Math.round(min / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.round(hours / 24)
-  if (days < 30) return `${days}d ago`
-  return formatDate(iso)
-}
 
 // Real progress: the latest progress reported by the technician (Report.progress).
 // Falls back to the same status-derived value the rest of the admin UI uses.
@@ -144,7 +97,6 @@ function StatusPill({ status }: { status: string }) {
 export default function AdminProjectsPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<ProjectRow[]>([])
-  const [notifications, setNotifications] = useState<NotificationRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -168,7 +120,6 @@ export default function AdminProjectsPage() {
       }
       const payload = await res.json()
       setProjects((payload.projects || []) as ProjectRow[])
-      setNotifications((payload.notifications || []) as NotificationRow[])
     } catch (e: any) {
       setError(e.message || 'Failed to load projects')
     } finally {
@@ -259,39 +210,6 @@ export default function AdminProjectsPage() {
     { label: 'Completed', value: counts.COMPLETED, icon: <CheckCircleIcon className="h-4 w-4" />, accent: 'text-emerald-600 bg-emerald-500/10' },
   ]
 
-  const statusList = PROJECT_STATUSES.map((s) => ({ status: s, count: counts[s] || 0 }))
-
-  // Recent activity is built from real records only: the admin's own
-  // notifications, plus the creation of each real project row.
-  const activity = useMemo<ActivityItem[]>(() => {
-    const fromNotifications: ActivityItem[] = notifications.map((n) => ({
-      id: n.id,
-      type: n.type,
-      title: n.title,
-      detail: n.message || null,
-      createdAt: n.createdAt,
-    }))
-    const fromProjects: ActivityItem[] = projects.map((p) => ({
-      id: `${p.id}-created`,
-      type: 'PROJECT',
-      title: 'New project created',
-      detail: [p.title, p.booking?.client?.name].filter(Boolean).join(' · ') || null,
-      createdAt: p.createdAt || '',
-    }))
-    return [...fromNotifications, ...fromProjects]
-      .filter((a) => a.createdAt)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 6)
-  }, [projects, notifications])
-
-  function notificationIcon(type: string) {
-    if (type === 'ASSIGNMENT') return <UserPlusIcon className="h-4 w-4" />
-    if (type === 'BOOKING') return <InboxTrayIcon className="h-4 w-4" />
-    if (type === 'LEAVE') return <CalendarIcon className="h-4 w-4" />
-    if (type === 'PROJECT') return <HammerIcon className="h-4 w-4" />
-    return <ActivityIcon className="h-4 w-4" />
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -335,7 +253,7 @@ export default function AdminProjectsPage() {
       {/* Management counters — real database counts, no trend data. */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {summaryCards.map((card) => (
-          <div key={card.label}>
+          <div key={card.label} className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{card.label}</span>
               <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${card.accent}`}>{card.icon}</span>
@@ -345,9 +263,9 @@ export default function AdminProjectsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6">
         {/* Main table */}
-        <div className="lg:col-span-2">
+        <div>
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
               <h2 className="text-sm font-black text-slate-900">Projects</h2>
@@ -526,49 +444,6 @@ export default function AdminProjectsPage() {
           </div>
         </div>
 
-        {/* Right-side management panel */}
-        <aside aria-label="Project status and recent activity" className="space-y-5 border-t border-slate-200 pt-5 lg:col-span-1 lg:border-l lg:border-t-0 lg:pt-0 lg:pl-5">
-          <section className="pb-5 lg:border-b lg:border-slate-200">
-            <h2 className="text-sm font-extrabold text-slate-900">Project Status</h2>
-            <p className="mt-1 text-xs text-slate-500">Current workload by stage</p>
-            <ul className="mt-3 space-y-2.5">
-              {statusList.map((s) => (
-                <li key={s.status} className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-2 font-medium text-slate-600">
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[s.status]}`} />
-                    {STATUS_LABEL[s.status]}
-                  </span>
-                  <span className="font-black text-slate-900">{s.count}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section>
-            <h2 className="text-sm font-extrabold text-slate-900">Recent Activity</h2>
-            {activity.length === 0 ? (
-              <p className="mt-3 text-xs text-slate-500">No recent activity.</p>
-            ) : (
-              <ul className="mt-3 space-y-3">
-                {activity.map((a) => (
-                  <li key={a.id} className="flex gap-2.5">
-                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                      {notificationIcon(a.type)}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="break-words text-xs font-bold text-slate-800">{a.title}</div>
-                      {a.detail && <div className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-500">{a.detail}</div>}
-                      <div className="mt-1 text-[10px] font-medium text-slate-400">{relativeTime(a.createdAt)}</div>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <Link href="/admin/notifications" className="mt-4 inline-flex items-center gap-1 text-[11px] font-bold text-yellow-600 hover:underline">
-              View all <ArrowRightIcon className="h-3 w-3" />
-            </Link>
-          </section>
-        </aside>
       </div>
 
       <ConfirmDialog
