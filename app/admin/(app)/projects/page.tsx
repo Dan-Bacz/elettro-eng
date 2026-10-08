@@ -343,7 +343,7 @@ export default function AdminProjectsPage() {
       {/* Management counters — real database counts, no trend data. */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {summaryCards.map((card) => (
-          <div key={card.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+          <div key={card.label}>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{card.label}</span>
               <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${card.accent}`}>{card.icon}</span>
@@ -536,7 +536,7 @@ export default function AdminProjectsPage() {
 
         {/* Right-side management panel */}
         <div className="space-y-4 lg:col-span-1">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div>
             <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Quick Actions</h2>
             <div className="mt-3 space-y-2">
               {quickActions.map((a, i) => (
@@ -557,7 +557,7 @@ export default function AdminProjectsPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div>
             <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Project Status</h2>
             <ul className="mt-3 space-y-2.5">
               {statusList.map((s) => (
@@ -572,7 +572,7 @@ export default function AdminProjectsPage() {
             </ul>
           </div>
 
-<div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+<div>
             <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Recent Activity</h2>
             {activity.length === 0 ? (
               <p className="mt-3 text-xs text-slate-400">No recent activity.</p>
