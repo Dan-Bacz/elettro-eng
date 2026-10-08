@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Admin dashboard: progress bar fill. Tinted at runtime with the status colour. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/brand_500" />
+    <corners android:radius="3dp" />
+</shape>

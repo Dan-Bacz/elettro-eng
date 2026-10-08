@@ -58,7 +58,7 @@ export default async function handler(req, res) {
       prisma.booking.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
-          client: { select: { id: true, name: true, email: true } },
+          client: { select: { id: true, name: true, email: true, phone: true } },
           assignedTo: { select: { id: true, name: true, email: true } },
           reports: { select: { progress: true, content: true, createdAt: true } },
           project: {

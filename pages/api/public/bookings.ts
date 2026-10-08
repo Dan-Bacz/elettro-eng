@@ -72,6 +72,9 @@ export default async function handler(req: any, res: any) {
         ? installations.map((i: string) => String(i).trim()).filter(Boolean)
         : []
     const details = [
+      clientName ? `Client name: ${String(clientName).trim()}` : '',
+      cleanEmail ? `Client email: ${cleanEmail}` : '',
+      phone ? `Client phone: ${String(phone).trim()}` : '',
       selectedOffers.length ? `Selected offerings: ${selectedOffers.join(', ')}` : '',
       buildingType ? `Building type: ${String(buildingType).trim()}` : '',
       projectLocation ? `Location: ${String(projectLocation).trim()}` : '',
