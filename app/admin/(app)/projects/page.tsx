@@ -306,19 +306,28 @@ export default function AdminProjectsPage() {
                 />
               </div>
             ) : (
-              <div ref={menuRef} className="overflow-x-auto">
-                <table className="w-full min-w-[920px] text-left">
+              <div ref={menuRef} className="w-full">
+                <table className="w-full table-fixed text-left">
+                  <colgroup>
+                    <col className="w-[42%] md:w-[32%] lg:w-[24%]" />
+                    <col className="w-[35%] md:w-[25%] lg:w-[18%]" />
+                    <col className="hidden md:table-column md:w-[12%] lg:w-[10%]" />
+                    <col className="w-[15%] md:w-[17%] lg:w-[11%]" />
+                    <col className="hidden lg:table-column lg:w-[13%]" />
+                    <col className="hidden lg:table-column lg:w-[9%]" />
+                    <col className="hidden lg:table-column lg:w-[9%]" />
+                    <col className="w-[8%] md:w-[14%] lg:w-[6%]" />
+                  </colgroup>
                   <thead>
                     <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-400">
-                      <th className="px-4 py-3 font-bold">ID</th>
-                      <th className="px-4 py-3 font-bold">Project Name</th>
-                      <th className="px-4 py-3 font-bold">Client</th>
-                      <th className="px-4 py-3 font-bold">Type</th>
-                      <th className="px-4 py-3 font-bold">Status</th>
-                      <th className="px-4 py-3 font-bold">Progress</th>
-                      <th className="px-4 py-3 font-bold">Start Date</th>
-                      <th className="px-4 py-3 font-bold">End Date</th>
-                      <th className="px-4 py-3 text-right font-bold">Actions</th>
+                      <th className="px-2 py-3 font-bold sm:px-3">Project</th>
+                      <th className="px-2 py-3 font-bold sm:px-3">Client</th>
+                      <th className="hidden px-3 py-3 font-bold md:table-cell">Type</th>
+                      <th className="px-2 py-3 font-bold sm:px-3">Status</th>
+                      <th className="hidden px-3 py-3 font-bold lg:table-cell">Progress</th>
+                      <th className="hidden px-3 py-3 font-bold lg:table-cell">Start</th>
+                      <th className="hidden px-3 py-3 font-bold lg:table-cell">End</th>
+                      <th className="px-2 py-3 text-right font-bold sm:px-3">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -329,41 +338,40 @@ export default function AdminProjectsPage() {
                       const detailHref = `/admin/projects/${p.bookingId}`
                       return (
                         <tr key={p.id} className="border-t border-slate-100 align-middle transition-colors hover:bg-yellow-50/40">
-                          <td className="px-4 py-3.5 font-mono text-[11px] text-slate-400">#{p.id.slice(0, 8)}</td>
-                          <td className="max-w-[240px] px-4 py-3.5">
-                            <Link href={detailHref} className="text-xs font-bold text-slate-800 hover:text-yellow-600">
+                          <td className="min-w-0 px-2 py-3 sm:px-3">
+                            <Link href={detailHref} className="block break-words text-xs font-bold text-slate-800 hover:text-yellow-600">
                               {p.title}
                             </Link>
                             {(p.description || p.booking?.title) && (
-                              <div className="mt-0.5 line-clamp-1 max-w-[220px] text-[10px] text-slate-400">
+                              <div className="mt-0.5 line-clamp-1 text-[10px] text-slate-400">
                                 {(p.description || p.booking?.title || '').slice(0, 80)}
                               </div>
                             )}
                           </td>
-                          <td className="max-w-[160px] px-4 py-3.5 text-xs font-medium text-slate-600">
-                            <span className="block truncate">{client}</span>
+                          <td className="min-w-0 px-2 py-3 text-xs font-medium text-slate-600 sm:px-3 sm:py-3.5">
+                            <span className="block break-words">{client}</span>
                             {techCount > 0 && (
                               <span className="mt-0.5 block text-[10px] text-slate-400">
                                 {techCount} technician{techCount === 1 ? '' : 's'}
                               </span>
                             )}
                           </td>
-                          <td className="px-4 py-3.5 text-xs font-medium text-slate-600">{classifyService(p.title)}</td>
-                          <td className="px-4 py-3.5"><StatusPill status={p.status} /></td>
-                          <td className="px-4 py-3.5">
+                          <td className="hidden px-3 py-3.5 text-xs font-medium text-slate-600 md:table-cell">{classifyService(p.title)}</td>
+                          <td className="px-2 py-3 sm:px-3"><StatusPill status={p.status} /></td>
+                          <td className="hidden px-3 py-3.5 lg:table-cell">
                             <div className="flex items-center gap-2">
-                              <div className="h-1.5 w-24 overflow-hidden rounded-full bg-slate-100">
+                              <div className="h-1.5 min-w-8 flex-1 overflow-hidden rounded-full bg-slate-100">
                                 <div
                                   className={`h-full rounded-full transition-all ${p.status === 'COMPLETED' ? 'bg-emerald-500' : p.status === 'CANCELLED' ? 'bg-slate-300' : 'bg-yellow-400'}`}
                                   style={{ width: `${progress}%` }}
                                 />
                               </div>
-                              <span className="w-9 text-right text-[11px] font-bold text-slate-600">{progress}%</span>
+                              <span className="w-8 shrink-0 text-right text-[11px] font-bold text-slate-600">{progress}%</span>
                             </div>
                           </td>
-                          <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{formatDate(p.startDate || p.booking?.startDate)}</td>
-                          <td className="whitespace-nowrap px-4 py-3.5 text-xs text-slate-500">{formatDate(p.endDate || p.booking?.endDate)}</td>
-                          <td className="relative px-4 py-3.5 text-right">
+                          <td className="hidden whitespace-nowrap px-3 py-3.5 text-xs text-slate-500 lg:table-cell">{formatDate(p.startDate || p.booking?.startDate)}</td>
+                          <td className="hidden whitespace-nowrap px-3 py-3.5 text-xs text-slate-500 lg:table-cell">{formatDate(p.endDate || p.booking?.endDate)}</td>
+                          <td className="relative px-2 py-3 text-right sm:px-3 sm:py-3.5">
                             <button
                               onClick={() => setOpenMenu(openMenu === p.id ? null : p.id)}
                               disabled={busyId === p.id}
