@@ -3,6 +3,10 @@ import { useState } from "react"
 import CTASection from "@/components/client/CTASection"
 import { COMPANY } from "@/components/client/siteData"
 
+const emailLines = COMPANY.email.includes("@")
+  ? [COMPANY.email.split("@")[0], `@${COMPANY.email.split("@")[1]}`]
+  : [COMPANY.email]
+
 const INFO_CARDS = [
   {
     icon: "📞",
@@ -12,7 +16,7 @@ const INFO_CARDS = [
   {
     icon: "✉️",
     title: "Email",
-    lines: [COMPANY.email, "We reply within 24 hours"],
+    lines: [...emailLines, "We reply within 24 hours"],
   },
   {
     icon: "📍",
