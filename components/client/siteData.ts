@@ -1,9 +1,9 @@
 export const COMPANY = {
   name: "ELETTRO",
   tagline: "Engineering Enterprises",
-  phone: "0961 234 5678",
-  email: "info@elettro.com",
-  address: "Zamboanga Del Sur, Philippines",
+  phone: "09109064859",
+  email: "lanzaderasjezamae959@gmail.com",
+  address: "Mahayag, Zamboanga del Sur, Philippines",
   hours: "Mon – Sat: 8:00 AM – 6:00 PM",
   facebook: "#",
   instagram: "#",
