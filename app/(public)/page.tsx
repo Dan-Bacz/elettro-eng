@@ -7,22 +7,42 @@ import { SERVICES } from "@/components/client/siteData"
 
 const TRUST_BADGES = [
   {
-    icon: "🛡️",
+    icon: (
+      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 3 19 6v5c0 4.6-2.9 7.8-7 10-4.1-2.2-7-5.4-7-10V6l7-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+    ),
     title: "Licensed & Insured",
     desc: "Fully licensed electricians and covered workmanship.",
   },
   {
-    icon: "👷",
+    icon: (
+      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 14a9 9 0 0 1 18 0" />
+        <path d="M3 14h18v3H3zM12 5v6M7 7l1.5 4M17 7l-1.5 4" />
+      </svg>
+    ),
     title: "Skilled Technicians",
     desc: "Trained professionals with years of field experience.",
   },
   {
-    icon: "🏅",
+    icon: (
+      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="10" r="7" />
+        <path d="m9.5 10 1.7 1.7 3.5-3.5M8 16l-1 5 5-2 5 2-1-5" />
+      </svg>
+    ),
     title: "Quality Materials",
     desc: "Only certified, high-quality electrical components.",
   },
   {
-    icon: "⏱️",
+    icon: (
+      <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l2.5 1.5M9 2h6M12 2v3" />
+      </svg>
+    ),
     title: "On-Time Service",
     desc: "We show up on schedule and finish on budget.",
   },
@@ -56,7 +76,7 @@ export default function HomePage() {
                 key={badge.title}
                 className="flex items-start gap-4 p-5 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-gray-50 hover:border-yellow-400/40 transition-colors"
               >
-                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-yellow-400/10 border border-yellow-400/30 text-2xl shrink-0">
+                <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-yellow-400/10 border border-yellow-400/30 text-yellow-700 shrink-0">
                   {badge.icon}
                 </div>
                 <div>
