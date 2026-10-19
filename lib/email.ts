@@ -475,3 +475,33 @@ export async function sendClientVerificationEmail(input: {
     throw new Error('The email provider did not accept the verification message.')
   }
 }
+
+export async function sendClientFeedbackEmail(input: {
+  name: string
+  email: string
+  subject: string
+  message: string
+}) {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    throw new Error('Email delivery is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD.')
+  }
+
+  const subject = input.subject.replace(/[\r\n]+/g, ' ').slice(0, 120)
+  const name = escapeHtml(input.name)
+  const email = escapeHtml(input.email)
+  const safeSubject = escapeHtml(subject)
+  const message = escapeHtml(input.message)
+  const transporter = await getTransporter()
+  const info = await withTimeout(transporter.sendMail({
+    from: `${process.env.GMAIL_USER} <${process.env.GMAIL_USER}>`,
+    to: ADMIN_EMAIL,
+    replyTo: input.email,
+    subject: `Client feedback: ${subject}`,
+    text: `Client: ${input.name}\nEmail: ${input.email}\nSubject: ${subject}\n\n${input.message}`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto"><div style="background:#0B0F10;padding:20px;text-align:center"><h1 style="color:#F5C400;margin:0">ELETTRO</h1><p style="color:#9EA8AC;margin:4px 0 0">CLIENT FEEDBACK</p></div><div style="background:#f9f9f9;padding:24px;border:1px solid #e0e0e0"><p><strong>Client:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Subject:</strong> ${safeSubject}</p><p style="white-space:pre-wrap">${message}</p></div></div>`,
+  }), 25000)
+
+  if (!info.accepted.some((address) => String(address).toLowerCase() === ADMIN_EMAIL.toLowerCase())) {
+    throw new Error('The email provider did not accept the feedback message.')
+  }
+}
