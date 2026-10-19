@@ -13,19 +13,9 @@ const MAX_LINE_QTY = 999
 const PAYMENT_METHOD_ALIASES: Record<string, string> = {
   GCASH: 'GCASH',
   G_CASH: 'GCASH',
-  MAYA: 'MAYA',
-  MAYA_PAYMAYA: 'MAYA',
-  PAYMAYA: 'MAYA',
-  CARD: 'CARD',
-  CREDIT_CARD: 'CARD',
-  CREDIT: 'CARD',
-  DEBIT: 'CARD',
-  CREDIT_DEBIT_CARD: 'CARD',
-  BANK_TRANSFER: 'BANK_TRANSFER',
-  BANK: 'BANK_TRANSFER',
   CASH_ON_DELIVERY: 'CASH_ON_DELIVERY',
   COD: 'CASH_ON_DELIVERY',
-  CASH: 'CASH_ON_DELIVERY',
+  CASH_ON_PICKUP: 'CASH_ON_PICKUP',
 }
 
 function isValidEmail(email: string) {
@@ -77,6 +67,11 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Please select at least one product to order' })
   }
 
+  const fulfillmentMethod = String(body.fulfillmentMethod || 'DELIVERY').trim().toUpperCase()
+  if (!['DELIVERY', 'PICKUP'].includes(fulfillmentMethod)) {
+    return res.status(400).json({ error: 'Choose delivery or pickup' })
+  }
+
   // ---- delivery information ----
   const address = cleanText(body.address, 300)
   const barangay = cleanText(body.barangay, 120)
@@ -85,17 +80,27 @@ export default async function handler(req: any, res: any) {
   const postalCode = cleanText(body.postalCode, 20).replace(/[^0-9]/g, '')
   const deliveryNotes = cleanText(body.deliveryNotes || body.notes, 500)
 
-  if (!address) return res.status(400).json({ error: 'Complete delivery address is required' })
-  if (!city) return res.status(400).json({ error: 'Municipality / City is required' })
-  if (!province) return res.status(400).json({ error: 'Province is required' })
+  if (fulfillmentMethod === 'DELIVERY' && !address) return res.status(400).json({ error: 'Complete delivery address is required' })
+  if (fulfillmentMethod === 'DELIVERY' && !city) return res.status(400).json({ error: 'Municipality / City is required' })
+  if (fulfillmentMethod === 'DELIVERY' && !province) return res.status(400).json({ error: 'Province is required' })
   if (postalCode && !/^\d{4}$/.test(postalCode)) {
     return res.status(400).json({ error: 'Postal code must be a 4-digit number' })
   }
 
   // ---- payment method ----
   const rawMethod = String(body.paymentMethod || 'CASH_ON_DELIVERY').trim().toUpperCase().replace(/[\s-]+/g, '_')
-  const paymentMethod = PAYMENT_METHOD_ALIASES[rawMethod] || 'CASH_ON_DELIVERY'
-  const paymentStatus = paymentMethod === 'CASH_ON_DELIVERY' ? 'COD' : 'UNPAID'
+  const paymentMethod = PAYMENT_METHOD_ALIASES[rawMethod]
+  if (!paymentMethod) return res.status(400).json({ error: 'Choose a supported payment method' })
+  if (paymentMethod === 'CASH_ON_DELIVERY' && fulfillmentMethod !== 'DELIVERY') {
+    return res.status(400).json({ error: 'Cash on delivery is only available for delivery orders' })
+  }
+  if (paymentMethod === 'CASH_ON_PICKUP' && fulfillmentMethod !== 'PICKUP') {
+    return res.status(400).json({ error: 'Cash on pickup is only available for pickup orders' })
+  }
+  if (paymentMethod === 'GCASH' && (!process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME || !process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER)) {
+    return res.status(503).json({ error: 'GCash payment is not configured yet. Please choose cash or try again later.' })
+  }
+  const paymentStatus = paymentMethod === 'GCASH' ? 'UNPAID' : 'CASH_DUE'
 
   try {
     const cleanEmail = String(email).trim().toLowerCase()
@@ -175,6 +180,8 @@ export default async function handler(req: any, res: any) {
           notes: deliveryNotes || null,
           paymentMethod,
           paymentStatus,
+          fulfillmentMethod,
+          shippingConfirmed: fulfillmentMethod === 'PICKUP',
           shipping,
           status: 'PENDING',
           total: round2(total),
@@ -188,7 +195,7 @@ export default async function handler(req: any, res: any) {
           userId: client.id,
           type: 'ORDER',
           title: 'Order Placed',
-          message: `Your order ${reference} was received and is pending review.`,
+          message: `Your order ${reference} was received. Track payment and fulfillment updates in your dashboard.`,
           link: '/client/dashboard#orders',
         },
       })
@@ -206,7 +213,7 @@ export default async function handler(req: any, res: any) {
             userId: admin.id,
             type: 'ORDER',
             title: 'New Product Order',
-            message: `${cleanName} (${cleanEmail}) placed an order for ${orderItems.length} item(s) worth ₱${round2(total).toLocaleString()} via ${paymentMethod}.`,
+            message: `${cleanName} (${cleanEmail}) placed a ${fulfillmentMethod.toLowerCase()} order for ${orderItems.length} item(s) worth ₱${round2(total).toLocaleString()} via ${paymentMethod}.`,
             link: '/admin/orders',
           })),
         })
@@ -230,6 +237,7 @@ export default async function handler(req: any, res: any) {
       reference,
       paymentMethod,
       paymentStatus,
+      fulfillmentMethod,
       status: 'PENDING',
       total: round2(total),
       message: `Order submitted successfully. Your reference number is ${reference}.`,

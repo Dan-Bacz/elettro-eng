@@ -7,6 +7,9 @@ import { formatPeso } from "./storeUtils"
 import ClientSessionGate from "../ClientSessionGate"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+const GCASH_CONFIGURED = Boolean(
+  process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME && process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER
+)
 
 type PaymentChoice = {
   id: string
@@ -19,32 +22,20 @@ const PAYMENT_METHODS: PaymentChoice[] = [
   {
     id: "GCASH",
     label: "GCash",
-    hint: "Pay via your GCash wallet",
-    note: "You will receive payment instructions by email/SMS after we confirm your order.",
-  },
-  {
-    id: "MAYA",
-    label: "Maya / PayMaya",
-    hint: "Pay via your Maya wallet",
-    note: "You will receive payment instructions by email/SMS after we confirm your order.",
-  },
-  {
-    id: "CARD",
-    label: "Credit / Debit Card",
-    hint: "Visa, Mastercard, JCB, Amex",
-    note: "You will receive a secure payment link after we confirm your order.",
-  },
-  {
-    id: "BANK_TRANSFER",
-    label: "Bank Transfer",
-    hint: "Direct deposit / online banking",
-    note: "Our bank details will be emailed once your order is confirmed.",
+    hint: "Manual GCash transfer; our team verifies payment",
+    note: "Place your order first. GCash instructions and payment reference submission are in your client dashboard.",
   },
   {
     id: "CASH_ON_DELIVERY",
     label: "Cash on Delivery",
     hint: "Pay when your order arrives",
-    note: "Pay in cash when the order is delivered to your address.",
+    note: "Available for delivery orders. Pay in cash when your order arrives.",
+  },
+  {
+    id: "CASH_ON_PICKUP",
+    label: "Cash on Pickup",
+    hint: "Pay in cash when you collect your order",
+    note: "Available for pickup orders when your order is ready.",
   },
 ]
 
@@ -54,6 +45,7 @@ type Confirmation = {
   reference: string
   total: number
   paymentMethod: string
+  fulfillmentMethod: string
   status: string
 }
 
@@ -76,6 +68,7 @@ export default function CheckoutModal() {
     deliveryNotes: "",
   })
   const [paymentMethod, setPaymentMethod] = useState("CASH_ON_DELIVERY")
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<"DELIVERY" | "PICKUP">("DELIVERY")
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({})
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState("")
@@ -118,10 +111,12 @@ export default function CheckoutModal() {
     else if (!EMAIL_RE.test(form.email.trim())) next.email = "Please enter a valid email address"
     if (!form.phone.trim()) next.phone = "Your mobile number is required"
     else if (!isValidPhone(form.phone)) next.phone = "Please enter a valid mobile number"
-    if (!form.address.trim()) next.address = "Complete address is required"
-    if (!form.city.trim()) next.city = "Municipality / City is required"
-    if (!form.province.trim()) next.province = "Province is required"
-    if (form.postalCode.trim() && !/^\d{4}$/.test(form.postalCode.trim())) next.postalCode = "4-digit postal code"
+    if (fulfillmentMethod === "DELIVERY") {
+      if (!form.address.trim()) next.address = "Complete address is required"
+      if (!form.city.trim()) next.city = "Municipality / City is required"
+      if (!form.province.trim()) next.province = "Province is required"
+      if (form.postalCode.trim() && !/^\d{4}$/.test(form.postalCode.trim())) next.postalCode = "4-digit postal code"
+    }
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -147,6 +142,7 @@ export default function CheckoutModal() {
           province: form.province.trim(),
           postalCode: form.postalCode.trim(),
           deliveryNotes: form.deliveryNotes.trim(),
+          fulfillmentMethod,
           paymentMethod,
           items: items.map((it) => ({ inventoryItemId: it.id, quantity: it.quantity })),
         }),
@@ -157,6 +153,7 @@ export default function CheckoutModal() {
         reference: data.reference,
         total: Number(data.total ?? subtotal),
         paymentMethod: data.paymentMethod || paymentMethod,
+        fulfillmentMethod: data.fulfillmentMethod || fulfillmentMethod,
         status: data.status || "PENDING",
       })
       clear()
@@ -206,20 +203,18 @@ export default function CheckoutModal() {
                     <p className="text-sm font-bold text-amber-600">Order Under Review</p>
                   </div>
                   <div className="sm:col-span-2">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Deliver To</p>
-                    <p className="text-sm font-medium text-gray-700">
-                      {form.address.trim()}
-                      {form.barangay ? `, ${form.barangay.trim()}` : ""}, {form.city.trim()}, {form.province.trim()}
-                      {form.postalCode.trim() ? ` ${form.postalCode.trim()}` : ""}
-                    </p>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{confirmation.fulfillmentMethod === "PICKUP" ? "Fulfillment" : "Deliver To"}</p>
+                    <p className="text-sm font-medium text-gray-700">{confirmation.fulfillmentMethod === "PICKUP" ? "Pickup instructions will be shared when the order is ready." : `${form.address.trim()}${form.barangay ? `, ${form.barangay.trim()}` : ""}, ${form.city.trim()}, ${form.province.trim()}${form.postalCode.trim() ? ` ${form.postalCode.trim()}` : ""}`}</p>
                   </div>
                 </div>
               </div>
 
               <p className="mt-5 text-xs leading-relaxed text-gray-500">
                 {paymentMethod === "CASH_ON_DELIVERY"
-                  ? "We will contact you on your mobile number to confirm delivery details."
-                  : `We will email you payment instructions for ${paymentLabel} once your order is confirmed.`}{" "}
+                ? "Pay cash when your order is delivered. Follow the order status in your client dashboard."
+                : paymentMethod === "CASH_ON_PICKUP"
+                  ? "Pay cash when you collect your order after it is marked ready for pickup."
+                  : "Our team will confirm the order and delivery fee first. Then pay by GCash from your client dashboard; the payment stays pending until verified."}{" "}
                 Keep your order number for reference.
               </p>
 
@@ -296,7 +291,24 @@ export default function CheckoutModal() {
                 </section>
 
                 <section>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-gray-900">Delivery Information</h3>
+                  <h3 className="text-sm font-black uppercase tracking-wide text-gray-900">Fulfillment</h3>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {(["DELIVERY", "PICKUP"] as const).map((method) => (
+                      <button
+                        key={method}
+                        type="button"
+                        onClick={() => {
+                          setFulfillmentMethod(method)
+                          setPaymentMethod(method === "DELIVERY" ? "CASH_ON_DELIVERY" : "CASH_ON_PICKUP")
+                        }}
+                        aria-pressed={fulfillmentMethod === method}
+                        className={`rounded-xl border-2 p-3 text-left text-sm font-bold ${fulfillmentMethod === method ? "border-yellow-400 bg-yellow-50" : "border-gray-200"}`}
+                      >
+                        {method === "DELIVERY" ? "Deliver to address" : "Pick up"}
+                      </button>
+                    ))}
+                  </div>
+                  {fulfillmentMethod === "DELIVERY" ? (
                   <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <label className="mb-1 block text-xs font-bold text-gray-700">Complete Address *</label>
@@ -327,23 +339,33 @@ export default function CheckoutModal() {
                       <textarea value={form.deliveryNotes} onChange={(e) => setField("deliveryNotes", e.target.value)} placeholder="Landmarks, preferred delivery time, special instructions…" rows={2} className={inputClass} />
                     </div>
                   </div>
+                  ) : (
+                    <p className="mt-3 rounded-lg bg-gray-50 p-3 text-xs leading-5 text-gray-600">We will share pickup instructions when your order is ready. You can pay cash when you collect it, or choose GCash.</p>
+                  )}
                 </section>
 
                 <section>
                   <h3 className="text-sm font-black uppercase tracking-wide text-gray-900">Payment Method</h3>
                   <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {PAYMENT_METHODS.map((method) => {
+                      if (method.id === "CASH_ON_DELIVERY" && fulfillmentMethod !== "DELIVERY") return null
+                      if (method.id === "CASH_ON_PICKUP" && fulfillmentMethod !== "PICKUP") return null
                       const active = paymentMethod === method.id
                       return (
                         <button
                           key={method.id}
                           type="button"
-                          onClick={() => setPaymentMethod(method.id)}
+                          onClick={() => {
+                            if (method.id !== "GCASH" || GCASH_CONFIGURED) setPaymentMethod(method.id)
+                          }}
+                          disabled={method.id === "GCASH" && !GCASH_CONFIGURED}
                           aria-pressed={active}
                           className={`rounded-xl border-2 p-3.5 text-left transition-all ${
                             active
                               ? "border-yellow-400 bg-yellow-50 ring-2 ring-yellow-400/30"
-                              : "border-gray-200 bg-white hover:border-yellow-300"
+                              : method.id === "GCASH" && !GCASH_CONFIGURED
+                                ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
+                                : "border-gray-200 bg-white hover:border-yellow-300"
                           }`}
                         >
                           <span className="flex items-center justify-between">
@@ -356,15 +378,14 @@ export default function CheckoutModal() {
                               {active && <span className="h-1.5 w-1.5 rounded-full bg-black" />}
                             </span>
                           </span>
-                          <span className="mt-1 block text-xs text-gray-500">{method.hint}</span>
+                          <span className="mt-1 block text-xs text-gray-500">{method.id === "GCASH" && !GCASH_CONFIGURED ? "Temporarily unavailable — GCash recipient details not configured" : method.hint}</span>
                           {active && <span className="mt-2 block text-[10px] leading-relaxed text-gray-500">{method.note}</span>}
                         </button>
                       )
                     })}
                   </div>
                   <p className="mt-2 text-[10px] text-gray-400">
-                    No amount is charged on this site. Payment is arranged directly with our team after order
-                    confirmation.
+                    GCash transfers are manually verified by our team. Cash is collected upon delivery or pickup.
                   </p>
                 </section>
 
@@ -398,7 +419,7 @@ export default function CheckoutModal() {
                   </div>
                   <div className="flex items-center justify-between text-gray-600">
                     <dt>Shipping</dt>
-                    <dd className="text-xs font-semibold text-gray-400">To be calculated</dd>
+                    <dd className="text-xs font-semibold text-gray-400">{fulfillmentMethod === "PICKUP" ? "No delivery fee" : "To be calculated"}</dd>
                   </div>
                   <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-base">
                     <dt className="font-black text-gray-900">Total</dt>

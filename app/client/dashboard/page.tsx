@@ -23,14 +23,18 @@ type Order = {
   status: string
   paymentStatus: string
   paymentMethod: string
+  paymentReference: string | null
+  fulfillmentMethod: "DELIVERY" | "PICKUP"
   total: number
   shipping: number
+  shippingConfirmed: boolean
   address: string | null
   barangay: string | null
   city: string | null
   province: string | null
   postalCode: string | null
   deliveryNotes: string | null
+  fulfillmentNote: string | null
   createdAt: string
   updatedAt: string
   items: { id: string; name: string; quantity: number; unit: string | null; unitPrice: number }[]
@@ -64,11 +68,25 @@ const BOOKING_STATUS_LABELS: Record<string, string> = {
 }
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  PENDING: "Pending",
-  APPROVED: "Approved",
-  COMPLETED: "Completed",
+  PENDING: "New order",
+  APPROVED: "Confirmed",
+  PROCESSING: "Preparing",
+  READY_FOR_PICKUP: "Ready for pickup",
+  SHIPPED: "Shipped · to receive",
+  DELIVERED: "Delivered · confirm receipt",
+  COMPLETED: "Received",
   CANCELLED: "Cancelled",
 }
+
+const ORDER_FILTER_OPTIONS = [
+  { value: "ALL", label: "All orders" },
+  { value: "AWAITING_CONFIRMATION", label: "Awaiting confirmation" },
+  { value: "TO_PAY", label: "To Pay" },
+  { value: "TO_SHIP", label: "To Ship" },
+  { value: "TO_RECEIVE", label: "To Receive" },
+  { value: "COMPLETED", label: "Received" },
+  { value: "CANCELLED", label: "Cancelled" },
+]
 
 function formatDate(value: string | null | undefined, includeTime = false) {
   if (!value) return "Not set"
@@ -97,6 +115,13 @@ function statusStyle(status: string) {
 
 function StatusPill({ status, labels }: { status: string; labels: Record<string, string> }) {
   return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusStyle(status)}`}>{labels[status] || status.replace(/_/g, " ")}</span>
+}
+
+function orderStatusLabel(order: Order) {
+  if (order.status === "PENDING") return "Awaiting confirmation"
+  if (order.status === "APPROVED" && order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID") return "To Pay"
+  if (order.status === "PROCESSING") return "Preparing"
+  return ORDER_STATUS_LABELS[order.status] || order.status.replace(/_/g, " ")
 }
 
 function BookingProgress({ booking }: { booking: Booking }) {
@@ -141,16 +166,31 @@ function OrderProgress({ order }: { order: Order }) {
   if (order.status === "CANCELLED") {
     return <p className="mt-3 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm font-semibold text-red-800">This order is cancelled.</p>
   }
-  const stages = [
-    { status: "PENDING", label: "Order Placed" },
-    { status: "APPROVED", label: "Approved" },
-    { status: "COMPLETED", label: "Completed" },
-  ]
-  const activeIndex = Math.max(0, stages.findIndex((stage) => stage.status === order.status))
+  const isGcashOrder = order.paymentMethod === "GCASH"
+  const stages = isGcashOrder
+    ? [
+        { label: "Order Placed" },
+        { label: "To Pay" },
+        { label: "To Ship" },
+        { label: "To Receive" },
+        { label: "Received" },
+      ]
+    : [
+        { label: "Order Placed" },
+        { label: "To Process" },
+        { label: "To Ship" },
+        { label: "To Receive" },
+        { label: "Received" },
+      ]
+  let activeIndex = 0
+  if (order.status === "COMPLETED") activeIndex = stages.length - 1
+  else if (["SHIPPED", "READY_FOR_PICKUP", "DELIVERED"].includes(order.status)) activeIndex = 3
+  else if (order.status === "APPROVED") activeIndex = isGcashOrder && order.paymentStatus === "PAID" ? 2 : 1
+  else if (order.status === "PROCESSING") activeIndex = 2
   return (
     <ol className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
       {stages.map((stage, index) => (
-        <li key={stage.status} className={`flex items-center gap-2 text-xs ${index === activeIndex ? "font-bold text-gray-900" : index < activeIndex ? "font-semibold text-gray-700" : "text-gray-400"}`}>
+        <li key={stage.label} className={`flex items-center gap-2 text-xs ${index === activeIndex ? "font-bold text-gray-900" : index < activeIndex ? "font-semibold text-gray-700" : "text-gray-400"}`}>
           <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] ${index < activeIndex ? "bg-yellow-400 text-black" : index === activeIndex ? "border-2 border-yellow-500 bg-yellow-50" : "border border-gray-300"}`}>{index < activeIndex ? "✓" : index + 1}</span>
           {stage.label}
         </li>
@@ -167,6 +207,8 @@ export default function ClientDashboardPage() {
   const [search, setSearch] = useState("")
   const [bookingStatus, setBookingStatus] = useState("ALL")
   const [orderStatus, setOrderStatus] = useState("ALL")
+  const [paymentReferences, setPaymentReferences] = useState<Record<string, string>>({})
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null)
   const [loggingOut, setLoggingOut] = useState(false)
 
   const loadDashboard = useCallback(async () => {
@@ -201,9 +243,14 @@ export default function ClientDashboardPage() {
     )
   }, [bookingStatus, data?.bookings, search])
 
-  const filteredOrders = useMemo(() => (data?.orders ?? []).filter((order) =>
-    orderStatus === "ALL" || order.status === orderStatus,
-  ), [data?.orders, orderStatus])
+  const filteredOrders = useMemo(() => (data?.orders ?? []).filter((order) => {
+    if (orderStatus === "ALL") return true
+    if (orderStatus === "AWAITING_CONFIRMATION") return order.status === "PENDING"
+    if (orderStatus === "TO_PAY") return order.status === "APPROVED" && order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID"
+    if (orderStatus === "TO_SHIP") return ["APPROVED", "PROCESSING"].includes(order.status)
+    if (orderStatus === "TO_RECEIVE") return ["SHIPPED", "READY_FOR_PICKUP", "DELIVERED"].includes(order.status)
+    return order.status === orderStatus
+  }), [data?.orders, orderStatus])
 
   async function logout() {
     setLoggingOut(true)
@@ -226,6 +273,29 @@ export default function ClientDashboardPage() {
     if (response.ok) await loadDashboard()
   }
 
+  async function updateClientOrder(orderId: string, action: "submit-payment" | "confirm-received") {
+    setBusyOrderId(orderId)
+    setError("")
+    try {
+      const response = await fetch("/api/client/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          action,
+          ...(action === "submit-payment" ? { paymentReference: paymentReferences[orderId] || "" } : {}),
+        }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || "Could not update your order.")
+      await loadDashboard()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not update your order.")
+    } finally {
+      setBusyOrderId(null)
+    }
+  }
+
   if (loading) {
     return <main className="min-h-screen bg-gray-50 px-4 py-10"><div className="mx-auto max-w-7xl animate-pulse space-y-5"><div className="h-36 rounded-2xl bg-gray-200" /><div className="h-28 rounded-2xl bg-gray-200" /><div className="h-80 rounded-2xl bg-gray-200" /></div></main>
   }
@@ -244,6 +314,8 @@ export default function ClientDashboardPage() {
   }
 
   const unreadCount = data.notifications.filter((notification) => !notification.read).length
+  const gcashAccountName = process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME || ""
+  const gcashAccountNumber = process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER || ""
   const cards = [
     { label: "Total Service Bookings", value: data.counts.bookings, detail: "All submitted requests" },
     { label: "Under Review", value: data.counts.pendingBookings, detail: "Awaiting team review" },
@@ -352,7 +424,7 @@ export default function ClientDashboardPage() {
             <div><h2 className="text-lg font-black text-gray-900">My Product Orders</h2><p className="mt-1 text-sm text-gray-500">Order statuses reflect saved fulfillment updates.</p></div>
             <select value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)} aria-label="Filter orders by status" className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:border-yellow-500">
               <option value="ALL">All statuses</option>
-              {Object.entries(ORDER_STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              {ORDER_FILTER_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </div>
           <div className="divide-y divide-gray-100">
@@ -362,9 +434,9 @@ export default function ClientDashboardPage() {
               <details key={order.id} id={`order-${order.id}`} className="group px-5 py-5 sm:px-6">
                 <summary className="flex cursor-pointer list-none flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-bold text-yellow-800">{order.reference}</span><StatusPill status={order.status} labels={ORDER_STATUS_LABELS} /></div>
+                    <div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-bold text-yellow-800">{order.reference}</span><span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${statusStyle(order.status)}`}>{orderStatusLabel(order)}</span></div>
                     <p className="mt-1 text-sm font-bold text-gray-900">{order.items.map((item) => `${item.name} × ${item.quantity}`).join(", ")}</p>
-                    <p className="mt-1 text-xs text-gray-500">Placed {formatDate(order.createdAt)} · Payment {order.paymentStatus.replace(/_/g, " ")}</p>
+                    <p className="mt-1 text-xs text-gray-500">Placed {formatDate(order.createdAt)} · {order.fulfillmentMethod === "PICKUP" ? "Pickup" : "Delivery"} · Payment {order.paymentStatus.replace(/_/g, " ")}</p>
                   </div>
                   <div className="flex items-center gap-4"><span className="text-sm font-black text-gray-900">{formatMoney(order.total + order.shipping)}</span><span className="font-bold text-yellow-700 group-open:rotate-180">⌄</span></div>
                 </summary>
@@ -374,21 +446,62 @@ export default function ClientDashboardPage() {
                     <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Order date</p><p className="mt-1 text-sm text-gray-700">{formatDate(order.createdAt, true)}</p></div>
                     <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Payment status</p><p className="mt-1 text-sm text-gray-700">{order.paymentStatus.replace(/_/g, " ")}</p></div>
                     <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Payment method</p><p className="mt-1 text-sm text-gray-700">{order.paymentMethod.replace(/_/g, " ")}</p></div>
+                    <div><p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Fulfillment</p><p className="mt-1 text-sm text-gray-700">{order.fulfillmentMethod === "PICKUP" ? "Pickup" : "Delivery"}</p></div>
                   </div>
                   <div className="mt-4 overflow-x-auto">
                     <table className="w-full min-w-[420px] text-left text-sm">
                       <thead className="text-xs text-gray-500"><tr><th className="py-2 font-semibold">Product</th><th className="py-2 font-semibold">Quantity</th><th className="py-2 text-right font-semibold">Unit price</th><th className="py-2 text-right font-semibold">Line total</th></tr></thead>
                       <tbody className="divide-y divide-gray-100">{order.items.map((item) => <tr key={item.id}><td className="py-2 font-medium text-gray-800">{item.name}</td><td className="py-2 text-gray-600">{item.quantity} {item.unit || ""}</td><td className="py-2 text-right text-gray-600">{formatMoney(item.unitPrice)}</td><td className="py-2 text-right font-semibold text-gray-800">{formatMoney(item.unitPrice * item.quantity)}</td></tr>)}</tbody>
-                      <tfoot><tr><td colSpan={3} className="pt-3 text-right text-xs font-semibold text-gray-500">Total including saved shipping</td><td className="pt-3 text-right font-black text-gray-900">{formatMoney(order.total + order.shipping)}</td></tr></tfoot>
+                      <tfoot><tr><td colSpan={3} className="pt-3 text-right text-xs font-semibold text-gray-500">{order.fulfillmentMethod === "DELIVERY" && !order.shippingConfirmed ? "Products total · delivery fee pending" : "Total including delivery fee"}</td><td className="pt-3 text-right font-black text-gray-900">{formatMoney(order.total + order.shipping)}</td></tr></tfoot>
                     </table>
                   </div>
                   <div className="mt-4 rounded-xl bg-gray-50 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Order progress · {ORDER_STATUS_LABELS[order.status] || order.status}</p><p className="text-xs text-gray-500">Last saved update: {formatDate(order.updatedAt, true)}</p></div>
+                    <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Order progress · {orderStatusLabel(order)}</p><p className="text-xs text-gray-500">Last saved update: {formatDate(order.updatedAt, true)}</p></div>
                     <OrderProgress order={order} />
-                    {order.status === "APPROVED" && <p className="mt-3 text-xs text-gray-600">The order has been approved. No shipment or delivery status is recorded yet.</p>}
                   </div>
-                  <p className="mt-4 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery address:</span> {[order.address, order.barangay, order.city, order.province, order.postalCode].filter(Boolean).join(", ") || "Not specified"}</p>
+                  {order.fulfillmentMethod === "DELIVERY" && <p className="mt-4 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery address:</span> {[order.address, order.barangay, order.city, order.province, order.postalCode].filter(Boolean).join(", ") || "Not specified"}</p>}
                   {order.deliveryNotes && <p className="mt-2 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery notes:</span> {order.deliveryNotes}</p>}
+                  {order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID" && order.status === "PENDING" && (
+                    <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Your order is awaiting confirmation. We will confirm the delivery fee before payment is due.</p>
+                  )}
+                  {order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID" && order.status === "APPROVED" && order.shippingConfirmed && (
+                    <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+                      <h4 className="text-sm font-bold text-blue-900">Pay with GCash</h4>
+                      {gcashAccountName && gcashAccountNumber ? (
+                        <>
+                          <p className="mt-2 text-sm text-blue-900">Send <strong>{formatMoney(order.total + order.shipping)}</strong> to <strong>{gcashAccountName}</strong> at <strong>{gcashAccountNumber}</strong>.</p>
+                          {["UNPAID", "SUBMITTED"].includes(order.paymentStatus) ? (
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                              <label className="flex-1 text-xs font-semibold text-blue-900">
+                                {order.paymentStatus === "SUBMITTED" ? "Update GCash transaction reference" : "GCash transaction reference"}
+                                <input
+                                  value={paymentReferences[order.id] ?? order.paymentReference ?? ""}
+                                  onChange={(event) => setPaymentReferences((current) => ({ ...current, [order.id]: event.target.value }))}
+                                  maxLength={80}
+                                  className="mt-1 w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm text-gray-900"
+                                  placeholder="Enter the reference from your GCash receipt"
+                                />
+                              </label>
+                              <button type="button" disabled={busyOrderId === order.id} onClick={() => updateClientOrder(order.id, "submit-payment")} className="self-end rounded-lg bg-blue-700 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-800 disabled:opacity-50">
+                                {busyOrderId === order.id ? "Submitting…" : order.paymentStatus === "SUBMITTED" ? "Update reference" : "Submit reference"}
+                              </button>
+                            </div>
+                          ) : null}
+                          {order.paymentStatus === "SUBMITTED" && <p className="mt-2 text-sm font-semibold text-blue-800">Reference {order.paymentReference || "submitted"} is awaiting manual verification. This order is not marked paid yet.</p>}
+                        </>
+                      ) : <p className="mt-2 text-sm leading-5 text-blue-800">GCash recipient details are not configured yet. Please contact ELETTRO before transferring funds.</p>}
+                    </div>
+                  )}
+                  {order.fulfillmentNote && <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-gray-700"><span className="font-bold">{order.fulfillmentMethod === "PICKUP" ? "Pickup instructions:" : "Fulfillment update:"}</span> {order.fulfillmentNote}</p>}
+                  {order.paymentMethod === "GCASH" && order.paymentStatus === "PAID" && <p className="mt-3 text-sm font-semibold text-emerald-700">GCash payment verified.</p>}
+                  {order.paymentMethod !== "GCASH" && order.paymentStatus !== "PAID" && <p className="mt-3 text-xs text-gray-600">Payment is due in cash when your order is {order.fulfillmentMethod === "PICKUP" ? "picked up" : "delivered"}.</p>}
+                  {order.status === "READY_FOR_PICKUP" && <p className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">Your order is ready for pickup. Follow the pickup instructions provided by our team.</p>}
+                  {order.status === "DELIVERED" && <p className="mt-3 rounded-lg border border-cyan-100 bg-cyan-50 px-4 py-3 text-sm text-cyan-900">The order has been marked delivered. Confirm once you have received it.</p>}
+                  {["DELIVERED", "READY_FOR_PICKUP"].includes(order.status) && (
+                    <button type="button" disabled={busyOrderId === order.id} onClick={() => updateClientOrder(order.id, "confirm-received")} className="mt-3 rounded-lg bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
+                      {busyOrderId === order.id ? "Saving…" : order.status === "READY_FOR_PICKUP" ? "Confirm pickup received" : "Confirm order received"}
+                    </button>
+                  )}
                 </div>
               </details>
             ))}

@@ -45,7 +45,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const activeBookings = bookings.filter((booking) =>
       ['APPROVED', 'ASSIGNED', 'IN_PROGRESS'].includes(booking.status),
     ).length
-    const awaitingOrders = orders.filter((order) => ['PENDING', 'APPROVED'].includes(order.status)).length
+    const awaitingOrders = orders.filter((order) => !['COMPLETED', 'CANCELLED'].includes(order.status)).length
 
     return res.status(200).json({
       user: client,

@@ -1,7 +1,5 @@
 "use client"
 import Link from "next/link"
-import { useState } from "react"
-import OrderForm from "./OrderForm"
 
 export type InventoryProduct = {
   id: string
@@ -21,7 +19,6 @@ export type InventoryProduct = {
 export default function ProductCard({ product }: { product: InventoryProduct }) {
   const imageSrc = product.imageUrl || product.imageData
   const outOfStock = product.quantity <= 0
-  const [orderOpen, setOrderOpen] = useState(false)
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col">
@@ -73,22 +70,15 @@ export default function ProductCard({ product }: { product: InventoryProduct }) 
             Details
           </Link>
           {!outOfStock && (
-            <button
-              onClick={() => setOrderOpen(true)}
+            <Link
+              href={`/products/${product.id}`}
               className="inline-flex items-center justify-center gap-1.5 flex-1 px-4 py-2.5 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors"
             >
-              Order
-            </button>
+              Shop options
+            </Link>
           )}
         </div>
       </div>
-
-      {orderOpen && (
-        <OrderForm
-          product={{ id: product.id, name: product.name, unit: product.unit, quantity: product.quantity }}
-          onClose={() => setOrderOpen(false)}
-        />
-      )}
     </div>
   )
 }

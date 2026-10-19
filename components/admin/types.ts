@@ -116,12 +116,18 @@ export type OrderObj = {
   province?: string | null
   postalCode?: string | null
   deliveryNotes?: string | null
+  fulfillmentNote?: string | null
   paymentMethod?: string
   paymentStatus?: string
   notes?: string | null
-  status: 'PENDING' | 'APPROVED' | 'COMPLETED' | 'CANCELLED'
+  status: 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
   total: number
   createdAt: string
+  updatedAt?: string
+  paymentReference?: string | null
+  fulfillmentMethod?: 'DELIVERY' | 'PICKUP'
+  shipping?: number
+  shippingConfirmed?: boolean
   items: OrderItemObj[]
   client?: { id: string; name: string; email: string; phone?: string | null }
 }
