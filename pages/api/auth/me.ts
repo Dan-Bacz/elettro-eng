@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
-import { parse } from 'cookie'
-import { getTokenFromRequest } from '../../../lib/auth'
+import { getJwtSecret, getTokenFromRequest } from '../../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -12,7 +11,7 @@ export default async function handler(req, res){
 
     let payload: any
     try{
-      payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+      payload = jwt.verify(token, getJwtSecret())
     }catch(e){
       return res.status(401).json({ error: 'Invalid token' })
     }
@@ -20,6 +19,7 @@ export default async function handler(req, res){
     const user = await prisma.user.findUnique({ where: { id: payload.userId } })
     if (!user) return res.status(401).json({ error: 'User not found' })
 
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0')
     return res.json({
       ok: true,
       user: {
@@ -30,6 +30,7 @@ export default async function handler(req, res){
         phone: user.phone,
         approved: user.approved,
         status: user.status,
+        emailVerifiedAt: user.emailVerifiedAt,
         address: user.address,
         specialization: user.specialization,
         yearsOfExperience: user.yearsOfExperience,

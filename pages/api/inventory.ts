@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { uploadToCloudinary } from '../../lib/cloudinary'
+import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -42,6 +43,10 @@ function planImage(body: any): { action: ImageAction; imageUrl?: string; imagePu
 
 export default async function handler(req, res) {
   try {
+    const session = await getSessionUser(getTokenFromRequest(req))
+    if (!session) return res.status(401).json({ error: 'Authentication required' })
+    if (session.role !== 'ADMIN' || session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
+
     if (req.method === 'GET') {
       const items = await prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } })
       return res.json(items)

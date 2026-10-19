@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client'
-import jwt from 'jsonwebtoken'
+import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -39,19 +39,12 @@ function stockStatus(item: { quantity: number; reorderLevel?: number | null }) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const authorization = req.headers.authorization || ''
-  const token = authorization.startsWith('Bearer ')
-    ? authorization.slice(7)
-    : req.cookies?.token
+  const token = getTokenFromRequest(req)
   if (!token) return res.status(401).json({ error: 'Authentication required' })
 
-  let userId: string | undefined
-  try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as { userId?: string }
-    userId = payload.userId
-  } catch {
-    return res.status(401).json({ error: 'Invalid session' })
-  }
+  const session = await getSessionUser(token)
+  if (!session) return res.status(401).json({ error: 'Invalid session' })
+  if (session.role !== 'ADMIN' || session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
 
   try {
     const [bookings, inventory, users, projects, admin, recentNotifications, pendingLeaves, activeLeaves, activities, orders] = await Promise.all([
@@ -90,10 +83,8 @@ export default async function handler(req, res) {
           assignments: { include: { tech: { select: { id: true, name: true, email: true } } } }
         }
       }),
-      userId ? prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }) : null,
-      userId
-        ? prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 10 })
-        : [],
+      prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true } }),
+      prisma.notification.findMany({ where: { userId: session.id }, orderBy: { createdAt: 'desc' }, take: 10 }),
       prisma.leaveRequest.count({ where: { status: 'PENDING' } }),
       prisma.leaveRequest.findMany({ where: { status: 'APPROVED' }, select: { techId: true, fromDate: true, toDate: true } }),
       prisma.technicianActivity.findMany({ where: { createdAt: { gte: new Date(Date.now() - 6 * 86400000) } }, select: { createdAt: true } }),

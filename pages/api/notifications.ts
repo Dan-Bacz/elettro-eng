@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
+import { getJwtSecret } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -16,19 +17,23 @@ export default async function handler(req: any, res: any) {
 
     let payload: any
     try {
-      payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+      payload = jwt.verify(token, getJwtSecret())
     } catch {
       return res.status(401).json({ error: 'Invalid session' })
     }
     const userId = payload.userId
     if (!userId) return res.status(401).json({ error: 'Invalid session' })
+    const account = await prisma.user.findUnique({
+      where: { id: String(userId) },
+      select: { role: true, status: true },
+    })
+    if (!account || account.status !== 'ACTIVE') return res.status(401).json({ error: 'Invalid session' })
 
     if (req.method === 'GET') {
       const queryRole = String(req.query.role || '').toUpperCase()
-      const where: any = userId ? { userId } : {}
-      if (queryRole === 'ALL') delete where.userId
+      const canViewAll = queryRole === 'ALL' && account.role === 'ADMIN'
       const notifications = await prisma.notification.findMany({
-        where: { userId: where.userId as string },
+        where: canViewAll ? {} : { userId: String(userId) },
         orderBy: { createdAt: 'desc' },
         take: 100
       })

@@ -76,8 +76,13 @@ export default function InventoryPage(){
 
   useEffect(() => {
     fetch('/api/auth/me')
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) {
+          router.replace('/admin/login')
+          return
+        }
+        const data = await res.json()
+        if (data?.user?.role !== 'ADMIN') {
           router.replace('/admin/login')
           return
         }

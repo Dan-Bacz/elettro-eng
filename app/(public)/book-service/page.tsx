@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import CTASection from "@/components/client/CTASection"
 import { SERVICES } from "@/components/client/siteData"
+import ClientSessionGate from "@/components/client/ClientSessionGate"
 
 const SERVICE_OPTIONS = [
   ...SERVICES.map((s) => s.title),
@@ -30,6 +31,23 @@ function BookingForm() {
   const [error, setError] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!active || !data?.user) return
+        setForm((current) => ({
+          ...current,
+          clientName: data.user.name || current.clientName,
+          email: data.user.email || current.email,
+          phone: data.user.phone || current.phone,
+        }))
+      })
+      .catch((reason) => console.error("Could not load client contact details:", reason))
+    return () => { active = false }
+  }, [])
 
   function updateField(field: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -149,13 +167,13 @@ function BookingForm() {
             Book a <span className="text-yellow-400">Service</span>
           </h1>
           <p className="mt-3 text-gray-400 max-w-xl">
-            Schedule an electrical service or request a product. No account or login required —
-            just fill out the form and we&apos;ll take it from there.
+            Sign in with your verified client account to submit an electrical service request.
           </p>
         </div>
         <div className="absolute bottom-0 inset-x-0 h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400" />
       </section>
 
+      <ClientSessionGate>
       <section className="bg-gray-50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
           <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
@@ -190,7 +208,7 @@ function BookingForm() {
                   <input
                     id="bk-name"
                     value={form.clientName}
-                    onChange={(e) => updateField("clientName", e.target.value)}
+                    readOnly
                     placeholder="John Doe"
                     className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                   />
@@ -203,7 +221,7 @@ function BookingForm() {
                   <input
                     id="bk-phone"
                     value={form.phone}
-                    onChange={(e) => updateField("phone", e.target.value)}
+                    readOnly
                     placeholder="+63 900 000 0000"
                     className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                   />
@@ -217,7 +235,7 @@ function BookingForm() {
                     id="bk-email"
                     type="email"
                     value={form.email}
-                    onChange={(e) => updateField("email", e.target.value)}
+                    readOnly
                     placeholder="john@example.com"
                     className="w-full px-4 py-3 rounded-lg border border-gray-300 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                   />
@@ -352,6 +370,7 @@ function BookingForm() {
           </div>
         </div>
       </section>
+      </ClientSessionGate>
 
       <CTASection
         heading="Questions Before Booking?"

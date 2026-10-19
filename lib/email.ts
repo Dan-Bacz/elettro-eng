@@ -54,6 +54,18 @@ function getAppUrl() {
   return process.env.NEXT_PUBLIC_APP_URL || 'https://elettro-eng-one.vercel.app'
 }
 
+export function getClientVerificationUrl(token: string) {
+  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!configuredUrl && process.env.NODE_ENV === 'production') {
+    throw new Error('NEXT_PUBLIC_APP_URL must be configured in production for verification links.')
+  }
+  const appUrl = new URL(configuredUrl || 'http://localhost:3000')
+  if (process.env.NODE_ENV === 'production' && appUrl.protocol !== 'https:') {
+    throw new Error('NEXT_PUBLIC_APP_URL must use HTTPS in production.')
+  }
+  return new URL(`/client/verify?token=${encodeURIComponent(token)}`, appUrl).toString()
+}
+
 function escapeHtml(value: string) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -416,4 +428,50 @@ export async function sendPasswordResetCodeEmail(input: PasswordResetEmail & { e
   }
 
   throw new Error('Could not send the reset email. Please try again later.')
+}
+
+export async function sendClientVerificationEmail(input: {
+  name: string
+  email: string
+  verificationUrl: string
+}) {
+  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    throw new Error('Email delivery is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD.')
+  }
+
+  const name = escapeHtml(input.name)
+  const verificationUrl = escapeHtml(input.verificationUrl)
+  const info = await withTimeout((async () => {
+    const transporter = await getTransporter()
+    return transporter.sendMail({
+      from: `${process.env.GMAIL_USER} <${process.env.GMAIL_USER}>`,
+      to: input.email,
+      subject: 'Verify your Elettro client account',
+      text: `Hello ${input.name}, verify your Elettro client account using this link: ${input.verificationUrl}\n\nThis link expires in 24 hours and can only be used once.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #0B0F10; padding: 20px; text-align: center;">
+            <h1 style="color: #F5C400; margin: 0; font-size: 24px;">ELETTRO</h1>
+            <p style="color: #9EA8AC; margin: 4px 0 0; font-size: 11px; letter-spacing: 2px;">ENGINEERING ENTERPRISES</p>
+          </div>
+          <div style="background-color: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0;">
+            <h2 style="color: #111; margin-top: 0;">Verify your email address</h2>
+            <p style="color: #555; font-size: 14px;">Hello <strong>${name}</strong>,</p>
+            <p style="color: #555; font-size: 14px; line-height: 1.6;">Confirm your email address to activate your client account and manage bookings and orders.</p>
+            <div style="text-align: center; margin: 25px 0;">
+              <a href="${verificationUrl}" style="background-color: #F5C400; color: #111; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Verify Email</a>
+            </div>
+            <p style="color: #555; font-size: 13px;">This link expires in 24 hours and can only be used once. If you did not create an account, you can ignore this email.</p>
+          </div>
+          <div style="background-color: #0B0F10; padding: 15px; text-align: center;">
+            <p style="color: #666; margin: 0; font-size: 11px;">Elettro Engineering Enterprises - Automated Notification</p>
+          </div>
+        </div>
+      `,
+    })
+  })(), 25000)
+
+  if (!info.accepted.some((address) => String(address).toLowerCase() === input.email.toLowerCase())) {
+    throw new Error('The email provider did not accept the verification message.')
+  }
 }

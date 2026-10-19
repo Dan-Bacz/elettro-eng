@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { uploadToCloudinary } from '../../../lib/cloudinary'
 import { sendBookingSubmittedNotification } from '../../../lib/email'
 import { sendTextbeeSms, BOOKING_SUBMITTED_SMS_MESSAGE } from '../../../lib/textbee'
+import { requireVerifiedClient } from '../../../lib/client-auth'
 
 const prisma = new PrismaClient()
 
@@ -17,9 +18,6 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const {
-    clientName,
-    email,
-    phone,
     service,
     preferredDate,
     preferredTime,
@@ -31,31 +29,16 @@ export default async function handler(req: any, res: any) {
     attachment,
   } = req.body || {}
 
-  if (!clientName || !String(clientName).trim()) {
-    return res.status(400).json({ error: 'Full name is required' })
-  }
-  if (!email || !String(email).trim()) {
-    return res.status(400).json({ error: 'Email address is required' })
-  }
   if (!service || !String(service).trim()) {
     return res.status(400).json({ error: 'Please select a service' })
   }
 
   try {
-    const cleanEmail = String(email).trim().toLowerCase()
-
-    let client = await prisma.user.findUnique({ where: { email: cleanEmail } })
-    if (!client) {
-      client = await prisma.user.create({
-        data: {
-          name: String(clientName).trim(),
-          email: cleanEmail,
-          phone: phone ? String(phone).trim() : null,
-          role: 'CLIENT',
-          approved: true,
-        },
-      })
-    }
+    const client = await requireVerifiedClient(req, res)
+    if (!client) return
+    const cleanName = client.name
+    const cleanEmail = client.email
+    const phone = client.phone
 
     // Optional project photo -> Cloudinary
     let attachmentUrl: string | null = null
@@ -72,7 +55,7 @@ export default async function handler(req: any, res: any) {
         ? installations.map((i: string) => String(i).trim()).filter(Boolean)
         : []
     const details = [
-      clientName ? `Client name: ${String(clientName).trim()}` : '',
+      cleanName ? `Client name: ${cleanName}` : '',
       cleanEmail ? `Client email: ${cleanEmail}` : '',
       phone ? `Client phone: ${String(phone).trim()}` : '',
       selectedOffers.length ? `Selected offerings: ${selectedOffers.join(', ')}` : '',
@@ -86,21 +69,34 @@ export default async function handler(req: any, res: any) {
       .filter(Boolean)
       .join('\n')
 
-    const booking = await prisma.booking.create({
-      data: {
-        clientId: client.id,
-        title,
-        description: details || null,
-        status: 'PENDING',
-        startDate: preferredDate ? new Date(String(preferredDate)) : null,
-      },
+    const booking = await prisma.$transaction(async (tx) => {
+      const created = await tx.booking.create({
+        data: {
+          clientId: client.id,
+          title,
+          description: details || null,
+          status: 'PENDING',
+          startDate: preferredDate ? new Date(String(preferredDate)) : null,
+        },
+      })
+      const reference = `ELT-${created.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+      await tx.notification.create({
+        data: {
+          userId: client.id,
+          type: 'BOOKING',
+          title: 'Service Booking Submitted',
+          message: `Your booking ${reference} was received and is under review.`,
+          link: `/client/dashboard#booking-${created.id}`,
+        },
+      })
+      return created
     })
 
     const reference = `ELT-${booking.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
 
     // Notify the client by email (non-blocking failure)
     void sendBookingSubmittedNotification({
-      name: String(clientName).trim(),
+      name: cleanName,
       email: cleanEmail,
       service: title,
       reference,

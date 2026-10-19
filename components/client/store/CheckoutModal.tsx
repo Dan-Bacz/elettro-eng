@@ -1,9 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useCart } from "./CartContext"
 import { CartIcon, CheckIcon, CloseIcon } from "./storeIcons"
 import { formatPeso } from "./storeUtils"
+import ClientSessionGate from "../ClientSessionGate"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -80,6 +81,24 @@ export default function CheckoutModal() {
   const [serverError, setServerError] = useState("")
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
 
+  useEffect(() => {
+    if (!checkoutOpen) return
+    let active = true
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!active || !data?.user) return
+        setForm((current) => ({
+          ...current,
+          clientName: data.user.name || current.clientName,
+          email: data.user.email || current.email,
+          phone: data.user.phone || current.phone,
+        }))
+      })
+      .catch((reason) => console.error("Could not load client contact details:", reason))
+    return () => { active = false }
+  }, [checkoutOpen])
+
   const paymentLabel = useMemo(
     () => PAYMENT_METHODS.find((p) => p.id === paymentMethod)?.label || paymentMethod,
     [paymentMethod]
@@ -152,6 +171,7 @@ export default function CheckoutModal() {
     "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
 
   return (
+    <ClientSessionGate>
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-3 sm:p-6" role="dialog" aria-modal="true">
       <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
         {confirmation ? (
@@ -259,17 +279,17 @@ export default function CheckoutModal() {
                   <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <label className="mb-1 block text-xs font-bold text-gray-700">Full Name *</label>
-                      <input value={form.clientName} onChange={(e) => setField("clientName", e.target.value)} placeholder="e.g. Juan Dela Cruz" autoComplete="name" className={inputClass} />
+                      <input value={form.clientName} readOnly autoComplete="name" className={`${inputClass} bg-gray-50`} />
                       {errors.clientName && <p className="mt-1 text-xs font-semibold text-red-600">{errors.clientName}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Email Address *</label>
-                      <input type="email" value={form.email} onChange={(e) => setField("email", e.target.value)} placeholder="you@example.com" autoComplete="email" className={inputClass} />
+                      <input type="email" value={form.email} readOnly autoComplete="email" className={`${inputClass} bg-gray-50`} />
                       {errors.email && <p className="mt-1 text-xs font-semibold text-red-600">{errors.email}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Mobile Number *</label>
-                      <input type="tel" value={form.phone} onChange={(e) => setField("phone", e.target.value)} placeholder="e.g. 0917 123 4567" autoComplete="tel" className={inputClass} />
+                      <input type="tel" value={form.phone} readOnly autoComplete="tel" className={`${inputClass} bg-gray-50`} />
                       {errors.phone && <p className="mt-1 text-xs font-semibold text-red-600">{errors.phone}</p>}
                     </div>
                   </div>
@@ -402,5 +422,6 @@ export default function CheckoutModal() {
         )}
       </div>
     </div>
+    </ClientSessionGate>
   )
 }

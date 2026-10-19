@@ -1,5 +1,6 @@
 import { PrismaClient, LeaveType } from '@prisma/client'
 import jwt from 'jsonwebtoken'
+import { getJwtSecret } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -28,7 +29,7 @@ async function requireUser(req: any, res: any) {
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   let payload: any
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    payload = jwt.verify(token, getJwtSecret())
   } catch {
     return res.status(401).json({ error: 'Invalid session' })
   }
@@ -69,6 +70,7 @@ async function notifyAdmins(type: string, title: string, message: string, link: 
 export default async function handler(req: any, res: any) {
   const user = await requireUser(req, res)
   if (!user) return
+  if (user.role !== 'ADMIN' && user.role !== 'TECH') return res.status(403).json({ error: 'Forbidden' })
   if (user.role !== 'TECH') return res.status(403).json({ error: 'Only technicians can manage leave.' })
 
   if (req.method === 'GET') {

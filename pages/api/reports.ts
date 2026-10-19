@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
+import { getJwtSecret } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -14,7 +15,7 @@ async function requireUser(req: any, res: any) {
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   let payload: any
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    payload = jwt.verify(token, getJwtSecret())
   } catch {
     return res.status(401).json({ error: 'Invalid session' })
   }
@@ -26,10 +27,19 @@ async function requireUser(req: any, res: any) {
 export default async function handler(req: any, res: any) {
   const user = await requireUser(req, res)
   if (!user) return
+  if (user.role !== 'ADMIN' && user.role !== 'TECH') return res.status(403).json({ error: 'Forbidden' })
 
   if (req.method === 'GET') {
     try {
       const reports = await prisma.report.findMany({
+        where: user.role === 'TECH' ? {
+          booking: {
+            OR: [
+              { assignedToId: user.id },
+              { project: { is: { assignments: { some: { techId: user.id } } } } },
+            ],
+          },
+        } : {},
         orderBy: { createdAt: 'desc' },
         include: {
           author: { select: { id: true, name: true, email: true, role: true } },
@@ -37,6 +47,14 @@ export default async function handler(req: any, res: any) {
         }
       })
       const activities = await prisma.technicianActivity.findMany({
+        where: user.role === 'TECH' ? {
+          booking: {
+            OR: [
+              { assignedToId: user.id },
+              { project: { is: { assignments: { some: { techId: user.id } } } } },
+            ],
+          },
+        } : {},
         orderBy: { createdAt: 'desc' },
         include: {
           tech: { select: { id: true, name: true, email: true } },
@@ -55,7 +73,7 @@ export default async function handler(req: any, res: any) {
       if (!bookingId || !content) {
         return res.status(400).json({ error: 'Booking and content are required' })
       }
-      const booking = await prisma.booking.findUnique({ where: { id: String(bookingId) }, select: { id: true, assignedToId: true, title: true } })
+      const booking = await prisma.booking.findUnique({ where: { id: String(bookingId) }, select: { id: true, clientId: true, assignedToId: true, title: true } })
       if (!booking) return res.status(404).json({ error: 'Booking not found' })
       if (user.role === 'TECH' && booking.assignedToId !== user.id) {
         const isMember = await prisma.projectAssignment.findFirst({
@@ -105,6 +123,15 @@ export default async function handler(req: any, res: any) {
           }))
         })
       }
+      await prisma.notification.create({
+        data: {
+          userId: booking.clientId,
+          type: 'BOOKING',
+          title: 'Service Progress Updated',
+          message: `A progress report was added to your booking "${booking.title}".`,
+          link: `/client/dashboard#booking-${booking.id}`,
+        },
+      })
 
       return res.status(201).json(newReport)
     } catch (error: any) {

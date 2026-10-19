@@ -7,9 +7,9 @@ export default function FeaturedProducts({ limit = 3 }: { limit?: number }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch("/api/inventory")
-      .then((res) => (res.ok ? res.json() : []))
-      .then((items: InventoryProduct[]) => setProducts(items))
+    fetch("/api/public/products")
+      .then((res) => (res.ok ? res.json() : { products: [] }))
+      .then((data: { products: InventoryProduct[] }) => setProducts(data.products || []))
       .catch(() => setProducts([]))
       .finally(() => setLoading(false))
   }, [])

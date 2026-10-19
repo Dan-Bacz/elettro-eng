@@ -1,6 +1,7 @@
 "use client"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { Service } from "./siteData"
+import ClientSessionGate from "./ClientSessionGate"
 
 type FormState = {
   clientName: string
@@ -24,7 +25,7 @@ const INITIAL_FORM: FormState = {
   description: "",
 }
 
-export default function ServiceBookingSection({ service }: { service: Service }) {
+function ServiceBookingForm({ service }: { service: Service }) {
   const [selectedOfferings, setSelectedOfferings] = useState<string[]>([])
   const [otherSelected, setOtherSelected] = useState(false)
   const [otherSpecified, setOtherSpecified] = useState("")
@@ -37,6 +38,23 @@ export default function ServiceBookingSection({ service }: { service: Service })
   const [error, setError] = useState("")
   const [result, setResult] = useState<{ reference: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!active || !data?.user) return
+        setForm((current) => ({
+          ...current,
+          clientName: data.user.name || current.clientName,
+          email: data.user.email || current.email,
+          phone: data.user.phone || current.phone,
+        }))
+      })
+      .catch((reason) => console.error("Could not load client contact details:", reason))
+    return () => { active = false }
+  }, [])
 
   function toggleOffering(offering: string) {
     setSelectedOfferings((prev) =>
@@ -139,8 +157,7 @@ export default function ServiceBookingSection({ service }: { service: Service })
             <div className="mt-1 text-2xl font-black text-black">{result.reference}</div>
           </div>
           <p className="mt-5 text-sm text-gray-500">
-            A confirmation email has been sent to {form.email}. Keep this reference number for any
-            future correspondence.
+            Keep this reference number for any future correspondence. We may send a confirmation email to {form.email} when email delivery is available.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -296,7 +313,7 @@ export default function ServiceBookingSection({ service }: { service: Service })
                 <input
                   id="ib-name"
                   value={form.clientName}
-                  onChange={(e) => updateField("clientName", e.target.value)}
+                  readOnly
                   placeholder="John Doe"
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                 />
@@ -310,7 +327,7 @@ export default function ServiceBookingSection({ service }: { service: Service })
                   id="ib-email"
                   type="email"
                   value={form.email}
-                  onChange={(e) => updateField("email", e.target.value)}
+                  readOnly
                   placeholder="john@gmail.com"
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                 />
@@ -323,7 +340,7 @@ export default function ServiceBookingSection({ service }: { service: Service })
                 <input
                   id="ib-phone"
                   value={form.phone}
-                  onChange={(e) => updateField("phone", e.target.value)}
+                  readOnly
                   placeholder="+63 900 000 0000"
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                 />
@@ -467,4 +484,8 @@ export default function ServiceBookingSection({ service }: { service: Service })
       )}
     </>
   )
+}
+
+export default function ServiceBookingSection({ service }: { service: Service }) {
+  return <ClientSessionGate><ServiceBookingForm service={service} /></ClientSessionGate>
 }

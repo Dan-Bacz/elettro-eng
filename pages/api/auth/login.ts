@@ -2,17 +2,23 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { serialize } from 'cookie'
+import { getJwtSecret } from '../../../lib/auth'
+import { isRateLimited } from '../../../lib/client-auth'
 
 const prisma = new PrismaClient()
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end()
 
-  const { email, password, client } = req.body || {}
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  const password = String(req.body?.password || '')
   if (!email || !password) return res.status(400).json({ error: 'Missing credentials' })
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } })
+    if (await isRateLimited(req, 'staff-login', 10, 15 * 60 * 1000, email)) {
+      return res.status(429).json({ error: 'Too many sign-in attempts. Please wait and try again.' })
+    }
+    const user = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } })
     if (!user) return res.status(401).json({ error: 'Invalid credentials' })
 
     const u: any = user
@@ -20,6 +26,10 @@ export default async function handler(req, res) {
 
     const ok = await bcrypt.compare(password, u.password)
     if (!ok) return res.status(401).json({ error: 'Invalid credentials' })
+
+    if (u.role === 'CLIENT') {
+      return res.status(403).json({ error: 'Client accounts must use the client sign-in page.' })
+    }
 
     if (u.role === 'TECH') {
       const status = u.status || (u.approved ? 'ACTIVE' : 'PENDING')
@@ -35,7 +45,7 @@ export default async function handler(req, res) {
       // ACTIVE technicians can sign in from the technician web dashboard or the Android app
     }
 
-    const token = jwt.sign({ userId: user.id, role: user.role, status: u.status }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' })
+    const token = jwt.sign({ userId: user.id, role: user.role, status: u.status }, getJwtSecret(), { expiresIn: '7d' })
     const cookie = serialize('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

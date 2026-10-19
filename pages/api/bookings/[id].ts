@@ -1,21 +1,16 @@
 import { PrismaClient } from '@prisma/client'
-import jwt from 'jsonwebtoken'
+import { getSessionUser, getTokenFromRequest } from '../../../lib/auth'
 
 const prisma = new PrismaClient()
 
 export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).end()
 
-  const authorization = req.headers.authorization || ''
-  const token = typeof authorization === 'string' && authorization.startsWith('Bearer ')
-    ? authorization.slice(7)
-    : req.cookies?.token
+  const token = getTokenFromRequest(req)
   if (!token) return res.status(401).json({ error: 'Authentication required' })
-  try {
-    jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
-  } catch {
-    return res.status(401).json({ error: 'Invalid session' })
-  }
+  const session = await getSessionUser(token)
+  if (!session) return res.status(401).json({ error: 'Invalid session' })
+  if (session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
 
   try {
     const booking = await prisma.booking.findUnique({
@@ -39,6 +34,19 @@ export default async function handler(req: any, res: any) {
       }
     })
     if (!booking) return res.status(404).json({ error: 'Booking not found' })
+    if (session.role === 'CLIENT') {
+      const client = await prisma.user.findUnique({
+        where: { id: session.id },
+        select: { emailVerifiedAt: true },
+      })
+      if (!client?.emailVerifiedAt || booking.clientId !== session.id) {
+        return res.status(404).json({ error: 'Booking not found' })
+      }
+    } else if (session.role === 'TECH') {
+      const isAssigned = booking.assignedToId === session.id ||
+        booking.project?.assignments.some((assignment) => assignment.techId === session.id)
+      if (!isAssigned) return res.status(403).json({ error: 'Forbidden' })
+    }
     return res.json(booking)
   } catch (error: any) {
     console.error('Booking detail error:', error)

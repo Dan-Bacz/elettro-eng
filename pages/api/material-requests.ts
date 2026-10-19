@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
+import { getJwtSecret } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -14,7 +15,7 @@ async function requireUser(req: any, res: any) {
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   let payload: any
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    payload = jwt.verify(token, getJwtSecret())
   } catch {
     return res.status(401).json({ error: 'Invalid session' })
   }
@@ -34,6 +35,7 @@ async function notifyUser(userId: string, type: string, title: string, message: 
 export default async function handler(req: any, res: any) {
   const user = await requireUser(req, res)
   if (!user) return
+  if (user.role !== 'ADMIN' && user.role !== 'TECH') return res.status(403).json({ error: 'Forbidden' })
 
   // GET: list material requests (admin = all/status filter; tech = own/bookingId filter)
   if (req.method === 'GET') {

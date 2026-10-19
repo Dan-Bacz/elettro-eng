@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { sendTechnicianApprovalNotification } from '../../lib/email'
+import { getJwtSecret } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -16,7 +17,7 @@ async function requireUser(req: any, res: any) {
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   let payload: any
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    payload = jwt.verify(token, getJwtSecret())
   } catch {
     return res.status(401).json({ error: 'Invalid session' })
   }
@@ -54,6 +55,8 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'POST') {
     try {
       const { action, bookingId, assignToId, status, startDate, endDate, name, email, password, role, userId, reason } = req.body
+
+      if (user.role !== 'ADMIN' && user.role !== 'TECH') return res.status(403).json({ error: 'Forbidden' })
 
       // --- User registration lifecycle (admin only) ---
 
@@ -242,6 +245,7 @@ export default async function handler(req: any, res: any) {
             create: { projectId: project.id, techId: assignToId }
           })
           await notifyUser(assignToId, 'ASSIGNMENT', 'New Job Assigned', `You have been assigned to "${b.title}".`, '/technician/dashboard')
+          await notifyUser(b.clientId, 'BOOKING', 'Technician Assigned', `A technician has been assigned to your booking "${b.title}".`, `/client/dashboard#booking-${b.id}`)
         } else {
           await prisma.projectAssignment.deleteMany({ where: { projectId: project.id } })
         }
@@ -292,6 +296,7 @@ export default async function handler(req: any, res: any) {
           await prisma.project.update({ where: { id: project.id }, data: { status: 'ASSIGNED' } })
         }
         await notifyUser(assignToId, 'ASSIGNMENT', 'Added to Project Team', `You have been added to the project team for "${b.title}".`, '/technician/dashboard')
+        await notifyUser(b.clientId, 'BOOKING', 'Technician Assigned', `A technician has been assigned to your booking "${b.title}".`, `/client/dashboard#booking-${b.id}`)
         return res.json(b)
       }
 
@@ -326,6 +331,11 @@ export default async function handler(req: any, res: any) {
       }
 
       if (action === 'update_status') {
+        const previous = await prisma.booking.findUnique({
+          where: { id: bookingId },
+          select: { status: true, clientId: true, title: true }
+        })
+        if (!previous) return res.status(404).json({ error: 'Booking not found' })
         const b = await prisma.booking.update({
           where: { id: bookingId },
           data: { status, ...(typeof req.body.budget !== 'undefined' ? { budget: req.body.budget ? Number(req.body.budget) : null } : {}) },
@@ -337,6 +347,9 @@ export default async function handler(req: any, res: any) {
         }
         if (b.assignedToId) {
           await notifyUser(b.assignedToId, 'ASSIGNMENT', `Booking status updated to ${status}`, `"${b.title}" is now ${status}.`, '/technician/dashboard')
+        }
+        if (previous.status !== b.status) {
+          await notifyUser(b.clientId, 'BOOKING', 'Booking Status Updated', `Your booking "${b.title}" is now ${b.status}.`, `/client/dashboard#booking-${b.id}`)
         }
         return res.json(b)
       }

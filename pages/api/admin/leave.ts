@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { sendLeaveDecisionNotification } from '../../../lib/email'
+import { getJwtSecret } from '../../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -15,7 +16,7 @@ async function requireAdmin(req: any, res: any) {
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   let payload: any
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    payload = jwt.verify(token, getJwtSecret())
   } catch {
     return res.status(401).json({ error: 'Invalid session' })
   }

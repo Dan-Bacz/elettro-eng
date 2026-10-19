@@ -1,21 +1,16 @@
 import { PrismaClient } from '@prisma/client'
-import jwt from 'jsonwebtoken'
+import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
 const SETTING_KEYS = ['orgName', 'supportEmail', 'supportPhone', 'lowStockThreshold', 'address', 'adminEmail'] as const
 
 export default async function handler(req: any, res: any) {
-  const authorization = req.headers.authorization || ''
-  const token = typeof authorization === 'string' && authorization.startsWith('Bearer ')
-    ? authorization.slice(7)
-    : req.cookies?.token
+  const token = getTokenFromRequest(req)
   if (!token) return res.status(401).json({ error: 'Authentication required' })
-  try {
-    jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
-  } catch {
-    return res.status(401).json({ error: 'Invalid session' })
-  }
+  const user = await getSessionUser(token)
+  if (!user) return res.status(401).json({ error: 'Invalid session' })
+  if (user.role !== 'ADMIN' || user.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
 
   if (req.method === 'GET') {
     try {

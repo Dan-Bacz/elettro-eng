@@ -16,6 +16,7 @@ model User {
   phone     String?
   approved  Boolean     @default(false)
   status    UserStatus  @default(ACTIVE)
+  emailVerifiedAt DateTime?
   address   String?
   specialization String?
   yearsOfExperience Int?
@@ -34,6 +35,26 @@ model User {
   leaveCredits LeaveCredits? @relation("TechLeaveCredits")
   orders Order[]
   passwordResetCodes PasswordResetCode[]
+  emailVerificationTokens EmailVerificationToken[]
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model AuthRateLimit {
+  key             String   @id
+  count           Int      @default(0)
+  windowStartedAt DateTime @default(now())
 }
 
 // One-time 6-digit codes emailed to technicians for "Forgot Password".

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import ClientSessionGate from "./ClientSessionGate"
 
 type OrderProduct = {
   id: string
@@ -27,6 +28,23 @@ export default function OrderForm({ product, onClose }: OrderFormProps) {
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<string>("")
   const [error, setError] = useState("")
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/auth/me", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!active || !data?.user) return
+        setForm((current) => ({
+          ...current,
+          clientName: data.user.name || current.clientName,
+          email: data.user.email || current.email,
+          phone: data.user.phone || current.phone,
+        }))
+      })
+      .catch((reason) => console.error("Could not load client contact details:", reason))
+    return () => { active = false }
+  }, [])
 
   function setField(key: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -76,6 +94,7 @@ export default function OrderForm({ product, onClose }: OrderFormProps) {
   }
 
   return (
+    <ClientSessionGate>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
         <div className="flex items-center justify-between">
@@ -111,7 +130,7 @@ export default function OrderForm({ product, onClose }: OrderFormProps) {
               <label className="mb-1 block text-xs font-bold text-gray-700">Full Name</label>
               <input
                 value={form.clientName}
-                onChange={(e) => setField("clientName", e.target.value)}
+                readOnly
                 placeholder="e.g. Juan Dela Cruz"
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
@@ -123,7 +142,7 @@ export default function OrderForm({ product, onClose }: OrderFormProps) {
               <input
                 type="email"
                 value={form.email}
-                onChange={(e) => setField("email", e.target.value)}
+                readOnly
                 placeholder="you@example.com"
                 autoComplete="email"
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400"
@@ -136,7 +155,7 @@ export default function OrderForm({ product, onClose }: OrderFormProps) {
               <input
                 type="tel"
                 value={form.phone}
-                onChange={(e) => setField("phone", e.target.value)}
+                readOnly
                 placeholder="e.g. 0917 123 4567"
                 autoComplete="tel"
                 className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400"
@@ -174,5 +193,6 @@ export default function OrderForm({ product, onClose }: OrderFormProps) {
         )}
       </div>
     </div>
+    </ClientSessionGate>
   )
 }

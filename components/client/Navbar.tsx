@@ -74,6 +74,12 @@ export default function Navbar() {
 
             {/* Right actions */}
             <div className="flex items-center gap-2 lg:gap-3">
+              <Link
+                href="/client"
+                className="hidden sm:inline-flex items-center rounded-lg border border-white/15 px-3 py-2.5 text-sm font-semibold text-gray-200 hover:border-yellow-400 hover:text-yellow-400 transition-colors"
+              >
+                Client Portal
+              </Link>
               {/* Search */}
               <Link
                 href="/products"

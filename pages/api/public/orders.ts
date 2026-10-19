@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { sendOrderSubmittedNotification } from '../../../lib/email'
+import { requireVerifiedClient } from '../../../lib/client-auth'
 
 const prisma = new PrismaClient()
 
@@ -50,7 +51,18 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   const body = req.body || {}
-  const { clientName, email, phone, items } = body
+  let client
+  try {
+    client = await requireVerifiedClient(req, res)
+  } catch (error) {
+    console.error('Public order authentication failed:', error)
+    return res.status(500).json({ error: 'Could not verify your client account.' })
+  }
+  if (!client) return
+  const clientName = client.name
+  const email = client.email
+  const phone = client.phone || ''
+  const { items } = body
 
   if (!clientName || !String(clientName).trim()) {
     return res.status(400).json({ error: 'Full name is required' })
@@ -129,22 +141,6 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    // Upsert the client account (passwordless, same pattern as public bookings).
-    let client = await prisma.user.findUnique({ where: { email: cleanEmail } })
-    if (!client) {
-      client = await prisma.user.create({
-        data: {
-          name: cleanName,
-          email: cleanEmail,
-          phone: cleanPhone,
-          role: 'CLIENT',
-          approved: true,
-        },
-      })
-    } else if (!client.phone) {
-      client = await prisma.user.update({ where: { id: client.id }, data: { phone: cleanPhone } })
-    }
-
     // Recalculate everything from the database. Reject items that have no
     // configured selling price (card UI disables carting those).
     let total = 0
@@ -164,7 +160,7 @@ export default async function handler(req: any, res: any) {
     })
 
     const order = await prisma.$transaction(async (tx) => {
-      return tx.order.create({
+      const created = await tx.order.create({
         data: {
           clientId: client.id,
           clientName: cleanName,
@@ -186,22 +182,37 @@ export default async function handler(req: any, res: any) {
         },
         include: { items: true },
       })
+      const reference = `ORD-${created.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+      await tx.notification.create({
+        data: {
+          userId: client.id,
+          type: 'ORDER',
+          title: 'Order Placed',
+          message: `Your order ${reference} was received and is pending review.`,
+          link: '/client/dashboard#orders',
+        },
+      })
+      return created
     })
 
     const reference = `ORD-${order.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
 
     // Notify admins in-app so it shows up in the notifications center.
-    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
-    if (admins.length) {
-      await prisma.notification.createMany({
-        data: admins.map((admin) => ({
-          userId: admin.id,
-          type: 'ORDER',
-          title: 'New Product Order',
-          message: `${cleanName} (${cleanEmail}) placed an order for ${orderItems.length} item(s) worth ₱${round2(total).toLocaleString()} via ${paymentMethod}.`,
-          link: '/admin/orders',
-        })),
-      })
+    try {
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
+      if (admins.length) {
+        await prisma.notification.createMany({
+          data: admins.map((admin) => ({
+            userId: admin.id,
+            type: 'ORDER',
+            title: 'New Product Order',
+            message: `${cleanName} (${cleanEmail}) placed an order for ${orderItems.length} item(s) worth ₱${round2(total).toLocaleString()} via ${paymentMethod}.`,
+            link: '/admin/orders',
+          })),
+        })
+      }
+    } catch (error) {
+      console.error('Failed to notify admins about a new product order:', error)
     }
 
     // Notify the client by email (non-blocking failure)

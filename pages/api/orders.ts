@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
+import { getJwtSecret } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -14,7 +15,7 @@ async function requireAdmin(req: any, res: any) {
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   let payload: any
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    payload = jwt.verify(token, getJwtSecret())
   } catch {
     return res.status(401).json({ error: 'Invalid session' })
   }
@@ -81,15 +82,17 @@ export default async function handler(req: any, res: any) {
         return updated
       })
 
-      await prisma.notification.create({
-        data: {
-          userId: result.clientId,
-          type: 'ORDER',
-          title: 'Order Status Updated',
-          message: `Your order ${withReference(result).reference} is now ${status}. Thank you for choosing Elettro.`,
-          link: '/contact',
-        },
-      })
+      if (order.status !== status) {
+        await prisma.notification.create({
+          data: {
+            userId: result.clientId,
+            type: 'ORDER',
+            title: 'Order Status Updated',
+            message: `Your order ${withReference(result).reference} is now ${status}. Thank you for choosing Elettro.`,
+            link: '/client/dashboard#orders',
+          },
+        })
+      }
 
       return res.json({ ok: true, order: withReference(result) })
     }

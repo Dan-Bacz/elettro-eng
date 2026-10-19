@@ -65,6 +65,13 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
 
         <div className="px-4 pb-6 space-y-3">
           <Link
+            href="/client"
+            onClick={onClose}
+            className="flex items-center justify-center w-full px-5 py-3.5 rounded-xl border border-white/15 text-white text-sm font-bold hover:border-yellow-400 hover:text-yellow-400 transition-colors"
+          >
+            Client Portal
+          </Link>
+          <Link
             href="/book-service"
             onClick={onClose}
             className="flex items-center justify-center gap-2 w-full px-5 py-3.5 rounded-xl bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors"

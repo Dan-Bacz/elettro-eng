@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { uploadToCloudinary } from '../../lib/cloudinary'
+import { getJwtSecret } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
@@ -22,7 +23,7 @@ function authenticate(req: any, res: any) {
   const token = getToken(req)
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'dev-secret')
+    return jwt.verify(token, getJwtSecret())
   } catch {
     return res.status(401).json({ error: 'Invalid session' })
   }
@@ -32,7 +33,9 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'GET') {
     const payload = authenticate(req, res)
     if (!payload || typeof payload === 'number') return res.status(401).json({ error: 'Invalid session' })
+    if (!['ADMIN', 'TECH'].includes(payload.role)) return res.status(403).json({ error: 'Forbidden' })
     const techUserId = req.query.techId || payload.userId
+    if (payload.role === 'TECH' && String(techUserId) !== String(payload.userId)) return res.status(403).json({ error: 'Forbidden' })
     try {
       const [tech, bookings] = await Promise.all([
         prisma.user.findUnique({
@@ -72,6 +75,7 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'POST') {
     const payload = authenticate(req, res)
     if (!payload || typeof payload === 'number') return res.status(401).json({ error: 'Invalid session' })
+    if (!['ADMIN', 'TECH'].includes(payload.role)) return res.status(403).json({ error: 'Forbidden' })
     if (payload.status === 'SUSPENDED') return res.status(403).json({ error: 'Your account has been suspended' })
     const { techId, bookingId, message } = req.body
     if (!techId || !bookingId || !message) {
@@ -81,7 +85,27 @@ export default async function handler(req: any, res: any) {
       return res.status(403).json({ error: 'You can only post updates for your own account' })
     }
     try {
+      const booking = await prisma.booking.findUnique({
+        where: { id: String(bookingId) },
+        select: { id: true, clientId: true, title: true, assignedToId: true },
+      })
+      if (!booking) return res.status(404).json({ error: 'Booking not found' })
+      if (payload.role === 'TECH' && booking.assignedToId !== String(payload.userId)) {
+        const isMember = await prisma.projectAssignment.findFirst({
+          where: { project: { bookingId: booking.id }, techId: String(payload.userId) },
+        })
+        if (!isMember) return res.status(403).json({ error: 'You can only post updates for your assigned projects' })
+      }
       const act = await prisma.technicianActivity.create({ data: { techId, bookingId, message } })
+      await prisma.notification.create({
+        data: {
+          userId: booking.clientId,
+          type: 'BOOKING',
+          title: 'Service Progress Updated',
+          message: `A service update was added to your booking "${booking.title}".`,
+          link: `/client/dashboard#booking-${booking.id}`,
+        },
+      })
       return res.status(201).json(act)
     } catch (error: any) {
       console.error('Tech API error:', error)
