@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import StatusBadge from '../../../../../components/admin/StatusBadge'
 import EmptyState from '../../../../../components/admin/EmptyState'
-import type { BookingObj, DashboardData, UserObj } from '../../../../../components/admin/types'
+import type { BookingObj, DashboardData, OrderObj, UserObj } from '../../../../../components/admin/types'
 import { formatDate } from '../../../../../components/admin/types'
 
 export default function AdminClientDetailPage() {
@@ -13,6 +13,7 @@ export default function AdminClientDetailPage() {
   const router = useRouter()
   const [client, setClient] = useState<UserObj | null>(null)
   const [bookings, setBookings] = useState<BookingObj[]>([])
+  const [orders, setOrders] = useState<OrderObj[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -31,6 +32,7 @@ export default function AdminClientDetailPage() {
         if (!cancelled) {
           setClient(found)
           setBookings((payload.bookings || []).filter((b) => b.clientId === clientId))
+          setOrders((payload.orders || []).filter((order) => order.clientId === clientId))
         }
       } catch (e: any) {
         if (!cancelled) setError(e.message || 'Failed to load client')
@@ -56,7 +58,14 @@ export default function AdminClientDetailPage() {
 
   const active = bookings.filter((b) => ['PENDING', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS'].includes(b.status)).length
   const completed = bookings.filter((b) => b.status === 'COMPLETED').length
-  const totalSpent = bookings.reduce((sum, b) => sum + (Number(b.budget) || 0), 0)
+  const totalSpent = orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0)
+  const accountStatus = client.status === 'SUSPENDED'
+    ? 'Suspended'
+    : client.status === 'REJECTED'
+      ? 'Disabled'
+      : client.emailVerifiedAt
+        ? 'Active'
+        : 'Awaiting email verification'
 
   return (
     <div className="space-y-6">
@@ -76,15 +85,18 @@ export default function AdminClientDetailPage() {
           </div>
           <dl className="mt-5 space-y-3 text-xs">
             <div className="flex justify-between"><dt className="text-slate-400">Phone</dt><dd className="font-bold text-slate-700">{client.phone || '—'}</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-400">Joined</dt><dd className="font-bold text-slate-700">{formatDate(client.createdAt)}</dd></div>
-          </dl>
+              <div className="flex justify-between gap-4"><dt className="shrink-0 text-slate-400">Address</dt><dd className="text-right font-bold text-slate-700">{client.address || '—'}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-400">Account</dt><dd className={`font-bold ${accountStatus === 'Active' ? 'text-emerald-700' : accountStatus === 'Awaiting email verification' ? 'text-amber-700' : 'text-red-700'}`}>{accountStatus}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-400">Joined</dt><dd className="font-bold text-slate-700">{formatDate(client.createdAt)}</dd></div>
+              {client.emailVerifiedAt && <div className="flex justify-between"><dt className="text-slate-400">Verified</dt><dd className="font-bold text-slate-700">{formatDate(client.emailVerifiedAt)}</dd></div>}
+            </dl>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 lg:col-span-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="text-2xl font-black text-slate-900">{bookings.length}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total Bookings</div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 lg:col-span-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="text-2xl font-black text-slate-900">{bookings.length}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Bookings</div>
+            </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="text-2xl font-black text-yellow-600">{active}</div>
             <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Active</div>
@@ -92,6 +104,10 @@ export default function AdminClientDetailPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="text-2xl font-black text-emerald-600">{completed}</div>
             <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed</div>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="text-2xl font-black text-slate-900">{orders.length}</div>
+            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Product Orders</div>
           </div>
         </div>
       </div>
@@ -134,10 +150,45 @@ export default function AdminClientDetailPage() {
           <div className="mt-4 space-y-3 text-xs">
             <div className="flex justify-between"><span className="text-slate-400">Bookings</span><span className="font-black text-slate-800">{bookings.length}</span></div>
             <div className="flex justify-between"><span className="text-slate-400">Completed</span><span className="font-black text-slate-800">{completed}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Booking Value</span><span className="font-black text-slate-800">${totalSpent.toLocaleString()}</span></div>
+            <div className="flex justify-between"><span className="text-slate-400">Order Value</span><span className="font-black text-slate-800">${totalSpent.toLocaleString()}</span></div>
           </div>
         </div>
       </div>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5">
+        <h2 className="text-sm font-black text-slate-900">Product Order History</h2>
+        {orders.length === 0 ? (
+          <EmptyState icon="📦" title="No product orders" message="This client has not placed any product orders." />
+        ) : (
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[600px] text-left">
+              <thead>
+                <tr className="text-[10px] uppercase tracking-wider text-slate-400">
+                  <th className="pb-3 pr-4 font-bold">Order</th>
+                  <th className="pb-3 pr-4 font-bold">Products</th>
+                  <th className="pb-3 pr-4 font-bold">Status</th>
+                  <th className="pb-3 pr-4 font-bold">Payment</th>
+                  <th className="pb-3 text-right font-bold">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id} className="border-t border-slate-100">
+                    <td className="py-3 pr-4">
+                      <div className="text-xs font-bold text-slate-800">{order.reference}</div>
+                      <div className="text-[10px] text-slate-400">{formatDate(order.createdAt)}</div>
+                    </td>
+                    <td className="py-3 pr-4 text-xs text-slate-600">{order.items.map((item) => `${item.name} × ${item.quantity}`).join(', ')}</td>
+                    <td className="py-3 pr-4"><StatusBadge status={order.status} /></td>
+                    <td className="py-3 pr-4 text-xs text-slate-600">{order.paymentStatus || '—'}</td>
+                    <td className="py-3 text-right text-xs font-bold text-slate-700">${Number(order.total).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

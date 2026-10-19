@@ -49,6 +49,13 @@ export default function AdminClientsPage() {
     return !q || (c.name || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q)
   })
 
+  function accountStatus(client: UserObj) {
+    if (client.status === 'SUSPENDED') return 'Suspended'
+    if (client.status === 'REJECTED') return 'Disabled'
+    if (!client.emailVerifiedAt) return 'Email not verified'
+    return 'Active'
+  }
+
   return (
     <div
       className="relative space-y-6 rounded-2xl bg-cover bg-center p-4 sm:p-6"
@@ -77,11 +84,12 @@ export default function AdminClientsPage() {
         />
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
-          <table className="w-full min-w-[640px] text-left">
+          <table className="w-full min-w-[760px] text-left">
             <thead>
               <tr className="text-[10px] uppercase tracking-wider text-slate-400">
                 <th className="px-5 py-3.5 font-bold">Client</th>
                 <th className="px-4 py-3.5 font-bold">Contact</th>
+                <th className="px-4 py-3.5 font-bold">Account</th>
                 <th className="px-4 py-3.5 font-bold text-center">Bookings</th>
                 <th className="px-4 py-3.5 font-bold">Joined</th>
                 <th className="px-5 py-3.5 font-bold text-right">View</th>
@@ -100,6 +108,17 @@ export default function AdminClientsPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3.5 text-xs font-medium text-slate-600">{c.phone || '—'}</td>
+                  <td className="px-4 py-3.5">
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                      accountStatus(c) === 'Active'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : accountStatus(c) === 'Suspended' || accountStatus(c) === 'Disabled'
+                          ? 'bg-red-50 text-red-700'
+                          : 'bg-amber-50 text-amber-700'
+                    }`}>
+                      {accountStatus(c)}
+                    </span>
+                  </td>
                   <td className="px-4 py-3.5 text-center text-xs font-black text-slate-700">{bookingCounts[c.id] || 0}</td>
                   <td className="px-4 py-3.5 text-xs text-slate-400">{formatDate(c.createdAt)}</td>
                   <td className="px-5 py-3.5 text-right">

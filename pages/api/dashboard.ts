@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.user.findMany({
         where: { role: { in: ['ADMIN', 'TECH', 'CLIENT'] } },
-        select: { id: true, name: true, email: true, role: true, phone: true, approved: true, status: true, createdAt: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
+        select: { id: true, name: true, email: true, role: true, phone: true, address: true, approved: true, status: true, emailVerifiedAt: true, createdAt: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
       }),
       prisma.project.findMany({
         orderBy: { createdAt: 'desc' },
@@ -265,6 +265,7 @@ export default async function handler(req, res) {
       rejectedUsers: rejectedTechs,
       orders: orders.map((order) => ({
         id: order.id,
+        clientId: order.clientId,
         reference: `ORD-${order.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`,
         clientName: order.clientName,
         email: order.email,

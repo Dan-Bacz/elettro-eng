@@ -11,6 +11,7 @@ export type UserObj = {
   approved?: boolean
   status?: UserStatus
   address?: string | null
+  emailVerifiedAt?: string | null
   specialization?: string | null
   yearsOfExperience?: number | null
   skills?: string | null
@@ -104,6 +105,7 @@ export type OrderItemObj = {
 
 export type OrderObj = {
   id: string
+  clientId?: string
   reference: string
   clientName: string
   email: string
@@ -147,6 +149,7 @@ export type DashboardData = {
   recentBookings: { id: string; title: string; status: string; clientName: string; createdAt: string }[]
   inventoryAlerts: { id: string; name: string; quantity: number; sku: string | null }[]
   bookings: BookingObj[]
+  orders: OrderObj[]
   inventory: InventoryItemObj[]
   technicians: UserObj[]
   pendingUsers: UserObj[]

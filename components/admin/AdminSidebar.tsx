@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/admin/dashboard' },
   { key: 'bookings', label: 'Bookings', icon: InboxIcon, href: '/admin/bookings' },
   { key: 'orders', label: 'Orders', icon: CartIcon, href: '/admin/orders' },
+  { key: 'clients', label: 'Clients', icon: UsersIcon, href: '/admin/clients' },
   { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
   { key: 'leave', label: 'Leave Requests', icon: CalendarIcon, href: '/admin/leave' },
     { key: 'inventory', label: 'Inventory', icon: PackageIcon, href: '/admin/inventory' },
