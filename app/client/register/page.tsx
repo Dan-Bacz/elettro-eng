@@ -55,7 +55,7 @@ export default function ClientRegisterPage() {
               <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-yellow-100 text-2xl">✉</span>
               <h1 className="mt-5 text-2xl font-black text-gray-900">Registration request received</h1>
               <p className="mt-3 text-sm leading-6 text-gray-600">
-                If registration is available for <strong>{form.email}</strong>, a verification email may be delivered. Delivery is not confirmed here; if no email arrives, use the resend option.
+                If registration is available for <strong>{form.email}</strong>, verification instructions may be sent to that address. Check your inbox and spam folder, then verify your email before signing in. No administrator approval is required.
               </p>
               <Link href={`/client/login?email=${encodeURIComponent(form.email)}`} className="mt-6 inline-flex rounded-lg bg-yellow-400 px-5 py-3 text-sm font-bold text-black hover:bg-yellow-300">
                 Go to client sign in
@@ -68,7 +68,7 @@ export default function ClientRegisterPage() {
             <>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-700">Client account</p>
               <h1 className="mt-2 text-2xl font-black text-gray-900">Create your account</h1>
-              <p className="mt-2 text-sm leading-6 text-gray-600">Verify your email to book services, order products, and track updates in one place.</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">Use an email address you can access. Verify it from the link we send, then sign in—no administrator approval is required.</p>
               <form onSubmit={submit} className="mt-6 space-y-4">
                 <label className="block space-y-1.5 text-sm font-semibold text-gray-700">
                   Full name
