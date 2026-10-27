@@ -32,7 +32,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.order.findMany({
         where: { clientId: client.id },
         orderBy: { createdAt: 'desc' },
-        include: { items: { orderBy: { createdAt: 'asc' } } },
+        include: {
+          items: { orderBy: { createdAt: 'asc' } },
+          warehouseRequest: {
+            select: {
+              reference: true,
+              status: true,
+              releases: {
+                orderBy: { createdAt: 'desc' },
+                select: { receipt: { select: { reference: true } } },
+              },
+            },
+          },
+        },
       }),
       prisma.notification.findMany({
         where: { userId: client.id },

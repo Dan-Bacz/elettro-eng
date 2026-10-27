@@ -31,10 +31,14 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Client accounts must use the client sign-in page.' })
     }
 
-    if (u.role === 'TECH') {
+    if (u.role !== 'ADMIN' && u.role !== 'TECH' && u.role !== 'SALES' && u.role !== 'WAREHOUSE') {
+      return res.status(403).json({ error: 'Client accounts must use the client sign-in page.' })
+    }
+
+    if (u.role !== 'ADMIN') {
       const status = u.status || (u.approved ? 'ACTIVE' : 'PENDING')
       if (status === 'PENDING') {
-        return res.status(403).json({ error: 'Your account is pending admin approval. Please wait for an administrator to approve your registration before logging in.' })
+        return res.status(403).json({ error: 'Your account is pending admin activation. Please wait for an administrator to activate it before logging in.' })
       }
       if (status === 'REJECTED') {
         return res.status(403).json({ error: u.rejectionReason ? `Your registration was rejected: ${u.rejectionReason}` : 'Your registration was rejected by the administrator. Please contact support for more information.' })

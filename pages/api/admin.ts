@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Role } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { sendTechnicianApprovalNotification } from '../../lib/email'
@@ -142,13 +142,14 @@ export default async function handler(req: any, res: any) {
       if (action === 'suspend_user') {
         const uid = req.body.userId
         if (!uid) return res.status(400).json({ error: 'User ID is required' })
-        const user = await prisma.user.update({
+        const updatedUser = await prisma.user.update({
           where: { id: uid },
           data: { status: 'SUSPENDED' },
           select: { id: true, name: true, email: true, role: true, status: true }
         })
-        await notifyUser(uid, 'ACCOUNT', 'Account Suspended', (reason || 'Your account has been suspended by an administrator.'), '/technician/login')
-        return res.json({ success: true, user })
+        const loginLink = updatedUser.role === 'TECH' ? '/technician/login' : '/admin/login'
+        await notifyUser(uid, 'ACCOUNT', 'Account Suspended', (reason || 'Your account has been suspended by an administrator.'), loginLink)
+        return res.json({ success: true, user: updatedUser })
       }
 
       if (action === 'activate_user') {
@@ -368,6 +369,15 @@ export default async function handler(req: any, res: any) {
         if (!email || !name) {
           return res.status(400).json({ error: 'Name and email are required' })
         }
+        const requestedRole = role ? String(role).toUpperCase() : 'TECH'
+        const selectedRole =
+          requestedRole === 'TECH' ? Role.TECH :
+          requestedRole === 'SALES' ? Role.SALES :
+          requestedRole === 'WAREHOUSE' ? Role.WAREHOUSE :
+          null
+        if (!selectedRole) {
+          return res.status(400).json({ error: 'Role must be TECH, SALES, or WAREHOUSE' })
+        }
         const existing = await prisma.user.findUnique({ where: { email } })
         if (existing) {
           return res.status(400).json({ error: 'User with this email already exists' })
@@ -379,7 +389,7 @@ export default async function handler(req: any, res: any) {
             name,
             email,
             password: hashedPassword,
-            role: role || 'TECH',
+            role: selectedRole,
             approved: true,
             status: 'ACTIVE'
           }

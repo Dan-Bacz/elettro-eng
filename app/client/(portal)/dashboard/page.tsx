@@ -38,6 +38,11 @@ type Order = {
   createdAt: string
   updatedAt: string
   items: { id: string; name: string; quantity: number; unit: string | null; unitPrice: number }[]
+  warehouseRequest: {
+    reference: string
+    status: string
+    releases: { receipt: { reference: string } | null }[]
+  } | null
 }
 
 type Notification = {
@@ -120,6 +125,7 @@ function StatusPill({ status, labels }: { status: string; labels: Record<string,
 function orderStatusLabel(order: Order) {
   if (order.status === "PENDING") return "Awaiting confirmation"
   if (order.status === "APPROVED" && order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID") return "To Pay"
+  if (order.status === "APPROVED" && order.warehouseRequest && order.warehouseRequest.status !== "FULFILLED") return "Awaiting warehouse release"
   if (order.status === "PROCESSING") return "Preparing"
   return ORDER_STATUS_LABELS[order.status] || order.status.replace(/_/g, " ")
 }
@@ -443,6 +449,17 @@ export default function ClientDashboardPage() {
                     <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Order progress · {orderStatusLabel(order)}</p><p className="text-xs text-gray-500">Last saved update: {formatDate(order.updatedAt, true)}</p></div>
                     <OrderProgress order={order} />
                   </div>
+                  {order.warehouseRequest && (
+                    <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="text-sm font-bold text-emerald-900">Warehouse verification · {order.warehouseRequest.status.replace(/_/g, " ")}</p>
+                      <p className="mt-1 text-xs text-emerald-800">Request {order.warehouseRequest.reference}. Stock is deducted only when warehouse staff record a verified release.</p>
+                      {order.warehouseRequest.releases.map((release) => release.receipt && (
+                        <a key={release.receipt.reference} href={`/client/receipts?reference=${encodeURIComponent(release.receipt.reference)}`} className="mt-2 inline-block text-xs font-bold text-blue-800 underline">
+                          View release receipt {release.receipt.reference}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   {order.fulfillmentMethod === "DELIVERY" && <p className="mt-4 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery address:</span> {[order.address, order.barangay, order.city, order.province, order.postalCode].filter(Boolean).join(", ") || "Not specified"}</p>}
                   {order.deliveryNotes && <p className="mt-2 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery notes:</span> {order.deliveryNotes}</p>}
                   {order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID" && order.status === "PENDING" && (

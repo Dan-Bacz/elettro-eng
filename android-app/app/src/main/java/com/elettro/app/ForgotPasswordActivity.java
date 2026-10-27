@@ -22,13 +22,13 @@ import com.google.android.material.textfield.TextInputLayout;
 import org.json.JSONObject;
 
 /**
- * Technician-only "Forgot Password" flow.
+ * Staff "Forgot Password" flow.
  *
  * Step 1 asks for the account email and requests a 6-digit code.
  * Step 2 collects the emailed code.
  * Step 3 sets the new password and returns the user to login.
  *
- * The server decides which emails are eligible (active technician accounts only)
+ * The server decides which staff emails are eligible.
  * and answers with the same neutral message either way, so this screen cannot be
  * used to discover which email addresses are registered.
  */

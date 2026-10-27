@@ -191,6 +191,20 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Link href="/admin/staff" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-yellow-400">
+          <div className="text-xs font-bold uppercase text-slate-400">Active Sales Staff</div>
+          <div className="mt-1 text-2xl font-black text-slate-900">{data.stats.sales}</div>
+        </Link>
+        <Link href="/admin/staff" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-yellow-400">
+          <div className="text-xs font-bold uppercase text-slate-400">Active Warehouse Staff</div>
+          <div className="mt-1 text-2xl font-black text-slate-900">{data.stats.warehouse}</div>
+        </Link>
+        <Link href="/admin/staff" className="flex items-center justify-between rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm font-black text-slate-900 hover:bg-yellow-100">
+          Manage department accounts <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+
       {/* C. Analytics */}
       <div className="card-enter grid grid-cols-1 gap-5 lg:grid-cols-5" style={{ animationDelay: '0.16s' }}>
         {/* Bookings Overview line chart */}

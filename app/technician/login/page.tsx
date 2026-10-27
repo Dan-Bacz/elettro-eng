@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { dashboardPathForRole } from '../../../lib/role-routing'
 
 export default function TechnicianLoginPage() {
   const [email, setEmail] = useState('')
@@ -29,9 +30,9 @@ export default function TechnicianLoginPage() {
         return
       }
       const data = await res.json().catch(() => ({}))
-      const role = data?.user?.role
-      if (role === 'ADMIN') router.push('/admin/dashboard')
-      else router.push('/technician/dashboard')
+      const destination = dashboardPathForRole(data?.user?.role)
+      if (destination) router.push(destination)
+      else setError('This account does not have access to the staff portal.')
     } catch (err) {
       setError('Network error')
       console.error(err)

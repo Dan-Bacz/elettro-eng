@@ -8,44 +8,47 @@ datasource db {
 }
 
 model User {
-  id        String      @id @default(uuid())
-  name      String
-  email     String      @unique
-  password  String?
-  role      Role        @default(CLIENT)
-  phone     String?
-  approved  Boolean     @default(false)
-  status    UserStatus  @default(ACTIVE)
-  emailVerifiedAt DateTime?
-  address   String?
-  specialization String?
-  yearsOfExperience Int?
-  skills    String?
-  profileImageUrl String?
-  rejectionReason String?
-  createdAt DateTime    @default(now())
-  bookings  Booking[]
-  reports   Report[]
-  assignedBookings Booking[] @relation("AssignedBookings")
-  technicianActivities TechnicianActivity[]
-  notifications Notification[]
-  materialRequests MaterialRequest[]
-  projectAssignments ProjectAssignment[]
-  leaveRequests LeaveRequest[] @relation("TechLeaves")
-  leaveCredits LeaveCredits? @relation("TechLeaveCredits")
-  orders Order[]
-  passwordResetCodes PasswordResetCode[]
+  id                      String                   @id @default(uuid())
+  name                    String
+  email                   String                   @unique
+  password                String?
+  role                    Role                     @default(CLIENT)
+  phone                   String?
+  approved                Boolean                  @default(false)
+  status                  UserStatus               @default(ACTIVE)
+  emailVerifiedAt         DateTime?
+  address                 String?
+  specialization          String?
+  yearsOfExperience       Int?
+  skills                  String?
+  profileImageUrl         String?
+  rejectionReason         String?
+  createdAt               DateTime                 @default(now())
+  bookings                Booking[]
+  reports                 Report[]
+  assignedBookings        Booking[]                @relation("AssignedBookings")
+  technicianActivities    TechnicianActivity[]
+  notifications           Notification[]
+  materialRequests        MaterialRequest[]
+  projectAssignments      ProjectAssignment[]
+  leaveRequests           LeaveRequest[]           @relation("TechLeaves")
+  leaveCredits            LeaveCredits?            @relation("TechLeaveCredits")
+  orders                  Order[]
+  passwordResetCodes      PasswordResetCode[]
   emailVerificationTokens EmailVerificationToken[]
+  warehouseRequests       WarehouseRequest[]       @relation("WarehouseRequestRequester")
+  warehouseReleases       WarehouseRelease[]       @relation("WarehouseReleaseWorker")
+  inventoryMovements      InventoryMovement[]      @relation("InventoryMovementWorker")
 }
 
 model EmailVerificationToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId, createdAt])
   @@index([expiresAt])
@@ -57,55 +60,55 @@ model AuthRateLimit {
   windowStartedAt DateTime @default(now())
 }
 
-// One-time 6-digit codes emailed to technicians for "Forgot Password".
+// One-time 6-digit codes emailed to staff for "Forgot Password".
 // Codes are stored hashed, expire after 15 minutes, and are single-use.
 model PasswordResetCode {
-  id         String    @id @default(uuid())
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codeHash   String
-  expiresAt  DateTime
-  attempts   Int       @default(0)
-  usedAt     DateTime?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId])
   @@index([expiresAt])
 }
 
 model Booking {
-  id           String   @id @default(uuid())
-  clientId     String
-  client       User     @relation(fields: [clientId], references: [id])
-  title        String
-  description  String?
-  status       BookingStatus @default(PENDING)
-  assignedToId String?
-  assignedTo   User?    @relation("AssignedBookings", fields: [assignedToId], references: [id])
-  startDate    DateTime?
-  endDate      DateTime?
-  budget       Float?
-  createdAt    DateTime @default(now())
+  id                   String               @id @default(uuid())
+  clientId             String
+  client               User                 @relation(fields: [clientId], references: [id])
+  title                String
+  description          String?
+  status               BookingStatus        @default(PENDING)
+  assignedToId         String?
+  assignedTo           User?                @relation("AssignedBookings", fields: [assignedToId], references: [id])
+  startDate            DateTime?
+  endDate              DateTime?
+  budget               Float?
+  createdAt            DateTime             @default(now())
   technicianActivities TechnicianActivity[]
-  reports   Report[]
-  materialRequests MaterialRequest[]
-  project   Project?
+  reports              Report[]
+  materialRequests     MaterialRequest[]
+  project              Project?
 }
 
 // A project is created automatically when a booking is approved.
 // Technicians are assigned to the project team; project status is driven by
 // technician reporting once the team has been assigned.
 model Project {
-  id          String   @id @default(uuid())
-  bookingId   String   @unique
-  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  id          String              @id @default(uuid())
+  bookingId   String              @unique
+  booking     Booking             @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   title       String
   description String?
-  status      BookingStatus @default(ASSIGNED)
+  status      BookingStatus       @default(ASSIGNED)
   startDate   DateTime?
   endDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   assignments ProjectAssignment[]
 }
 
@@ -121,38 +124,40 @@ model ProjectAssignment {
 }
 
 model TechnicianActivity {
-  id         String   @id @default(uuid())
-  techId     String
-  tech       User     @relation(fields: [techId], references: [id])
-  bookingId  String
-  booking    Booking  @relation(fields: [bookingId], references: [id])
-  message    String
-  createdAt  DateTime @default(now())
+  id        String   @id @default(uuid())
+  techId    String
+  tech      User     @relation(fields: [techId], references: [id])
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
 }
 
 model InventoryItem {
-  id          String   @id @default(uuid())
-  name        String
-  sku         String?  @unique
-  category    String?
-  brand       String?
-  model       String?
-  description String?
-  quantity    Int      @default(0)
-  unit        String?
-  buyPrice    Float?
-  sellPrice   Float?
+  id                    String                 @id @default(uuid())
+  name                  String
+  sku                   String?                @unique
+  category              String?
+  brand                 String?
+  model                 String?
+  description           String?
+  quantity              Int                    @default(0)
+  unit                  String?
+  buyPrice              Float?
+  sellPrice             Float?
   // Storefront merchandising (additive, optional):
-  originalPrice Float?  // list / reference price used to compute sale percentage badges
-  rating        Float?  // 0-5 star rating shown on the storefront
-  ratingCount   Int?    // number of reviews backing the rating
-  reorderLevel Int     @default(10)
-  imageUrl    String?
-  imagePublicId String?
-  imageData   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orderItems  OrderItem[]
+  originalPrice         Float? // list / reference price used to compute sale percentage badges
+  rating                Float? // 0-5 star rating shown on the storefront
+  ratingCount           Int? // number of reviews backing the rating
+  reorderLevel          Int                    @default(10)
+  imageUrl              String?
+  imagePublicId         String?
+  imageData             String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  orderItems            OrderItem[]
+  warehouseRequestItems WarehouseRequestItem[]
+  inventoryMovements    InventoryMovement[]
 }
 
 model Report {
@@ -201,27 +206,27 @@ model Notification {
 
 // Leave management (based on CSC Form No. 6 - Application for Leave)
 model LeaveRequest {
-  id                String     @id @default(uuid())
-  techId            String
-  tech              User       @relation("TechLeaves", fields: [techId], references: [id], onDelete: Cascade)
-  type              LeaveType
-  fromDate          DateTime
-  toDate            DateTime
-  days              Int
+  id                 String      @id @default(uuid())
+  techId             String
+  tech               User        @relation("TechLeaves", fields: [techId], references: [id], onDelete: Cascade)
+  type               LeaveType
+  fromDate           DateTime
+  toDate             DateTime
+  days               Int
   // CSC commutation: REQUESTED (with pay) or NOT_REQUESTED (without pay)
-  commutation       String     @default("NOT_REQUESTED")
+  commutation        String      @default("NOT_REQUESTED")
   // Vacation leave - address where the leave will be spent
   addressDuringLeave String?
   // Sick leave - medical certificate attached flag
-  medicalCertificate Boolean   @default(false)
-  reason            String?
-  status            LeaveStatus @default(PENDING)
-  adminNote         String?
-  approvedDays      Int?
-  decidedBy         String?
-  decidedAt         DateTime?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  medicalCertificate Boolean     @default(false)
+  reason             String?
+  status             LeaveStatus @default(PENDING)
+  adminNote          String?
+  approvedDays       Int?
+  decidedBy          String?
+  decidedAt          DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   @@index([techId])
   @@index([status])
@@ -247,49 +252,51 @@ model Setting {
 // Client product/material orders. A client submits from the public catalog with
 // a validated email and phone; admins manage the order lifecycle.
 model Order {
-  id          String      @id @default(uuid())
-  clientId    String
-  client      User        @relation(fields: [clientId], references: [id])
-  clientName  String
-  email       String
-  phone       String
+  id                String            @id @default(uuid())
+  clientId          String
+  client            User              @relation(fields: [clientId], references: [id])
+  clientName        String
+  email             String
+  phone             String
   // Delivery information collected at checkout
-  address     String?
-  barangay    String?
-  city        String?
-  province    String?
-  postalCode  String?
-  deliveryNotes String?
-  fulfillmentNote String?
-  notes       String?
+  address           String?
+  barangay          String?
+  city              String?
+  province          String?
+  postalCode        String?
+  deliveryNotes     String?
+  fulfillmentNote   String?
+  notes             String?
   // Payment information selected at checkout
-  paymentMethod String   @default("CASH_ON_DELIVERY")
-  paymentStatus String   @default("UNPAID")
-  paymentReference String?
-  fulfillmentMethod String @default("DELIVERY")
-  shipping    Float       @default(0)
-  shippingConfirmed Boolean @default(false)
-  status      OrderStatus @default(PENDING)
-  total       Float       @default(0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  items       OrderItem[]
+  paymentMethod     String            @default("CASH_ON_DELIVERY")
+  paymentStatus     String            @default("UNPAID")
+  paymentReference  String?
+  fulfillmentMethod String            @default("DELIVERY")
+  shipping          Float             @default(0)
+  shippingConfirmed Boolean           @default(false)
+  status            OrderStatus       @default(PENDING)
+  total             Float             @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  items             OrderItem[]
+  warehouseRequest  WarehouseRequest?
 
   @@index([clientId])
   @@index([status])
 }
 
 model OrderItem {
-  id              String        @id @default(uuid())
-  orderId         String
-  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  inventoryItemId String?
-  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
-  name            String
-  quantity        Int
-  unit            String?
-  unitPrice       Float
-  createdAt       DateTime      @default(now())
+  id                   String                @id @default(uuid())
+  orderId              String
+  order                Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  inventoryItemId      String?
+  inventoryItem        InventoryItem?        @relation(fields: [inventoryItemId], references: [id], onDelete: SetNull)
+  name                 String
+  quantity             Int
+  unit                 String?
+  unitPrice            Float
+  createdAt            DateTime              @default(now())
+  warehouseRequestItem WarehouseRequestItem?
 
   @@index([orderId])
 }
@@ -309,6 +316,142 @@ enum Role {
   ADMIN
   TECH
   CLIENT
+  SALES
+  WAREHOUSE
+}
+
+enum WarehouseRequestSource {
+  INTERNAL_SALES
+  CLIENT_ORDER
+}
+
+enum WarehouseRequestStatus {
+  PENDING
+  UNDER_REVIEW
+  PARTIALLY_FULFILLED
+  FULFILLED
+  REJECTED
+  CANCELLED
+}
+
+enum InventoryMovementType {
+  STOCK_RECEIVED
+  STOCK_RELEASED
+  ADJUSTMENT
+  RETURN
+}
+
+model WarehouseRequest {
+  id                String                 @id @default(uuid())
+  reference         String                 @unique
+  source            WarehouseRequestSource @default(INTERNAL_SALES)
+  status            WarehouseRequestStatus @default(PENDING)
+  requesterId       String
+  requester         User                   @relation("WarehouseRequestRequester", fields: [requesterId], references: [id], onDelete: Restrict)
+  orderId           String?                @unique
+  order             Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  idempotencyKey    String?                @unique
+  customerReference String?
+  projectReference  String?
+  notes             String?
+  items             WarehouseRequestItem[]
+  releases          WarehouseRelease[]
+  movements         InventoryMovement[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@index([requesterId, createdAt])
+  @@index([status, createdAt])
+  @@index([source, createdAt])
+}
+
+model WarehouseRequestItem {
+  id                  String                 @id @default(uuid())
+  requestId           String
+  request             WarehouseRequest       @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  inventoryItemId     String
+  inventoryItem       InventoryItem          @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  orderItemId         String?                @unique
+  orderItem           OrderItem?             @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  requestedQuantity   Int
+  releasedQuantity    Int                    @default(0)
+  unavailableQuantity Int                    @default(0)
+  unit                String?
+  notes               String?
+  releaseItems        WarehouseReleaseItem[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([requestId])
+  @@index([inventoryItemId])
+}
+
+model WarehouseRelease {
+  id             String                 @id @default(uuid())
+  requestId      String
+  request        WarehouseRequest       @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  releasedById   String
+  releasedBy     User                   @relation("WarehouseReleaseWorker", fields: [releasedById], references: [id], onDelete: Restrict)
+  receiptNumber  String                 @unique
+  idempotencyKey String                 @unique
+  notes          String?
+  items          WarehouseReleaseItem[]
+  receipt        WarehouseReceipt?
+  movements      InventoryMovement[]
+  createdAt      DateTime               @default(now())
+
+  @@index([requestId, createdAt])
+  @@index([releasedById, createdAt])
+}
+
+model WarehouseReleaseItem {
+  id               String               @id @default(uuid())
+  releaseId        String
+  release          WarehouseRelease     @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  requestItemId    String
+  requestItem      WarehouseRequestItem @relation(fields: [requestItemId], references: [id], onDelete: Restrict)
+  verified         Boolean              @default(false)
+  quantity         Int
+  unit             String?
+  stockBefore      Int
+  stockAfter       Int
+  discrepancyNotes String?
+  createdAt        DateTime             @default(now())
+
+  @@unique([releaseId, requestItemId])
+  @@index([requestItemId, createdAt])
+}
+
+model WarehouseReceipt {
+  id        String           @id @default(uuid())
+  reference String           @unique
+  releaseId String           @unique
+  release   WarehouseRelease @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  snapshot  Json
+  createdAt DateTime         @default(now())
+}
+
+model InventoryMovement {
+  id              String                @id @default(uuid())
+  inventoryItemId String
+  inventoryItem   InventoryItem         @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  type            InventoryMovementType
+  quantity        Int
+  stockBefore     Int
+  stockAfter      Int
+  requestId       String?
+  request         WarehouseRequest?     @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  releaseId       String?
+  release         WarehouseRelease?     @relation(fields: [releaseId], references: [id], onDelete: Restrict)
+  workerId        String
+  worker          User                  @relation("InventoryMovementWorker", fields: [workerId], references: [id], onDelete: Restrict)
+  reason          String?
+  createdAt       DateTime              @default(now())
+
+  @@index([inventoryItemId, createdAt])
+  @@index([requestId, createdAt])
+  @@index([workerId, createdAt])
+  @@index([type, createdAt])
 }
 
 enum UserStatus {

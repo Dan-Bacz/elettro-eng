@@ -1,9 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import ConfirmDialog from '../../../../components/admin/ConfirmDialog'
 import EmptyState from '../../../../components/admin/EmptyState'
-import InventoryModal from '../../../../components/admin/InventoryModal'
 import type { InventoryItemObj } from '../../../../components/admin/types'
 
 type StockStatus = 'IN' | 'LOW' | 'OUT'
@@ -43,20 +41,6 @@ export default function AdminInventoryPage() {
   const [category, setCategory] = useState('ALL')
   const [stockFilter, setStockFilter] = useState<StockStatus | 'ALL'>('ALL')
   const [sort, setSort] = useState<SortKey>('newest')
-
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<InventoryItemObj | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [saveError, setSaveError] = useState('')
-
-  const [showDelete, setShowDelete] = useState<InventoryItemObj | null>(null)
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
-  const showToast = useCallback((type: 'success' | 'error', text: string) => {
-    setToast({ type, text })
-    window.setTimeout(() => setToast(null), 4000)
-  }, [])
 
   const load = useCallback(async () => {
     try {
@@ -157,83 +141,6 @@ export default function AdminInventoryPage() {
     return sorted
   }, [items, query, category, stockFilter, sort])
 
-  function openAdd() {
-    setEditingItem(null)
-    setSaveError('')
-    setModalOpen(true)
-  }
-
-  function openEdit(item: InventoryItemObj) {
-    setEditingItem(item)
-    setSaveError('')
-    setModalOpen(true)
-  }
-
-  async function handleSave(data: Record<string, any>) {
-    setSubmitting(true)
-    setSaveError('')
-    try {
-      const method = editingItem ? 'PUT' : 'POST'
-      const res = await fetch('/api/inventory', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingItem ? { id: editingItem.id, ...data } : data),
-      })
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
-        throw new Error(j.error || 'Failed to save item')
-      }
-      setModalOpen(false)
-      setEditingItem(null)
-      showToast('success', editingItem ? 'Item updated successfully' : 'Item added to inventory')
-      await load()
-    } catch (e: any) {
-      setSaveError(e.message || 'Failed to save item')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function adjustQuantity(id: string, delta: number) {
-    const item = items.find((i) => i.id === id)
-    if (!item) return
-    if (delta < 0 && Number(item.quantity) <= 0) return
-    setBusyId(id)
-    try {
-      const res = await fetch('/api/inventory', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, quantity: Math.max(0, Number(item.quantity) + delta) }),
-      })
-      if (!res.ok) throw new Error('Failed to update quantity')
-      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantity: Math.max(0, Number(i.quantity) + delta) } : i)))
-    } catch {
-      showToast('error', 'Failed to update quantity')
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  async function handleDelete() {
-    if (!showDelete) return
-    setBusyId(showDelete.id)
-    try {
-      const res = await fetch('/api/inventory', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: showDelete.id }),
-      })
-      if (!res.ok) throw new Error('Failed to delete item')
-      setItems((prev) => prev.filter((i) => i.id !== showDelete.id))
-      setShowDelete(null)
-      showToast('success', 'Item deleted')
-    } catch (e: any) {
-      showToast('error', e.message || 'Failed to delete item')
-    } finally {
-      setBusyId(null)
-    }
-  }
-
   const statusBadge: Record<StockStatus, { label: string; className: string }> = {
     IN: { label: 'IN STOCK', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
     LOW: { label: 'LOW STOCK', className: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -256,18 +163,11 @@ export default function AdminInventoryPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Inventory</h1>
-          <p className="mt-0.5 text-xs font-medium text-slate-400">Manage electrical products, materials, equipment, and stock levels.</p>
+          <p className="mt-0.5 text-xs font-medium text-slate-400">Review electrical products, materials, equipment, and current stock levels.</p>
         </div>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-400 px-4 py-2.5 text-xs font-black text-black transition-colors hover:bg-yellow-500"
-        >
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          + Add Item
-        </button>
+        <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
+          Inventory is read-only here. Stock receipts, adjustments, and releases are recorded by Warehouse.
+        </p>
       </div>
 
       {/* Summary */}
@@ -363,16 +263,7 @@ export default function AdminInventoryPage() {
           <EmptyState
             icon="📦"
             title={items.length === 0 ? 'No inventory items yet' : 'No items match your filters'}
-            message={items.length === 0 ? 'Add your first product to start tracking stock.' : 'Try adjusting the search or filters.'}
-            action={items.length === 0 ? (
-              <button
-                type="button"
-                onClick={openAdd}
-                className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-black text-black transition-colors hover:bg-yellow-500"
-              >
-                + Add Item
-              </button>
-            ) : undefined}
+            message={items.length === 0 ? 'No inventory items have been created.' : 'Try adjusting the search or filters.'}
           />
         ) : (
           <table className="w-full text-left">
@@ -387,14 +278,12 @@ export default function AdminInventoryPage() {
                 <th className="px-3 py-3 text-right font-black">Sell Price</th>
                 <th className="px-3 py-3 text-center font-black">Stock</th>
                 <th className="px-3 py-3 text-center font-black">Status</th>
-                <th className="px-4 py-3 text-right font-black">Actions</th>
               </tr>
             </thead>
             <tbody>
               {visible.map((item, idx) => {
                 const status = statusBadge[stockOf(item)]
                 const q = Number(item.quantity) || 0
-                const busy = busyId === item.id
                 return (
                   <tr key={item.id} className="border-b border-slate-50 transition-colors last:border-0 hover:bg-yellow-50/40">
                     <td className="px-4 py-2.5 text-xs font-bold text-slate-300">{idx + 1}</td>
@@ -425,52 +314,12 @@ export default function AdminInventoryPage() {
                     </td>
                     <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-700">{item.buyPrice != null ? money(item.buyPrice) : '—'}</td>
                     <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-700">{item.sellPrice != null ? money(item.sellPrice) : '—'}</td>
-                    <td className="px-3 py-2.5">
-                      <div className="flex items-center justify-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => adjustQuantity(item.id, -1)}
-                          disabled={busy || q <= 0}
-                          aria-label="Decrease stock"
-                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 text-xs font-black text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          −
-                        </button>
-                        <div className="w-16 text-center">
-                          <div className="text-xs font-black text-slate-800">{q}</div>
-                          <div className="text-[9px] font-medium uppercase tracking-wide text-slate-400">{item.unit || 'pcs'}</div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => adjustQuantity(item.id, 1)}
-                          disabled={busy}
-                          aria-label="Increase stock"
-                          className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-200 text-xs font-black text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          +
-                        </button>
-                      </div>
+                    <td className="px-3 py-2.5 text-center">
+                      <div className="text-xs font-black text-slate-800">{q}</div>
+                      <div className="text-[9px] font-medium uppercase tracking-wide text-slate-400">{item.unit || 'pcs'}</div>
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <span className={`inline-flex rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${status.className}`}>{status.label}</span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(item)}
-                          className="rounded-md border border-slate-200 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 transition-colors hover:border-yellow-400 hover:bg-yellow-50 hover:text-yellow-700"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowDelete(item)}
-                          className="rounded-md border border-red-100 px-2.5 py-1.5 text-[10px] font-bold text-red-500 transition-colors hover:bg-red-50"
-                        >
-                          Delete
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 )
@@ -492,22 +341,12 @@ export default function AdminInventoryPage() {
           <EmptyState
             icon="📦"
             title={items.length === 0 ? 'No inventory items yet' : 'No items match your filters'}
-            message={items.length === 0 ? 'Add your first product to start tracking stock.' : 'Try adjusting the search or filters.'}
-            action={items.length === 0 ? (
-              <button
-                type="button"
-                onClick={openAdd}
-                className="rounded-lg bg-yellow-400 px-4 py-2 text-xs font-black text-black transition-colors hover:bg-yellow-500"
-              >
-                + Add Item
-              </button>
-            ) : undefined}
+            message={items.length === 0 ? 'No inventory items have been created.' : 'Try adjusting the search or filters.'}
           />
         ) : (
           visible.map((item) => {
             const status = statusBadge[stockOf(item)]
             const q = Number(item.quantity) || 0
-            const busy = busyId === item.id
             return (
               <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start gap-3">
@@ -550,99 +389,12 @@ export default function AdminInventoryPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => adjustQuantity(item.id, -1)}
-                      disabled={busy || q <= 0}
-                      aria-label="Decrease stock"
-                      className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-sm font-black text-red-500 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      −
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => adjustQuantity(item.id, 1)}
-                      disabled={busy}
-                      aria-label="Increase stock"
-                      className="flex h-7 w-7 items-center justify-center rounded-md border border-slate-200 text-sm font-black text-emerald-600 transition-colors hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(item)}
-                      className="rounded-md border border-slate-200 px-3 py-1.5 text-[10px] font-bold text-slate-600 transition-colors hover:border-yellow-400 hover:bg-yellow-50 hover:text-yellow-700"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowDelete(item)}
-                      className="rounded-md border border-red-100 px-3 py-1.5 text-[10px] font-bold text-red-500 transition-colors hover:bg-red-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
               </div>
             )
           })
         )}
       </div>
 
-      {/* Add / Edit modal */}
-      <InventoryModal
-        open={modalOpen}
-        initial={editingItem}
-        categories={categories}
-        submitting={submitting}
-        error={saveError}
-        onSubmit={handleSave}
-        onClose={() => !submitting && setModalOpen(false)}
-      />
-
-      {/* Delete confirmation */}
-      <ConfirmDialog
-        open={!!showDelete}
-        title="Delete Product?"
-        message={
-          showDelete
-            ? `This will permanently remove "${showDelete.name}" from your inventory. This action cannot be undone.`
-            : 'This will permanently remove this inventory item.'
-        }
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        danger
-        busy={busyId != null}
-        onConfirm={handleDelete}
-        onCancel={() => setShowDelete(null)}
-      />
-
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-[60]">
-          <div
-            className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm font-bold shadow-lg ${
-              toast.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-600'
-            }`}
-          >
-            {toast.type === 'success' ? (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-              </svg>
-            )}
-            {toast.text}
-          </div>
-        </div>
-      )}
     </div>
   )
 }

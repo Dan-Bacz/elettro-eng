@@ -14,10 +14,10 @@ export default async function handler(req: any, res: any) {
 
       const { role } = req.query || {}
       const where: any = {}
-      if (role === 'TECH') where.role = 'TECH'
+      if (role === 'TECH' || role === 'SALES' || role === 'WAREHOUSE') where.role = role
       else if (role === 'CLIENT') where.role = 'CLIENT'
       else if (role === 'ADMIN') where.role = 'ADMIN'
-      else where.role = { in: ['ADMIN', 'TECH', 'CLIENT'] }
+      else where.role = { in: ['ADMIN', 'SALES', 'WAREHOUSE', 'TECH', 'CLIENT'] }
 
       const users = await prisma.user.findMany({
         where,

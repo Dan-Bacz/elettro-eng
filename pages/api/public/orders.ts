@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { randomUUID } from 'crypto'
 import { sendOrderSubmittedNotification } from '../../../lib/email'
 import { requireVerifiedClient } from '../../../lib/client-auth'
 
@@ -190,6 +191,31 @@ export default async function handler(req: any, res: any) {
         include: { items: true },
       })
       const reference = `ORD-${created.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+      const requestItems = created.items.map((item) => {
+        if (!item.inventoryItemId) throw new Error('ORDER_ITEM_MISSING_INVENTORY')
+        return {
+          inventoryItemId: item.inventoryItemId,
+          orderItemId: item.id,
+          requestedQuantity: item.quantity,
+          unit: item.unit || 'pcs',
+        }
+      })
+      const requestId = randomUUID()
+      const warehouseReference = `WHR-${new Date().getFullYear()}-${requestId.slice(0, 8).toUpperCase()}`
+      await tx.warehouseRequest.create({
+        data: {
+          id: requestId,
+          reference: warehouseReference,
+          source: 'CLIENT_ORDER',
+          requesterId: client.id,
+          orderId: created.id,
+          customerReference: cleanName,
+          idempotencyKey: `CLIENT-ORDER-${created.id}`,
+          items: {
+            create: requestItems,
+          },
+        },
+      })
       await tx.notification.create({
         data: {
           userId: client.id,
@@ -199,6 +225,21 @@ export default async function handler(req: any, res: any) {
           link: '/client/dashboard#orders',
         },
       })
+      const warehouseWorkers = await tx.user.findMany({
+        where: { role: 'WAREHOUSE', status: 'ACTIVE' },
+        select: { id: true },
+      })
+      if (warehouseWorkers.length) {
+        await tx.notification.createMany({
+          data: warehouseWorkers.map((worker) => ({
+            userId: worker.id,
+            type: 'WAREHOUSE_REQUEST',
+            title: 'New Client Order Request',
+            message: `Order ${reference} is waiting for review.`,
+            link: '/warehouse/requests',
+          })),
+        })
+      }
       return created
     })
 
@@ -244,6 +285,9 @@ export default async function handler(req: any, res: any) {
     })
   } catch (error: any) {
     console.error('Public order API error', error)
+    if (error?.message === 'ORDER_ITEM_MISSING_INVENTORY') {
+      return res.status(409).json({ error: 'The order contains an item without an inventory record and could not be submitted.' })
+    }
     return res.status(500).json({ error: error?.message || 'Failed to submit order' })
   }
 }

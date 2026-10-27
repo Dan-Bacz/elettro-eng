@@ -371,7 +371,7 @@ export async function sendTechnicianApprovalNotification(user: { name: string; e
   }
 }
 
-// One-time 6-digit code emailed to a technician who asked to reset their password.
+// One-time 6-digit code emailed to a staff member who asked to reset their password.
 export type PasswordResetEmail = {
   name: string
   code: string
@@ -389,7 +389,7 @@ export function buildPasswordResetEmail(input: PasswordResetEmail) {
           <div style="background-color: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0;">
             <h2 style="color: #111; margin-top: 0;">Password Reset Code</h2>
             <p style="color: #555; font-size: 14px;">Good day <strong>${escapeHtml(input.name)}</strong>,</p>
-            <p style="color: #555; font-size: 14px;">We received a request to reset the password for your technician account. Use the code below in the Elettro app to choose a new password.</p>
+            <p style="color: #555; font-size: 14px;">We received a request to reset the password for your Elettro staff account. Use the code below to choose a new password.</p>
             <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 26px; margin: 22px 0; text-align: center;">
               <div style="font-size: 34px; letter-spacing: 10px; font-weight: bold; color: #111; font-family: 'Courier New', monospace;">${escapeHtml(input.code)}</div>
             </div>

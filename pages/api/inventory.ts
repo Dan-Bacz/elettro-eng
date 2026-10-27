@@ -45,17 +45,40 @@ export default async function handler(req, res) {
   try {
     const session = await getSessionUser(getTokenFromRequest(req))
     if (!session) return res.status(401).json({ error: 'Authentication required' })
-    if (session.role !== 'ADMIN' || session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
+    if (session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
 
     if (req.method === 'GET') {
-      const items = await prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } })
+      if (!['ADMIN', 'WAREHOUSE', 'SALES'].includes(session.role)) return res.status(403).json({ error: 'Forbidden' })
+      const items = await prisma.inventoryItem.findMany({
+        orderBy: { createdAt: 'desc' },
+        ...(session.role === 'SALES'
+          ? {
+              select: {
+                id: true,
+                name: true,
+                sku: true,
+                category: true,
+                unit: true,
+                quantity: true,
+                sellPrice: true,
+                reorderLevel: true,
+                createdAt: true,
+              },
+            }
+          : {}),
+      })
       return res.json(items)
     }
+
+    if (session.role !== 'WAREHOUSE') return res.status(403).json({ error: 'Only warehouse workers can modify inventory' })
 
     if (req.method === 'POST') {
       const body = req.body || {}
       if (!body.name || !String(body.name).trim()) {
         return res.status(400).json({ error: 'Item name is required' })
+      }
+      if (Number(body.quantity || 0) !== 0) {
+        return res.status(400).json({ error: 'Create products with zero stock, then record stock through warehouse receiving.' })
       }
 
       const plan = planImage(body)
@@ -101,6 +124,9 @@ export default async function handler(req, res) {
       const body = req.body || {}
       const { id } = body
       if (!id) return res.status(400).json({ error: 'Inventory item id required' })
+      if (typeof body.quantity !== 'undefined') {
+        return res.status(400).json({ error: 'Use the warehouse stock action to receive or adjust stock.' })
+      }
 
       const data: any = {}
 
@@ -169,6 +195,17 @@ export default async function handler(req, res) {
       const { id } = body
       if (!id) return res.status(400).json({ error: 'Inventory item id required' })
 
+      const item = await prisma.inventoryItem.findUnique({
+        where: { id: String(id) },
+        select: {
+          quantity: true,
+          _count: { select: { orderItems: true, warehouseRequestItems: true, inventoryMovements: true } },
+        },
+      })
+      if (!item) return res.status(404).json({ error: 'Inventory item not found' })
+      if (item.quantity !== 0 || item._count.orderItems > 0 || item._count.warehouseRequestItems > 0 || item._count.inventoryMovements > 0) {
+        return res.status(409).json({ error: 'Inventory items with stock or transaction history cannot be deleted.' })
+      }
       await prisma.inventoryItem.delete({ where: { id: String(id) } })
       return res.status(200).json({ ok: true })
     }

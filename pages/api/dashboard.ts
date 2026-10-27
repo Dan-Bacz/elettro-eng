@@ -61,7 +61,7 @@ export default async function handler(req, res) {
       }),
       prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.user.findMany({
-        where: { role: { in: ['ADMIN', 'TECH', 'CLIENT'] } },
+        where: { role: { in: ['ADMIN', 'TECH', 'CLIENT', 'SALES', 'WAREHOUSE'] } },
         select: { id: true, name: true, email: true, role: true, phone: true, address: true, approved: true, status: true, emailVerifiedAt: true, createdAt: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
       }),
       prisma.project.findMany({
@@ -126,6 +126,8 @@ export default async function handler(req, res) {
       rejectedTechnicians: rejectedTechs.length,
       clients: users.filter((user) => user.role === 'CLIENT').length,
       admins: users.filter((user) => user.role === 'ADMIN').length,
+      sales: users.filter((user) => user.role === 'SALES' && user.status === 'ACTIVE').length,
+      warehouse: users.filter((user) => user.role === 'WAREHOUSE' && user.status === 'ACTIVE').length,
       pendingLeaves,
       onLeave: onLeaveTechIds.size,
     }

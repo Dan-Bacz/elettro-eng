@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { randomUUID } from 'crypto'
 import jwt from 'jsonwebtoken'
 import { getJwtSecret } from '../../lib/auth'
 
@@ -44,6 +45,14 @@ export default async function handler(req: any, res: any) {
         include: {
           items: { orderBy: { createdAt: 'asc' } },
           client: { select: { id: true, name: true, email: true, phone: true } },
+          warehouseRequest: {
+            select: {
+              id: true,
+              reference: true,
+              status: true,
+              _count: { select: { releases: true } },
+            },
+          },
         },
       })
       return res.json({ orders: orders.map(withReference) })
@@ -66,7 +75,13 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Fulfillment instructions must be 500 characters or fewer.' })
       }
 
-      const order = await prisma.order.findUnique({ where: { id: String(id) } })
+      const order = await prisma.order.findUnique({
+        where: { id: String(id) },
+        include: {
+          items: true,
+          warehouseRequest: { include: { releases: { select: { id: true } } } },
+        },
+      })
       if (!order) return res.status(404).json({ error: 'Order not found' })
 
       const nextByStatus: Record<string, string[]> = {
@@ -89,6 +104,12 @@ export default async function handler(req: any, res: any) {
       }
       if (status && ['DELIVERED', 'READY_FOR_PICKUP'].includes(status)) {
         return res.status(400).json({ error: 'Only the client can confirm that a delivered or pickup order was received.' })
+      }
+      if (status === 'PROCESSING' && order.warehouseRequest) {
+        return res.status(409).json({ error: 'Warehouse release verification controls order processing.' })
+      }
+      if (status === 'CANCELLED' && order.warehouseRequest?.releases.length) {
+        return res.status(409).json({ error: 'An order with released warehouse items cannot be cancelled without an authorized return workflow.' })
       }
       if (status === 'CANCELLED' && order.paymentMethod === 'GCASH' && order.paymentStatus === 'PAID') {
         return res.status(409).json({ error: 'Handle the GCash refund before cancelling this paid order.' })
@@ -113,7 +134,8 @@ export default async function handler(req: any, res: any) {
       }
 
       const isApproval = status === 'APPROVED'
-      const isCancellation = status === 'CANCELLED' && ['APPROVED', 'PROCESSING'].includes(order.status)
+      const isCancellation = status === 'CANCELLED'
+      const restoreLegacyStock = isCancellation && !order.warehouseRequest && ['APPROVED', 'PROCESSING'].includes(order.status)
       const result = await prisma.$transaction(async (tx) => {
         const claimed = await tx.order.updateMany({
           where: { id: String(id), status: order.status, paymentStatus: order.paymentStatus, updatedAt: order.updatedAt },
@@ -130,26 +152,87 @@ export default async function handler(req: any, res: any) {
           include: { items: true },
         })
 
-        if (isApproval) {
-          for (const item of updated.items) {
-            if (!item.inventoryItemId) continue
-            const stock = await tx.inventoryItem.updateMany({
-              where: { id: item.inventoryItemId, quantity: { gte: item.quantity } },
-              data: { quantity: { decrement: item.quantity } },
-            })
-            if (stock.count !== 1) throw new Error('INSUFFICIENT_STOCK')
-          }
-        }
-        if (isCancellation) {
-          for (const item of updated.items) {
-            if (!item.inventoryItemId) continue
-            await tx.inventoryItem.update({
-              where: { id: item.inventoryItemId },
-              data: { quantity: { increment: item.quantity } },
+        if (isApproval && !order.warehouseRequest) {
+          const requestId = randomUUID()
+          const requestReference = `WHR-${new Date().getFullYear()}-${requestId.slice(0, 8).toUpperCase()}`
+          const lines = updated.items.filter(
+            (item): item is typeof item & { inventoryItemId: string } => Boolean(item.inventoryItemId),
+          )
+          if (lines.length !== updated.items.length) throw new Error('ORDER_ITEM_MISSING_INVENTORY')
+          await tx.warehouseRequest.create({
+            data: {
+              id: requestId,
+              reference: requestReference,
+              source: 'CLIENT_ORDER',
+              requesterId: updated.clientId,
+              orderId: updated.id,
+              customerReference: updated.clientName,
+              idempotencyKey: `CLIENT-ORDER-${updated.id}`,
+              items: {
+                create: lines.map((item) => ({
+                  inventoryItemId: item.inventoryItemId,
+                  orderItemId: item.id,
+                  requestedQuantity: item.quantity,
+                  unit: item.unit || 'pcs',
+                })),
+              },
+            },
+          })
+          const workers = await tx.user.findMany({
+            where: { role: 'WAREHOUSE', status: 'ACTIVE' },
+            select: { id: true },
+          })
+          if (workers.length) {
+            await tx.notification.createMany({
+              data: workers.map((worker) => ({
+                userId: worker.id,
+                type: 'WAREHOUSE_REQUEST',
+                title: 'Approved Client Order',
+                message: `Order ${withReference(updated).reference} is approved and ready for warehouse review.`,
+                link: '/warehouse/requests',
+              })),
             })
           }
         }
 
+        if (isCancellation && order.warehouseRequest) {
+          const requestUpdate = await tx.warehouseRequest.updateMany({
+            where: {
+              id: order.warehouseRequest.id,
+              status: { in: ['PENDING', 'UNDER_REVIEW', 'REJECTED'] },
+              updatedAt: order.warehouseRequest.updatedAt,
+            },
+            data: { status: 'CANCELLED', updatedAt: new Date() },
+          })
+          if (requestUpdate.count !== 1) throw new Error('WAREHOUSE_REQUEST_CHANGED')
+        }
+
+        if (restoreLegacyStock) {
+          for (const item of updated.items) {
+            if (!item.inventoryItemId) continue
+            const inventory = await tx.inventoryItem.findUnique({
+              where: { id: item.inventoryItemId },
+              select: { quantity: true },
+            })
+            if (!inventory) continue
+            const restored = await tx.inventoryItem.updateMany({
+              where: { id: item.inventoryItemId, quantity: inventory.quantity },
+              data: { quantity: { increment: item.quantity } },
+            })
+            if (restored.count !== 1) throw new Error('INVENTORY_CHANGED')
+            await tx.inventoryMovement.create({
+              data: {
+                inventoryItemId: item.inventoryItemId,
+                type: 'RETURN',
+                quantity: item.quantity,
+                stockBefore: inventory.quantity,
+                stockAfter: inventory.quantity + item.quantity,
+                workerId: user.id,
+                reason: `Legacy cancellation of ${withReference(updated).reference}`,
+              },
+            })
+          }
+        }
         return updated
       })
 
@@ -190,6 +273,12 @@ export default async function handler(req: any, res: any) {
     }
     if (error?.message === 'ORDER_CHANGED') {
       return res.status(409).json({ error: 'The order changed. Refresh and try again.' })
+    }
+    if (error?.message === 'WAREHOUSE_REQUEST_CHANGED') {
+      return res.status(409).json({ error: 'The warehouse request changed. Refresh and try again.' })
+    }
+    if (error?.message === 'ORDER_ITEM_MISSING_INVENTORY') {
+      return res.status(409).json({ error: 'The order contains an item without an inventory record and cannot be sent to warehouse.' })
     }
     return res.status(500).json({ error: error?.message || 'Failed to process order' })
   }

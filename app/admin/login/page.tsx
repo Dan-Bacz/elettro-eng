@@ -3,6 +3,7 @@ import Image from 'next/image'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { dashboardPathForRole } from '../../../lib/role-routing'
 
 export default function AdminLoginPage(){
   const [email, setEmail] = useState('')
@@ -23,9 +24,9 @@ export default function AdminLoginPage(){
         return
       }
       const data = await res.json().catch(() => ({}))
-      const role = data?.user?.role
-      if (role === 'TECH') router.push('/technician/dashboard')
-      else router.push('/admin/dashboard')
+      const destination = dashboardPathForRole(data?.user?.role)
+      if (destination) router.push(destination)
+      else setError('This account does not have access to the staff portal.')
     }catch(err){
       setError('Network error')
       console.error(err)
@@ -49,7 +50,7 @@ export default function AdminLoginPage(){
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8">
-          <h2 className="text-lg font-bold text-white">Admin Sign In</h2>
+          <h2 className="text-lg font-bold text-white">Staff Sign In</h2>
           <p className="mt-1 text-sm text-gray-400">Sign in with your admin account to access the dashboard.</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">

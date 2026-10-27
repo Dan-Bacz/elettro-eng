@@ -170,6 +170,15 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
+                    if ("SALES".equals(normalizedRole) || "WAREHOUSE".equals(normalizedRole)) {
+                        Intent departmentIntent = new Intent(this, DepartmentDashboardActivity.class);
+                        departmentIntent.putExtra(DepartmentDashboardActivity.EXTRA_ROLE, normalizedRole);
+                        departmentIntent.putExtra(DepartmentDashboardActivity.EXTRA_NAME, user.optString("name", ""));
+                        startActivity(departmentIntent);
+                        finish();
+                        return;
+                    }
+
                     Toast.makeText(this, "This account cannot sign in on the app", Toast.LENGTH_SHORT).show();
                 });
             } catch (Exception e) {

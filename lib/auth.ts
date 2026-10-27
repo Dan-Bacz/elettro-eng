@@ -19,7 +19,7 @@ export type SessionUser = {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'TECH' | 'CLIENT'
+  role: 'ADMIN' | 'SALES' | 'WAREHOUSE' | 'TECH' | 'CLIENT'
   approved: boolean
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED'
   createdAt: Date
@@ -37,9 +37,9 @@ export async function getSessionUser(token?: string | null): Promise<SessionUser
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role as any,
+      role: user.role,
       approved: user.approved,
-      status: user.status as any,
+      status: user.status,
       createdAt: user.createdAt,
     }
   } catch (e) {

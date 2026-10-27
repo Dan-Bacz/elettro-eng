@@ -12,4 +12,6 @@ Build
 3. Run on emulator or device.
 
 Notes
-- This is a minimal Java scaffold mapping the web app sections to Activities. Implement forms and API integrations as needed.
+- Staff sign-in routes Sales and Warehouse users to their department dashboard. Sales can submit material requests; Warehouse can review requests, record stock receipts or adjustments, and verify releases.
+- Admin inventory is view-only in the Android app. Stock changes are restricted to Warehouse and are recorded through the warehouse API.
+- The Android app is source-buildable without installing it on a device; use the web department portals for receipt printing.

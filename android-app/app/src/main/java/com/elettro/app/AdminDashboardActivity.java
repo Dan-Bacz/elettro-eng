@@ -216,11 +216,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnAddInventoryItem = findViewById(R.id.btn_add_inventory);
         btnAddTechnician = findViewById(R.id.btn_add_technician);
         btnGotoBookings = findViewById(R.id.btn_goto_bookings);
+        btnAddInventoryItem.setVisibility(View.GONE);
 
         btnQaAddClient = findViewById(R.id.btn_qa_add_client);
         btnQaNewBooking = findViewById(R.id.btn_qa_new_booking);
         btnQaAssignTech = findViewById(R.id.btn_qa_assign_tech);
         btnQaAddInventory = findViewById(R.id.btn_qa_add_inventory);
+        btnQaAddInventory.setVisibility(View.GONE);
 
         rowMoreClients = findViewById(R.id.row_more_clients);
         rowMoreTechnicians = findViewById(R.id.row_more_technicians);

@@ -177,6 +177,11 @@ export default function AdminOrdersPage() {
                         {STATUS_LABELS[order.status] || order.status}
                       </span>
                       <span className="text-[10px] text-slate-400">{formatDate(order.createdAt)}</span>
+                      {order.warehouseRequest && (
+                        <span className="rounded-lg bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                          Warehouse {order.warehouseRequest.status.toLowerCase().replace(/_/g, ' ')} · {order.warehouseRequest.reference}
+                        </span>
+                      )}
                       <span className="rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
                         {order.fulfillmentMethod === 'PICKUP' ? 'Pickup' : 'Delivery'} · {(order.paymentMethod || '').replace(/_/g, ' ')}
                       </span>
@@ -298,13 +303,20 @@ export default function AdminOrdersPage() {
                         </button>
                       )}
                       {order.status === 'APPROVED' && (
-                        <button
-                          onClick={() => updateOrder(order, { status: 'PROCESSING' })}
-                          disabled={busyId === order.id}
-                          className="rounded-lg border border-violet-200 px-3 py-1.5 text-[11px] font-bold text-violet-700 hover:bg-violet-50 disabled:opacity-50 transition-colors"
-                        >
-                          Start preparing
-                        </button>
+                        order.warehouseRequest
+                          ? <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700">Awaiting warehouse release</span>
+                          : <button
+                              onClick={() => updateOrder(order, { status: 'PROCESSING' })}
+                              disabled={busyId === order.id}
+                              className="rounded-lg border border-violet-200 px-3 py-1.5 text-[11px] font-bold text-violet-700 hover:bg-violet-50 disabled:opacity-50 transition-colors"
+                            >
+                              Start preparing
+                            </button>
+                      )}
+                      {order.warehouseRequest && order.warehouseRequest._count.releases > 0 && (
+                        <span className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-semibold text-amber-800">
+                          Warehouse items have been released; use a return workflow instead of cancellation.
+                        </span>
                       )}
                       {order.status === 'PROCESSING' && (
                         <button
@@ -327,8 +339,8 @@ export default function AdminOrdersPage() {
                       {['PENDING', 'APPROVED', 'PROCESSING'].includes(order.status) && (
                         <button
                           onClick={() => updateOrder(order, { status: 'CANCELLED' })}
-                          disabled={busyId === order.id || (order.paymentMethod === 'GCASH' && order.paymentStatus === 'PAID')}
-                          title={order.paymentMethod === 'GCASH' && order.paymentStatus === 'PAID' ? 'Paid GCash cancellations require handling the refund first' : undefined}
+                          disabled={busyId === order.id || Boolean(order.warehouseRequest?._count.releases) || (order.paymentMethod === 'GCASH' && order.paymentStatus === 'PAID')}
+                          title={order.warehouseRequest?._count.releases ? 'Released warehouse items require an authorized return workflow' : order.paymentMethod === 'GCASH' && order.paymentStatus === 'PAID' ? 'Paid GCash cancellations require handling the refund first' : undefined}
                           className="rounded-lg border border-red-200 px-3 py-1.5 text-[11px] font-bold text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
                         >
                           Cancel order

@@ -2,6 +2,7 @@
 import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { dashboardPathForRole } from '../../lib/role-routing'
 
 type UserObj = {
   id: string
@@ -164,8 +165,9 @@ export default function AdminPage() {
         return
       }
       const me = await res.json().catch(() => null)
-      if (me && me.user && me.user.role === 'TECH') {
-        router.push('/technician/dashboard')
+      const destination = me?.user?.role ? dashboardPathForRole(me.user.role) : null
+      if (destination && destination !== '/admin/dashboard') {
+        router.push(destination)
         return
       }
 

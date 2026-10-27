@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'TECH' | 'CLIENT'
+export type Role = 'ADMIN' | 'TECH' | 'CLIENT' | 'SALES' | 'WAREHOUSE'
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED'
 export type BookingStatusValue = 'PENDING' | 'APPROVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
@@ -130,6 +130,12 @@ export type OrderObj = {
   shippingConfirmed?: boolean
   items: OrderItemObj[]
   client?: { id: string; name: string; email: string; phone?: string | null }
+  warehouseRequest?: {
+    id: string
+    reference: string
+    status: 'PENDING' | 'UNDER_REVIEW' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'REJECTED' | 'CANCELLED'
+    _count: { releases: number }
+  } | null
 }
 
 export type DashboardData = {
@@ -148,6 +154,8 @@ export type DashboardData = {
     rejectedTechnicians: number
     clients: number
     admins: number
+    sales: number
+    warehouse: number
     pendingLeaves: number
     onLeave: number
   }
