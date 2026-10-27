@@ -50,7 +50,7 @@ export default function AdminLoginPage(){
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8">
-          <h2 className="text-lg font-bold text-white">Staff Sign In</h2>
+          <h2 className="text-lg font-bold text-white">Login to Warehouse</h2>
           <p className="mt-1 text-sm text-gray-400">Sign in with your admin account to access the dashboard.</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
