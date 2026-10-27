@@ -67,6 +67,9 @@
     <string name="welcome_admin_1">Good morning,</string>
     <string name="welcome_admin_2">Admin!</string>
     <string name="welcome_admin_3">Here\'s what\'s happening across your engineering business today.</string>
+    <string name="greeting_morning">Good morning,</string>
+    <string name="greeting_afternoon">Good afternoon,</string>
+    <string name="greeting_evening">Good evening,</string>
 
     <!-- Admin stats -->
     <string name="stat_total_bookings">Total Bookings</string>

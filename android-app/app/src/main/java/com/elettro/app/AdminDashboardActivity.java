@@ -61,6 +61,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private TextView headerUserName, headerUserRole, headerUserInitial;
     private TextView sectionTitle;
     private TextView sectionSubtitle;
+    private GreetingUpdater greetingUpdater;
     private SwipeRefreshLayout swipeRefresh;
 
     // Stat views
@@ -142,10 +143,17 @@ public class AdminDashboardActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        greetingUpdater.start();
         String currentTitle = sectionTitle.getText().toString();
         if (getString(R.string.notifications_title).equals(currentTitle) || "Alerts & Notifications".equals(currentTitle)) {
             loadNotifications();
         }
+    }
+
+    @Override
+    protected void onPause() {
+        greetingUpdater.stop();
+        super.onPause();
     }
 
     private void bindViews() {
@@ -159,6 +167,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         headerUserInitial = findViewById(R.id.header_user_initial);
         sectionTitle = findViewById(R.id.section_title);
         sectionSubtitle = findViewById(R.id.section_subtitle);
+        greetingUpdater = new GreetingUpdater(this, findViewById(R.id.admin_greeting));
         swipeRefresh = findViewById(R.id.swipe_refresh);
 
         statTotalBookings = findViewById(R.id.stat_total_bookings);

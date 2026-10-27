@@ -66,6 +66,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private TextView bellBadge;
     private TextView headerUserName, headerUserRole, headerUserInitial;
     private TextView sectionTitle, sectionSubtitle;
+    private GreetingUpdater greetingUpdater;
     private SwipeRefreshLayout swipeRefresh;
 
     // Sections
@@ -137,6 +138,18 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         loadData();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        greetingUpdater.start();
+    }
+
+    @Override
+    protected void onPause() {
+        greetingUpdater.stop();
+        super.onPause();
+    }
+
     private void bindViews() {
         drawerLayout = findViewById(R.id.drawer_layout);
         navView = findViewById(R.id.nav_view);
@@ -148,6 +161,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         headerUserInitial = findViewById(R.id.header_user_initial);
         sectionTitle = findViewById(R.id.section_title);
         sectionSubtitle = findViewById(R.id.section_subtitle);
+        greetingUpdater = new GreetingUpdater(this, findViewById(R.id.tech_greeting));
         swipeRefresh = findViewById(R.id.swipe_refresh);
 
         viewHome = findViewById(R.id.view_home_section);
