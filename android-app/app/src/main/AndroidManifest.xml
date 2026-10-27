@@ -51,6 +51,7 @@
 
         <activity android:name=".AdminDashboardActivity" />
         <activity android:name=".TechnicianDashboardActivity" />
+        <activity android:name=".RiderDashboardActivity" />
         <activity android:name=".DepartmentDashboardActivity" />
         <activity android:name=".AdminActivity" />
         <activity android:name=".TechActivity"

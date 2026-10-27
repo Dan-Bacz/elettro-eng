@@ -13,6 +13,8 @@ import android.util.Base64;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -45,6 +47,9 @@ public class SignupActivity extends AppCompatActivity {
     private Uri capturedImageUri;
     private String capturedImageBase64;
     private android.widget.Button captureProfileBtn;
+    private RadioGroup roleGroup;
+    private RadioButton roleTechnician;
+    private RadioButton roleRider;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +65,9 @@ public class SignupActivity extends AppCompatActivity {
         photoPreview = findViewById(R.id.photo_preview);
         cameraPlaceholder = findViewById(R.id.camera_placeholder);
         captureProfileBtn = findViewById(R.id.capture_profile_btn);
+        roleGroup = findViewById(R.id.role_group);
+        roleTechnician = findViewById(R.id.role_technician);
+        roleRider = findViewById(R.id.role_rider);
 
         signupBtn.setOnClickListener(v -> handleSignup());
 
@@ -161,6 +169,12 @@ public class SignupActivity extends AppCompatActivity {
         String password = passwordInput.getText() == null ? "" : passwordInput.getText().toString().trim();
         String confirmPassword = confirmPasswordInput.getText() == null ? "" : confirmPasswordInput.getText().toString().trim();
 
+        // Get selected role
+        String role = "TECH";
+        if (roleRider.isChecked()) {
+            role = "RIDER";
+        }
+
         if (TextUtils.isEmpty(name)) {
             nameInput.setError("Name is required");
             nameInput.requestFocus();
@@ -201,6 +215,7 @@ public class SignupActivity extends AppCompatActivity {
                 payload.put("email", email);
                 payload.put("phone", phone);
                 payload.put("password", password);
+                payload.put("role", role);
                 if (capturedImageBase64 != null) payload.put("profileImage", capturedImageBase64);
 
                 String response = ApiClient.post("/auth/signup", payload.toString());

@@ -170,6 +170,12 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
+                    if ("RIDER".equals(normalizedRole)) {
+                        startActivity(new Intent(this, RiderDashboardActivity.class));
+                        finish();
+                        return;
+                    }
+
                     if ("SALES".equals(normalizedRole) || "WAREHOUSE".equals(normalizedRole)) {
                         Intent departmentIntent = new Intent(this, DepartmentDashboardActivity.class);
                         departmentIntent.putExtra(DepartmentDashboardActivity.EXTRA_ROLE, normalizedRole);

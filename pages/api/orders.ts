@@ -11,7 +11,7 @@ function getToken(req: any) {
   return req.cookies?.token || null
 }
 
-async function requireAdmin(req: any, res: any) {
+async function requireAdminOrSales(req: any, res: any) {
   const token = getToken(req)
   if (!token) return res.status(401).json({ error: 'Authentication required' })
   let payload: any
@@ -21,7 +21,7 @@ async function requireAdmin(req: any, res: any) {
     return res.status(401).json({ error: 'Invalid session' })
   }
   const user = await prisma.user.findUnique({ where: { id: String(payload.userId) } })
-  if (!user || user.status !== 'ACTIVE' || user.role !== 'ADMIN') {
+  if (!user || user.status !== 'ACTIVE' || (user.role !== 'ADMIN' && user.role !== 'SALES')) {
     return res.status(403).json({ error: 'Forbidden' })
   }
   return user
@@ -36,7 +36,7 @@ function withReference(order: any): any {
 
 export default async function handler(req: any, res: any) {
   try {
-    const user = await requireAdmin(req, res)
+    const user = await requireAdminOrSales(req, res)
     if (!user) return
 
     if (req.method === 'GET') {
@@ -54,6 +54,37 @@ export default async function handler(req: any, res: any) {
             },
           },
         },
+        select: {
+          id: true,
+          clientId: true,
+          clientName: true,
+          email: true,
+          phone: true,
+          address: true,
+          barangay: true,
+          city: true,
+          province: true,
+          postalCode: true,
+          deliveryNotes: true,
+          fulfillmentNote: true,
+          paymentMethod: true,
+          paymentStatus: true,
+          notes: true,
+          status: true,
+          total: true,
+          createdAt: true,
+          updatedAt: true,
+          paymentReference: true,
+          fulfillmentMethod: true,
+          shipping: true,
+          shippingConfirmed: true,
+          riderId: true,
+          riderName: true,
+          riderAssignedAt: true,
+          items: true,
+          client: true,
+          warehouseRequest: true,
+        },
       })
       return res.json({ orders: orders.map(withReference) })
     }
@@ -63,16 +94,21 @@ export default async function handler(req: any, res: any) {
       const { id, status, paymentStatus } = body
       const hasShipping = Object.prototype.hasOwnProperty.call(body, 'shipping')
       const hasFulfillmentNote = Object.prototype.hasOwnProperty.call(body, 'fulfillmentNote')
+      const hasRiderName = Object.prototype.hasOwnProperty.call(body, 'riderName')
       const shipping = Number(body.shipping)
       const fulfillmentNote = String(body.fulfillmentNote ?? '').trim()
-      if (!id || (!status && !paymentStatus && !hasShipping && !hasFulfillmentNote)) {
-        return res.status(400).json({ error: 'Order id and an order, payment, shipping, or fulfillment note update are required' })
+      const riderName = String(body.riderName ?? '').trim()
+      if (!id || (!status && !paymentStatus && !hasShipping && !hasFulfillmentNote && !hasRiderName)) {
+        return res.status(400).json({ error: 'Order id and an order, payment, shipping, fulfillment note, or rider update are required' })
       }
       if (hasShipping && (!Number.isFinite(shipping) || shipping < 0 || shipping > 1000000)) {
         return res.status(400).json({ error: 'Shipping fee must be between 0 and 1,000,000.' })
       }
       if (hasFulfillmentNote && fulfillmentNote.length > 500) {
         return res.status(400).json({ error: 'Fulfillment instructions must be 500 characters or fewer.' })
+      }
+      if (hasRiderName && riderName.length > 100) {
+        return res.status(400).json({ error: 'Rider name must be 100 characters or fewer.' })
       }
 
       const order = await prisma.order.findUnique({
@@ -144,6 +180,7 @@ export default async function handler(req: any, res: any) {
             ...(paymentStatus ? { paymentStatus } : {}),
             ...(hasShipping ? { shipping: Math.round(shipping * 100) / 100, shippingConfirmed: true } : {}),
             ...(hasFulfillmentNote ? { fulfillmentNote: fulfillmentNote || null } : {}),
+            ...(hasRiderName ? { riderName: riderName || null, riderAssignedAt: riderName ? new Date() : null } : {}),
           },
         })
         if (claimed.count !== 1) throw new Error('ORDER_CHANGED')
@@ -240,20 +277,23 @@ export default async function handler(req: any, res: any) {
       const paymentChanged = Boolean(paymentStatus && order.paymentStatus !== paymentStatus)
       const shippingChanged = hasShipping && (!order.shippingConfirmed || order.shipping !== Math.round(shipping * 100) / 100)
       const fulfillmentNoteChanged = hasFulfillmentNote && order.fulfillmentNote !== (fulfillmentNote || null)
-      if (statusChanged || paymentChanged || shippingChanged || fulfillmentNoteChanged) {
+      const riderChanged = hasRiderName && order.riderName !== (riderName || null)
+      if (statusChanged || paymentChanged || shippingChanged || fulfillmentNoteChanged || riderChanged) {
         try {
           await prisma.notification.create({
             data: {
               userId: result.clientId,
               type: 'ORDER',
-              title: paymentChanged ? 'Payment Verified' : shippingChanged ? 'Delivery Fee Confirmed' : fulfillmentNoteChanged ? 'Fulfillment Instructions Updated' : 'Order Status Updated',
+              title: paymentChanged ? 'Payment Verified' : shippingChanged ? 'Delivery Fee Confirmed' : fulfillmentNoteChanged ? 'Fulfillment Instructions Updated' : riderChanged ? 'Rider Assigned' : 'Order Status Updated',
               message: paymentChanged
                 ? `Payment for ${withReference(result).reference} has been verified by our team.`
                 : shippingChanged
                   ? `The delivery fee for ${withReference(result).reference} is ₱${Math.round(shipping * 100) / 100}. Review the updated total in your dashboard.`
                   : fulfillmentNoteChanged
                     ? `The fulfillment instructions for ${withReference(result).reference} were updated.`
-                    : `Your order ${withReference(result).reference} is now ${status.replace(/_/g, ' ')}.`,
+                    : riderChanged
+                      ? `A rider has been assigned to your order ${withReference(result).reference}: ${riderName}.`
+                      : `Your order ${withReference(result).reference} is now ${status.replace(/_/g, ' ')}.`,
               link: '/client/dashboard#orders',
             },
           })

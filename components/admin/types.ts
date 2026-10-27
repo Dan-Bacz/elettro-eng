@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'TECH' | 'CLIENT' | 'SALES' | 'WAREHOUSE'
+export type Role = 'ADMIN' | 'TECH' | 'CLIENT' | 'SALES' | 'WAREHOUSE' | 'RIDER'
 export type UserStatus = 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED'
 export type BookingStatusValue = 'PENDING' | 'APPROVED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
@@ -128,6 +128,9 @@ export type OrderObj = {
   fulfillmentMethod?: 'DELIVERY' | 'PICKUP'
   shipping?: number
   shippingConfirmed?: boolean
+  riderId?: string | null
+  riderName?: string | null
+  riderAssignedAt?: string | null
   items: OrderItemObj[]
   client?: { id: string; name: string; email: string; phone?: string | null }
   warehouseRequest?: {

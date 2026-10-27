@@ -32,7 +32,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const { name, email, password, phone, address, specialization, yearsOfExperience, skills, profileImage } = req.body || {}
+    const { name, email, password, phone, address, specialization, yearsOfExperience, skills, profileImage, role } = req.body || {}
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Name, email, and password are required' })
@@ -40,6 +40,13 @@ export default async function handler(req: any, res: any) {
 
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' })
+    }
+
+    // Only TECH and RIDER roles are allowed from the Android app
+    const validRoles = ['TECH', 'RIDER']
+    const userRole = role ? String(role).toUpperCase() : 'TECH'
+    if (!validRoles.includes(userRole)) {
+      return res.status(400).json({ error: 'Invalid role. Only TECH and RIDER are allowed.' })
     }
 
     const existing = await prisma.user.findUnique({ where: { email } })
@@ -58,7 +65,7 @@ export default async function handler(req: any, res: any) {
         phone: phone || null,
         status: 'PENDING',
         approved: false,
-        role: 'TECH',
+        role: userRole,
         address: address || null,
         specialization: specialization || null,
         yearsOfExperience: yearsOfExperience ? Math.max(0, Math.round(Number(yearsOfExperience))) : null,
@@ -74,9 +81,9 @@ export default async function handler(req: any, res: any) {
         data: admins.map((admin) => ({
           userId: admin.id,
           type: 'REGISTRATION',
-          title: 'New Technician Registration',
-          message: `${user.name} (${user.email}) registered for a technician account and is awaiting approval.`,
-          link: '/admin/technicians'
+          title: `New ${userRole === 'RIDER' ? 'Rider' : 'Technician'} Registration`,
+          message: `${user.name} (${user.email}) registered for a ${userRole === 'RIDER' ? 'rider' : 'technician'} account and is awaiting approval.`,
+          link: userRole === 'RIDER' ? '/admin/staff' : '/admin/technicians'
         }))
       })
     }

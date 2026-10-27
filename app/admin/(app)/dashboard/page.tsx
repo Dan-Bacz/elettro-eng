@@ -81,6 +81,7 @@ export default function AdminDashboardPage() {
       { label: 'Pending', value: data.stats.pending, icon: <ClockIcon className="h-5 w-5" />, accent: 'blue' as const, spark: spark.slice(-7), change: null, description: 'Awaiting approval', href: '/admin/bookings' },
       { label: 'In Progress', value: data.stats.inProgress, icon: <GearIcon className="h-5 w-5" />, accent: 'green' as const, spark, change: null, description: 'Active projects being worked on', href: '/admin/projects' },
       { label: 'Completed', value: data.stats.completed, icon: <CheckCircleIcon className="h-5 w-5" />, accent: 'purple' as const, spark, change: null, description: 'Delivered & closed projects', href: '/admin/projects' },
+      { label: 'Sales', value: data.stats.sales, icon: <CartIcon className="h-5 w-5" />, accent: 'yellow' as const, spark: spark.slice(-7), change: null, description: 'Active sales staff', href: '/admin/sales' },
     ]
   }, [data])
 
@@ -185,7 +186,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* B. KPI Cards */}
-      <div className="card-enter grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" style={{ animationDelay: '0.08s' }}>
+      <div className="card-enter grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" style={{ animationDelay: '0.08s' }}>
         {kpi!.map((c) => (
           <KpiCard key={c.label} {...c} />
         ))}

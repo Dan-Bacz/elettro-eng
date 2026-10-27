@@ -10,6 +10,7 @@ type Department = 'sales' | 'warehouse'
 const NAVIGATION: Record<Department, { label: string; href: string }[]> = {
   sales: [
     { label: 'Dashboard', href: '/sales/dashboard' },
+    { label: 'Client Orders', href: '/sales/orders' },
     { label: 'Warehouse Requests', href: '/sales/requests' },
     { label: 'Release Receipts', href: '/sales/receipts' },
   ],

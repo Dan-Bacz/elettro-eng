@@ -253,6 +253,43 @@
                         android:textSize="15sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Role selection -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="I want to register as:"
+                    android:textColor="#111111"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/role_group"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="horizontal">
+
+                    <RadioButton
+                        android:id="@+id/role_technician"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:checked="true"
+                        android:text="Technician"
+                        android:textColor="#111111"
+                        android:textSize="14sp" />
+
+                    <RadioButton
+                        android:id="@+id/role_rider"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Rider"
+                        android:textColor="#111111"
+                        android:textSize="14sp" />
+                </RadioGroup>
+
                 <!-- Profile photo capture -->
                 <LinearLayout
                     android:layout_width="match_parent"

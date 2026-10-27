@@ -250,7 +250,7 @@ model Setting {
 }
 
 // Client product/material orders. A client submits from the public catalog with
-// a validated email and phone; admins manage the order lifecycle.
+// a validated email and phone; sales department manages the order lifecycle.
 model Order {
   id                String            @id @default(uuid())
   clientId          String
@@ -276,6 +276,10 @@ model Order {
   shippingConfirmed Boolean           @default(false)
   status            OrderStatus       @default(PENDING)
   total             Float             @default(0)
+  // Rider assignment (managed by sales department)
+  riderId           String?
+  riderName         String?
+  riderAssignedAt   DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
   items             OrderItem[]
@@ -283,6 +287,7 @@ model Order {
 
   @@index([clientId])
   @@index([status])
+  @@index([riderId])
 }
 
 model OrderItem {
@@ -318,6 +323,7 @@ enum Role {
   CLIENT
   SALES
   WAREHOUSE
+  RIDER
 }
 
 enum WarehouseRequestSource {
