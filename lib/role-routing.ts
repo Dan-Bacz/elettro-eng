@@ -12,5 +12,7 @@ export function dashboardPathForRole(role: SessionUser['role']): string | null {
       return '/warehouse/dashboard'
     case 'CLIENT':
       return '/client/dashboard'
+    case 'RIDER':
+      return null // Riders use Android app only
   }
 }

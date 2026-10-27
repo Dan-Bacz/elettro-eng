@@ -31,6 +31,9 @@ function withReference(order: any): any {
   return {
     ...order,
     reference: `ORD-${order.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+    riderId: order.riderId || null,
+    riderName: order.riderName || null,
+    riderAssignedAt: order.riderAssignedAt || null,
   }
 }
 
@@ -53,37 +56,6 @@ export default async function handler(req: any, res: any) {
               _count: { select: { releases: true } },
             },
           },
-        },
-        select: {
-          id: true,
-          clientId: true,
-          clientName: true,
-          email: true,
-          phone: true,
-          address: true,
-          barangay: true,
-          city: true,
-          province: true,
-          postalCode: true,
-          deliveryNotes: true,
-          fulfillmentNote: true,
-          paymentMethod: true,
-          paymentStatus: true,
-          notes: true,
-          status: true,
-          total: true,
-          createdAt: true,
-          updatedAt: true,
-          paymentReference: true,
-          fulfillmentMethod: true,
-          shipping: true,
-          shippingConfirmed: true,
-          riderId: true,
-          riderName: true,
-          riderAssignedAt: true,
-          items: true,
-          client: true,
-          warehouseRequest: true,
         },
       })
       return res.json({ orders: orders.map(withReference) })

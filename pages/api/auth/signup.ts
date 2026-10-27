@@ -65,7 +65,7 @@ export default async function handler(req: any, res: any) {
         phone: phone || null,
         status: 'PENDING',
         approved: false,
-        role: userRole,
+        role: userRole as 'TECH' | 'RIDER',
         address: address || null,
         specialization: specialization || null,
         yearsOfExperience: yearsOfExperience ? Math.max(0, Math.round(Number(yearsOfExperience))) : null,

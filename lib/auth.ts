@@ -19,7 +19,7 @@ export type SessionUser = {
   id: string
   name: string
   email: string
-  role: 'ADMIN' | 'SALES' | 'WAREHOUSE' | 'TECH' | 'CLIENT'
+  role: 'ADMIN' | 'SALES' | 'WAREHOUSE' | 'TECH' | 'CLIENT' | 'RIDER'
   approved: boolean
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED'
   createdAt: Date
