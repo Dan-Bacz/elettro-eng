@@ -1,5 +1,6 @@
 "use client"
 import Link from "next/link"
+import Image from "next/image"
 import { NAV_LINKS, COMPANY } from "./siteData"
 
 export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -25,9 +26,7 @@ export function MobileMenu({ open, onClose }: { open: boolean; onClose: () => vo
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <div className="flex items-center gap-2.5">
-            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-yellow-400 text-black font-black text-lg">
-              ⚡
-            </span>
+            <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-xl object-cover" />
             <span className="leading-tight">
               <span className="block font-black tracking-wide">ELETTRO</span>
               <span className="block text-[9px] uppercase tracking-[0.25em] text-gray-400 font-semibold">

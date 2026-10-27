@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
@@ -64,11 +65,11 @@ export default function ClientShell({ user, children }: ClientShellProps) {
       <aside className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-[#2a3138] bg-[#0b0f10] text-gray-300 transition-all duration-200 ${sidebarWidth} ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}>
         <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
           {collapsed ? (
-            <span className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-400 font-black text-black">⚡</span>
+            <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="mx-auto h-9 w-9 rounded-lg object-cover" />
           ) : (
             <>
               <div className="flex items-center gap-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-400 text-lg font-black text-black">⚡</span>
+                <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-lg object-cover" />
                 <div>
                   <div className="text-sm font-black leading-tight tracking-wide text-white">ELETTRO</div>
                   <div className="text-[9px] font-semibold uppercase tracking-[0.2em] text-gray-500">Client Portal</div>

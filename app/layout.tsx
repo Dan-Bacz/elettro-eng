@@ -6,11 +6,6 @@ export const metadata = {
     template: '%s | Elettro',
   },
   description: 'Electrical installation, maintenance, and supply solutions for residential, commercial, and industrial projects.',
-  icons: {
-    icon: '/icon.svg',
-    shortcut: '/icon.svg',
-    apple: '/icon.svg',
-  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

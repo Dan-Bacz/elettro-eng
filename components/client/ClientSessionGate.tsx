@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useEffect, useState, type ReactNode } from "react"
 
 type ClientSession = {
@@ -68,7 +69,7 @@ export default function ClientSessionGate({ children }: { children: ReactNode })
   return (
     <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
       <div className="rounded-2xl border border-gray-200 bg-white p-7 text-center shadow-sm sm:p-10">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-yellow-100 text-2xl">⚡</span>
+        <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={56} height={56} className="mx-auto h-14 w-14 rounded-2xl object-cover" />
         <h1 className="mt-5 text-2xl font-black text-gray-900">{heading}</h1>
         <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-gray-600">
           {needsVerification

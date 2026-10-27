@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import CTASection from "@/components/client/CTASection"
 
 const VALUES = [
@@ -130,9 +131,7 @@ export default function AboutPage() {
               <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-[#0b0f10] to-[#1a2029] aspect-[4/3] flex items-center justify-center relative">
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,196,0,0.15),transparent_65%)]" />
                 <div className="text-center relative px-8">
-                  <div className="flex items-center justify-center w-20 h-20 mx-auto rounded-2xl bg-yellow-400 text-black text-4xl font-black shadow-lg shadow-yellow-400/30">
-                    ⚡
-                  </div>
+                  <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={80} height={80} className="mx-auto h-20 w-20 rounded-2xl object-cover shadow-lg shadow-yellow-400/30" />
                   <div className="mt-5 font-black text-2xl tracking-wide">ELETTRO</div>
                   <div className="text-[11px] uppercase tracking-[0.35em] text-gray-400 font-semibold mt-1">
                     Engineering Enterprises

@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { COMPANY } from "./siteData"
 
 export default function Footer() {
@@ -12,9 +13,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-yellow-400 text-black font-black text-xl shadow-lg shadow-yellow-400/20">
-                ⚡
-              </span>
+              <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={40} height={40} className="h-10 w-10 rounded-xl object-cover shadow-lg shadow-yellow-400/20" />
               <span className="leading-tight">
                 <span className="block font-black text-lg tracking-wide">ELETTRO</span>
                 <span className="block text-[10px] uppercase tracking-[0.25em] text-gray-400 font-semibold">
