@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
@@ -48,15 +49,11 @@ export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boole
       {/* Brand */}
       <div className="flex h-16 items-center justify-between border-b border-white/10 px-4">
         {collapsed ? (
-          <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-400 text-black font-black">
-            ⚡
-          </div>
+          <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="mx-auto h-9 w-9 rounded-lg object-cover" />
         ) : (
           <>
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-400 text-black font-black text-lg">
-                ⚡
-              </div>
+              <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-lg object-cover" />
               <div>
                 <div className="text-sm font-black leading-tight text-white tracking-wide">ELETTRO</div>
                 <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-semibold">Engineering Admin</div>

@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
@@ -28,7 +29,7 @@ export default function TechShell({ user, children }: TechShellProps) {
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b0f10]">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link href="/technician/dashboard" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-400 text-black text-lg font-black">⚡</div>
+            <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-lg object-cover" />
             <div>
               <div className="text-sm font-black leading-tight text-white tracking-wide">ELETTRO</div>
               <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-semibold">Technician</div>

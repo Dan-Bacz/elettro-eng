@@ -1,4 +1,5 @@
 "use client"
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
@@ -528,7 +529,7 @@ export default function AdminPage() {
       <aside className={`${sidebarOpen ? 'w-72' : 'w-20'} bg-[#0b0f10] text-white h-screen sticky top-0 flex flex-col transition-all duration-200 overflow-hidden shrink-0 border-r border-white/10 z-20`}>
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="bg-yellow-400 text-black rounded-xl w-10 h-10 flex items-center justify-center font-black text-xl shrink-0 shadow-lg shadow-yellow-400/20">⚡</div>
+            <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={40} height={40} className="h-10 w-10 shrink-0 rounded-xl object-cover shadow-lg shadow-yellow-400/20" />
             {sidebarOpen && (
               <div className="min-w-0">
                 <div className="font-black text-lg leading-tight tracking-wide text-white">ELETTRO</div>
@@ -611,9 +612,7 @@ export default function AdminPage() {
                 onClick={() => setMenuOpen((prev) => !prev)}
                 className="flex items-center gap-3 rounded-full bg-white px-3 py-1.5 shadow-sm border border-slate-200 hover:bg-slate-50 transition"
               >
-                <div className="w-9 h-9 rounded-full bg-black text-yellow-400 flex items-center justify-center font-black text-sm">
-                  ⚡
-                </div>
+                <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-full object-cover" />
                 <div className="text-left hidden sm:block">
                   <div className="font-bold text-sm leading-tight text-slate-900">Admin User</div>
                   <div className="text-[11px] text-slate-500 font-medium">Operations Manager</div>

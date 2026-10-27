@@ -1,4 +1,5 @@
 'use client'
+import Image from 'next/image'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
@@ -48,9 +49,7 @@ export default function TechnicianLoginPage() {
       <div className="relative w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-yellow-400 text-black text-3xl font-black shadow-xl shadow-yellow-400/20">
-            ⚡
-          </div>
+          <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={64} height={64} className="mx-auto h-16 w-16 rounded-2xl object-cover shadow-xl shadow-yellow-400/20" />
           <h1 className="mt-4 text-2xl font-black tracking-wide text-white">ELETTRO</h1>
           <p className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-semibold mt-1">
             Technician Portal

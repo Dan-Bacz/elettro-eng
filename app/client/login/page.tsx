@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useEffect, useState, type FormEvent } from "react"
 
@@ -74,7 +75,7 @@ function ClientLoginForm() {
     <main className="min-h-screen bg-gray-50 px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-md">
         <Link href="/" className="inline-flex items-center gap-2 text-sm font-black tracking-wide text-gray-900">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400 text-lg">⚡</span>
+          <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-xl object-cover" />
           ELETTRO <span className="font-medium text-gray-500">Engineering</span>
         </Link>
         <section className="mt-7 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">

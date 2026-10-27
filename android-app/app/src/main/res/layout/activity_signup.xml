@@ -33,11 +33,11 @@
                 android:background="@drawable/bg_logo_circle">
 
                 <ImageView
-                    android:layout_width="34dp"
-                    android:layout_height="34dp"
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
                     android:layout_gravity="center"
                     android:contentDescription="@string/app_name"
-                    android:src="@drawable/ic_bolt_yellow" />
+                    android:src="@drawable/ic_elettro_logo" />
             </FrameLayout>
 
             <TextView
