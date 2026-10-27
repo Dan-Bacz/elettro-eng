@@ -16,7 +16,7 @@ export default function AdminLoginPage(){
     e.preventDefault()
     setLoading(true); setError('')
     try{
-      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, expectedRole: 'ADMIN' }) })
       if (!res.ok) {
         const j = await res.json().catch(()=>({error: 'Login failed'}))
         setError(j.error || 'Login failed')

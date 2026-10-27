@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { dashboardPathForRole } from '../../../lib/role-routing'
 
-export default function AdminLoginPage(){
+export default function WarehouseLoginPage(){
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,7 +16,7 @@ export default function AdminLoginPage(){
     e.preventDefault()
     setLoading(true); setError('')
     try{
-      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) })
+      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password, expectedRole: 'WAREHOUSE' }) })
       if (!res.ok) {
         const j = await res.json().catch(()=>({error: 'Login failed'}))
         setError(j.error || 'Login failed')
