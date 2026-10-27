@@ -85,7 +85,7 @@ export default function DepartmentStaffPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader icon={<UsersIcon className="h-5 w-5" />} title="Department Staff" subtitle="Create and review technician, sales, and warehouse accounts." />
+      <PageHeader icon={<UsersIcon className="h-5 w-5" />} title="Workers" subtitle="Create and review technician, sales, and warehouse accounts." />
       {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>}
       {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{notice}</div>}
       <form onSubmit={createStaff} className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
@@ -108,7 +108,7 @@ export default function DepartmentStaffPage() {
         <button disabled={saving} className="self-end rounded-lg bg-yellow-400 px-4 py-2.5 text-xs font-black text-black hover:bg-yellow-500 disabled:opacity-50">{saving ? 'Creating…' : 'Create active account'}</button>
       </form>
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <h2 className="border-b border-slate-100 px-4 py-3 text-sm font-black text-slate-900">Staff accounts</h2>
+        <h2 className="border-b border-slate-100 px-4 py-3 text-sm font-black text-slate-900">Worker accounts</h2>
         {loading ? <p className="p-4 text-sm text-slate-500">Loading accounts…</p> : users.length === 0 ? <p className="p-4 text-sm text-slate-500">No department accounts yet.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-left text-sm">

@@ -14,4 +14,5 @@ Build
 Notes
 - Staff sign-in routes Sales and Warehouse users to their department dashboard. Sales can submit material requests; Warehouse can review requests, record stock receipts or adjustments, and verify releases.
 - Admin inventory is view-only in the Android app. Stock changes are restricted to Warehouse and are recorded through the warehouse API.
-- The Android app is source-buildable without installing it on a device; use the web department portals for receipt printing.
+- The Android Admin screens use the shared backend for live bookings, orders, inventory, workers, and stock movement data.
+- The Android app is source-buildable without installing it on a device; receipt printing is available from the web-based department portals.

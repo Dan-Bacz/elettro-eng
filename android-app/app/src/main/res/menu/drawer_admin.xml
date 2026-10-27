@@ -14,6 +14,10 @@
             android:icon="@drawable/ic_shopping_cart"
             android:title="@string/drawer_orders" />
         <item
+            android:id="@+id/nav_clients"
+            android:icon="@drawable/ic_people"
+            android:title="@string/drawer_clients" />
+        <item
             android:id="@+id/nav_projects"
             android:icon="@drawable/ic_build"
             android:title="@string/drawer_projects" />
@@ -22,34 +26,29 @@
             android:icon="@drawable/ic_calendar"
             android:title="@string/drawer_leave" />
         <item
+            android:id="@+id/nav_inventory"
+            android:icon="@drawable/ic_inventory"
+            android:title="@string/drawer_inventory" />
+        <item
+            android:id="@+id/nav_stock_movements"
+            android:icon="@drawable/ic_description"
+            android:title="@string/drawer_stock_movements" />
+        <item
+            android:id="@+id/nav_workers"
+            android:icon="@drawable/ic_people"
+            android:title="@string/drawer_workers" />
+        <item
+            android:id="@+id/nav_reports"
+            android:icon="@drawable/ic_description"
+            android:title="@string/drawer_reports" />
+        <item
             android:id="@+id/nav_notifications"
             android:icon="@drawable/ic_notifications"
             android:title="@string/drawer_notifications" />
         <item
-            android:id="@+id/nav_more"
-            android:icon="@drawable/ic_more_horiz"
-            android:title="@string/nav_more">
-            <menu>
-                <group android:checkableBehavior="single" android:id="@+id/nav_group_more">
-                    <item
-                        android:id="@+id/nav_technicians"
-                        android:icon="@drawable/ic_people"
-                        android:title="@string/drawer_technicians" />
-                    <item
-                        android:id="@+id/nav_inventory"
-                        android:icon="@drawable/ic_inventory"
-                        android:title="@string/drawer_inventory" />
-                    <item
-                        android:id="@+id/nav_reports"
-                        android:icon="@drawable/ic_description"
-                        android:title="@string/drawer_reports" />
-                    <item
-                        android:id="@+id/nav_settings"
-                        android:icon="@drawable/ic_settings"
-                        android:title="@string/drawer_settings" />
-                </group>
-            </menu>
-        </item>
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_settings"
+            android:title="@string/drawer_settings" />
     </group>
     <group>
         <item

@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="worker_roles">
+        <item>Sales</item>
+        <item>Warehouse</item>
+        <item>Technician</item>
+    </string-array>
+    <string-array name="stock_movement_filters">
+        <item>All movement types</item>
+        <item>Stock received</item>
+        <item>Stock released</item>
+        <item>Adjustment</item>
+        <item>Return</item>
+    </string-array>
     <string name="app_name">Elettro</string>
     <string name="app_name_full">ELETTRO</string>
     <string name="app_tagline">ENGINEERING ENTERPRISES</string>
@@ -196,6 +208,10 @@
     <!-- Technician navigation -->
     <string name="drawer_my_projects">My Jobs</string>
     <string name="drawer_notifications">Notifications</string>
+    <string name="drawer_stock_movements">Stock Movements</string>
+    <string name="drawer_workers">Workers</string>
+    <string name="workers_subtitle">Create worker accounts and manage their access status</string>
+    <string name="stock_movements_subtitle">Review the audited history of warehouse stock changes</string>
     <string name="drawer_reports_tech">Reports</string>
     <string name="drawer_materials">Material Requests</string>
     <string name="drawer_inventory_tech">Inventory</string>

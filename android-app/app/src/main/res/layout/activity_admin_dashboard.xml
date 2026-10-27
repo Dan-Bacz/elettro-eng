@@ -1540,7 +1540,7 @@
                             <TextView
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="@string/drawer_technicians"
+                                android:text="@string/drawer_workers"
                                 android:textColor="@color/text_primary"
                                 android:textSize="13sp"
                                 android:textStyle="bold" />
@@ -1743,7 +1743,7 @@
                                     android:layout_width="34dp"
                                     android:layout_height="34dp"
                                     android:background="@drawable/bg_tile_violet"
-                                    android:contentDescription="@string/drawer_technicians"
+                                    android:contentDescription="@string/drawer_workers"
                                     android:padding="7dp"
                                     android:src="@drawable/ic_people"
                                     android:tint="@color/white" />
@@ -1753,7 +1753,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginStart="12dp"
                                     android:layout_weight="1"
-                                    android:text="@string/drawer_technicians"
+                                    android:text="@string/drawer_workers"
                                     android:textColor="@color/text_primary"
                                     android:textSize="13sp"
                                     android:textStyle="bold" />
@@ -1897,6 +1897,109 @@
                                     android:src="@drawable/ic_arrow_right"
                                     android:tint="@color/text_muted" />
                             </LinearLayout>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/view_workers_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_card"
+                                android:orientation="vertical"
+                                android:padding="14dp">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="Create a worker account"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="14sp"
+                                    android:textStyle="bold" />
+
+                                <EditText
+                                    android:id="@+id/worker_name_input"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:hint="Full name"
+                                    android:inputType="textPersonName"
+                                    android:maxLength="120"
+                                    android:singleLine="true" />
+
+                                <EditText
+                                    android:id="@+id/worker_email_input"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:hint="Email"
+                                    android:inputType="textEmailAddress"
+                                    android:maxLength="254"
+                                    android:singleLine="true" />
+
+                                <EditText
+                                    android:id="@+id/worker_password_input"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:hint="Temporary password (8+ characters)"
+                                    android:inputType="textPassword"
+                                    android:singleLine="true" />
+
+                                <Spinner
+                                    android:id="@+id/worker_role_spinner"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="48dp"
+                                    android:entries="@array/worker_roles" />
+
+                                <Button
+                                    android:id="@+id/worker_create_button"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="6dp"
+                                    android:background="@drawable/bg_action_yellow"
+                                    android:text="Create active account"
+                                    android:textColor="@color/el_ink"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/workers_list_container"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:orientation="vertical" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/view_stock_movements_section"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:visibility="gone">
+
+                            <EditText
+                                android:id="@+id/stock_movement_search"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:hint="Search product, worker, reference, or reason"
+                                android:inputType="text"
+                                android:singleLine="true" />
+
+                            <Spinner
+                                android:id="@+id/stock_movement_filter"
+                                android:layout_width="match_parent"
+                                android:layout_height="48dp"
+                                android:entries="@array/stock_movement_filters" />
+
+                            <LinearLayout
+                                android:id="@+id/stock_movements_list_container"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>

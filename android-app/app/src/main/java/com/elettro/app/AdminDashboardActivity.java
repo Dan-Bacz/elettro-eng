@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.Editable;
+import android.text.InputType;
 import android.text.TextWatcher;
 import android.util.Base64;
 import android.view.Gravity;
@@ -22,6 +23,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -73,12 +75,17 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private View viewClients, viewTechnicians, viewInventory, viewReports, viewSettings, viewMore;
     private View viewLeave;
     private View viewOrders;
+    private View viewWorkers, viewStockMovements;
     // List containers
     private LinearLayout recentBookingsContainer, bookingsListContainer, projectsListContainer;
     private LinearLayout registrationsListContainer, inventoryListContainer, techniciansListContainer;
     private LinearLayout clientsListContainer, reportsListContainer, notificationsListContainer;
     private LinearLayout leaveListContainer, leaveCreditsContainer;
     private LinearLayout ordersListContainer;
+    private LinearLayout workersListContainer, stockMovementsListContainer;
+    private EditText workerNameInput, workerEmailInput, workerPasswordInput, stockMovementSearch;
+    private Spinner workerRoleSpinner, stockMovementFilter;
+    private Button workerCreateButton;
     // Settings fields
     private EditText settingsOrgName, settingsSupportEmail;
     private EditText bookingSearchInput;
@@ -122,6 +129,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private JSONArray leaveReqsArray;
     private JSONArray leaveCreditsArray;
     private JSONArray ordersArray;
+    private JSONArray workersArray, stockMovementsArray;
+    private String currentSection = "home";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -191,6 +200,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewMore = findViewById(R.id.view_more_section);
         viewLeave = findViewById(R.id.view_leave_section);
         viewOrders = findViewById(R.id.view_orders_section);
+        viewWorkers = findViewById(R.id.view_workers_section);
+        viewStockMovements = findViewById(R.id.view_stock_movements_section);
 
         recentBookingsContainer = findViewById(R.id.recent_bookings_container);
         bookingsListContainer = findViewById(R.id.bookings_list_container);
@@ -206,6 +217,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
         leaveListContainer = findViewById(R.id.leave_list_container);
         leaveCreditsContainer = findViewById(R.id.leave_credits_container);
         ordersListContainer = findViewById(R.id.orders_list_container);
+        workersListContainer = findViewById(R.id.workers_list_container);
+        stockMovementsListContainer = findViewById(R.id.stock_movements_list_container);
+        workerNameInput = findViewById(R.id.worker_name_input);
+        workerEmailInput = findViewById(R.id.worker_email_input);
+        workerPasswordInput = findViewById(R.id.worker_password_input);
+        workerRoleSpinner = findViewById(R.id.worker_role_spinner);
+        workerCreateButton = findViewById(R.id.worker_create_button);
+        stockMovementSearch = findViewById(R.id.stock_movement_search);
+        stockMovementFilter = findViewById(R.id.stock_movement_filter);
 
         settingsOrgName = findViewById(R.id.settings_org_name);
         settingsSupportEmail = findViewById(R.id.settings_support_email);
@@ -254,6 +274,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private void setupSwipeRefresh() {
         swipeRefresh.setOnRefreshListener(() -> {
             loadDashboardData();
+            if ("workers".equals(currentSection)) loadWorkers();
+            if ("stock_movements".equals(currentSection)) loadStockMovements();
             swipeRefresh.setRefreshing(false);
         });
     }
@@ -268,12 +290,13 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_home) { showSection("home"); return true; }
             if (id == R.id.nav_bookings) { showSection("bookings"); return true; }
             if (id == R.id.nav_orders) { showSection("orders"); return true; }
+            if (id == R.id.nav_clients) { showSection("clients"); return true; }
             if (id == R.id.nav_projects) { showSection("projects"); return true; }
             if (id == R.id.nav_leave) { showSection("leave"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
-            if (id == R.id.nav_more) { showSection("more"); return true; }
-            if (id == R.id.nav_technicians) { showSection("technicians"); return true; }
             if (id == R.id.nav_inventory) { showSection("inventory"); return true; }
+            if (id == R.id.nav_workers) { showSection("workers"); return true; }
+            if (id == R.id.nav_stock_movements) { showSection("stock_movements"); return true; }
             if (id == R.id.nav_reports) { showSection("reports"); return true; }
             if (id == R.id.nav_settings) { showSection("settings"); hideKeyboard(); return true; }
             if (id == R.id.nav_logout) { logout(); return true; }
@@ -282,6 +305,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     private void showSection(String key) {
+        currentSection = key;
         viewDashboard.setVisibility("home".equals(key) ? View.VISIBLE : View.GONE);
         viewBookings.setVisibility("bookings".equals(key) ? View.VISIBLE : View.GONE);
         viewOrders.setVisibility("orders".equals(key) ? View.VISIBLE : View.GONE);
@@ -294,6 +318,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewSettings.setVisibility("settings".equals(key) ? View.VISIBLE : View.GONE);
         viewMore.setVisibility("more".equals(key) ? View.VISIBLE : View.GONE);
         viewLeave.setVisibility("leave".equals(key) ? View.VISIBLE : View.GONE);
+        viewWorkers.setVisibility("workers".equals(key) ? View.VISIBLE : View.GONE);
+        viewStockMovements.setVisibility("stock_movements".equals(key) ? View.VISIBLE : View.GONE);
 
         int titleRes = R.string.drawer_dashboard;
         int subRes = R.string.welcome_admin_3;
@@ -328,25 +354,27 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 menuRes = R.id.nav_notifications;
                 loadNotifications();
                 break;
-            case "more":
-                titleRes = R.string.more_title;
-                subRes = R.string.more_subtitle;
-                menuRes = R.id.nav_more;
-                break;
             case "clients":
                 titleRes = R.string.clients_title;
                 subRes = R.string.clients_subtitle;
-                menuRes = 0;
-                break;
-            case "technicians":
-                titleRes = R.string.technicians_title;
-                subRes = R.string.technicians_subtitle;
-                menuRes = R.id.nav_technicians;
+                menuRes = R.id.nav_clients;
                 break;
             case "inventory":
                 titleRes = R.string.inventory_title;
                 subRes = R.string.inventory_subtitle;
                 menuRes = R.id.nav_inventory;
+                break;
+            case "workers":
+                titleRes = R.string.drawer_workers;
+                subRes = R.string.workers_subtitle;
+                menuRes = R.id.nav_workers;
+                loadWorkers();
+                break;
+            case "stock_movements":
+                titleRes = R.string.drawer_stock_movements;
+                subRes = R.string.stock_movements_subtitle;
+                menuRes = R.id.nav_stock_movements;
+                loadStockMovements();
                 break;
             case "reports":
                 titleRes = R.string.reports_title;
@@ -409,6 +437,29 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnAddTechnician.setOnClickListener(v -> showAddTechnicianDialog());
         btnSaveSettings.setOnClickListener(v -> saveSettings());
         btnMarkAllRead.setOnClickListener(v -> markAllNotificationsRead());
+        workerCreateButton.setOnClickListener(v -> createWorker());
+
+        stockMovementSearch.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence text, int start, int count, int after) { }
+
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {
+                renderStockMovements();
+            }
+
+            @Override
+            public void afterTextChanged(Editable text) { }
+        });
+        stockMovementFilter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view, int position, long id) {
+                renderStockMovements();
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) { }
+        });
 
         btnQaAddClient.setOnClickListener(v -> showAddClientDialog());
         btnQaNewBooking.setOnClickListener(v -> showNewBookingDialog());
@@ -416,7 +467,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         btnQaAddInventory.setOnClickListener(v -> showAddInventoryDialog());
 
         rowMoreClients.setOnClickListener(v -> showSection("clients"));
-        rowMoreTechnicians.setOnClickListener(v -> showSection("technicians"));
+        rowMoreTechnicians.setOnClickListener(v -> showSection("workers"));
         rowMoreInventory.setOnClickListener(v -> showSection("inventory"));
         rowMoreReports.setOnClickListener(v -> showSection("reports"));
         rowMoreSettings.setOnClickListener(v -> showSection("settings"));
@@ -1390,6 +1441,234 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
             return;
         }
         iv.setImageResource(android.R.drawable.ic_menu_gallery);
+    }
+
+    private void loadWorkers() {
+        new Thread(() -> {
+            try {
+                String response = ApiClient.get("/users");
+                if (response == null) throw new Exception("Could not load worker accounts.");
+                JSONObject payload = new JSONObject(response);
+                workersArray = payload.optJSONArray("users");
+                runOnUiThread(this::renderWorkers);
+            } catch (Exception error) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        error.getMessage() == null ? "Could not load worker accounts." : error.getMessage(),
+                        Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    private void renderWorkers() {
+        workersListContainer.removeAllViews();
+        if (workersArray == null || workersArray.length() == 0) {
+            showEmpty(workersListContainer, R.string.empty);
+            return;
+        }
+
+        int displayed = 0;
+        for (int i = 0; i < workersArray.length(); i++) {
+            JSONObject worker = workersArray.optJSONObject(i);
+            if (worker == null) continue;
+            String role = worker.optString("role", "");
+            if (!("TECH".equals(role) || "SALES".equals(role) || "WAREHOUSE".equals(role))) continue;
+            displayed++;
+
+            String id = worker.optString("id", "");
+            String name = worker.optString("name", "Worker");
+            String email = worker.optString("email", "");
+            String status = worker.optString("status", worker.optBoolean("approved") ? "ACTIVE" : "PENDING");
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            cardParams.bottomMargin = dpToPx(8);
+            card.setLayoutParams(cardParams);
+
+            TextView title = new TextView(this);
+            title.setText(name + "  ·  " + role);
+            title.setTextColor(Color.parseColor("#101416"));
+            title.setTextSize(14);
+            title.setTypeface(null, Typeface.BOLD);
+            card.addView(title);
+
+            TextView details = new TextView(this);
+            details.setText(email + "\n" + status + "  ·  " + formatShortDate(worker.optString("createdAt", "")));
+            details.setTextColor(Color.parseColor("#68747A"));
+            details.setTextSize(12);
+            details.setPadding(0, dpToPx(4), 0, dpToPx(8));
+            card.addView(details);
+
+            Button statusButton = createSmallButton(
+                    "ACTIVE".equals(status) ? "Suspend" : "Activate",
+                    "ACTIVE".equals(status) ? Color.parseColor("#DC2626") : Color.parseColor("#059669"));
+            statusButton.setOnClickListener(v -> updateWorkerStatus(id, name, status));
+            card.addView(statusButton);
+            workersListContainer.addView(card);
+        }
+
+        if (displayed == 0) showEmpty(workersListContainer, R.string.empty);
+    }
+
+    private void createWorker() {
+        String name = workerNameInput.getText().toString().trim();
+        String email = workerEmailInput.getText().toString().trim();
+        String password = workerPasswordInput.getText().toString();
+        if (name.isEmpty() || email.isEmpty() || password.length() < 8) {
+            Toast.makeText(this, "Enter a name, valid email, and password with at least 8 characters.", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        String[] roles = {"SALES", "WAREHOUSE", "TECH"};
+        String role = roles[Math.max(0, Math.min(workerRoleSpinner.getSelectedItemPosition(), roles.length - 1))];
+        workerCreateButton.setEnabled(false);
+        new Thread(() -> {
+            try {
+                JSONObject body = new JSONObject();
+                body.put("action", "create_user");
+                body.put("name", name);
+                body.put("email", email);
+                body.put("password", password);
+                body.put("role", role);
+                String response = ApiClient.post("/admin", body.toString());
+                JSONObject result = response == null ? new JSONObject() : new JSONObject(response);
+                if (result.has("error")) throw new Exception(result.optString("error"));
+                runOnUiThread(() -> {
+                    workerNameInput.setText("");
+                    workerEmailInput.setText("");
+                    workerPasswordInput.setText("");
+                    Toast.makeText(this, role + " account created and activated.", Toast.LENGTH_SHORT).show();
+                    loadWorkers();
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        error.getMessage() == null ? "Could not create worker account." : error.getMessage(),
+                        Toast.LENGTH_LONG).show());
+            } finally {
+                runOnUiThread(() -> workerCreateButton.setEnabled(true));
+            }
+        }).start();
+    }
+
+    private void updateWorkerStatus(String workerId, String name, String currentStatus) {
+        new AlertDialog.Builder(this)
+                .setTitle("Update worker access")
+                .setMessage(("ACTIVE".equals(currentStatus) ? "Suspend " : "Activate ") + name + "'s account?")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Confirm", (dialog, which) -> new Thread(() -> {
+                    try {
+                        JSONObject body = new JSONObject();
+                        body.put("action", "ACTIVE".equals(currentStatus) ? "suspend_user" : "activate_user");
+                        body.put("userId", workerId);
+                        String response = ApiClient.post("/admin", body.toString());
+                        JSONObject result = response == null ? new JSONObject() : new JSONObject(response);
+                        if (result.has("error")) throw new Exception(result.optString("error"));
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, name + "'s account status was updated.", Toast.LENGTH_SHORT).show();
+                            loadWorkers();
+                        });
+                    } catch (Exception error) {
+                        runOnUiThread(() -> Toast.makeText(this,
+                                error.getMessage() == null ? "Could not update worker account." : error.getMessage(),
+                                Toast.LENGTH_LONG).show());
+                    }
+                }).start())
+                .show();
+    }
+
+    private void loadStockMovements() {
+        new Thread(() -> {
+            try {
+                String response = ApiClient.get("/warehouse-stock");
+                if (response == null) throw new Exception("Could not load stock movement history.");
+                JSONObject payload = new JSONObject(response);
+                stockMovementsArray = payload.optJSONArray("movements");
+                runOnUiThread(this::renderStockMovements);
+            } catch (Exception error) {
+                runOnUiThread(() -> Toast.makeText(this,
+                        error.getMessage() == null ? "Could not load stock movement history." : error.getMessage(),
+                        Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    private void renderStockMovements() {
+        if (stockMovementsListContainer == null) return;
+        stockMovementsListContainer.removeAllViews();
+        if (stockMovementsArray == null || stockMovementsArray.length() == 0) {
+            showEmpty(stockMovementsListContainer, R.string.empty);
+            return;
+        }
+
+        String[] movementTypes = {"ALL", "STOCK_RECEIVED", "STOCK_RELEASED", "ADJUSTMENT", "RETURN"};
+        int selectedPosition = Math.max(0, Math.min(stockMovementFilter.getSelectedItemPosition(), movementTypes.length - 1));
+        String selectedType = movementTypes[selectedPosition];
+        String query = stockMovementSearch.getText().toString().trim().toLowerCase(Locale.US);
+        int displayed = 0;
+
+        for (int i = 0; i < stockMovementsArray.length(); i++) {
+            JSONObject movement = stockMovementsArray.optJSONObject(i);
+            if (movement == null) continue;
+            String type = movement.optString("type", "");
+            if (!"ALL".equals(selectedType) && !selectedType.equals(type)) continue;
+
+            JSONObject item = movement.optJSONObject("inventoryItem");
+            JSONObject worker = movement.optJSONObject("worker");
+            JSONObject request = movement.optJSONObject("request");
+            JSONObject release = movement.optJSONObject("release");
+            String itemName = item == null ? "Inventory item" : item.optString("name", "Inventory item");
+            String sku = item == null ? "" : item.optString("sku", "");
+            String workerName = worker == null ? "Worker" : worker.optString("name", "Worker");
+            String reason = movement.optString("reason", "");
+            String reference = request != null ? request.optString("reference", "")
+                    : release != null ? release.optString("receiptNumber", "") : "";
+            String searchText = (itemName + " " + sku + " " + workerName + " " + reason + " " + reference)
+                    .toLowerCase(Locale.US);
+            if (!query.isEmpty() && !searchText.contains(query)) continue;
+            displayed++;
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
+            card.setBackgroundResource(R.drawable.bg_card);
+            LinearLayout.LayoutParams cardParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            cardParams.bottomMargin = dpToPx(8);
+            card.setLayoutParams(cardParams);
+
+            TextView product = new TextView(this);
+            product.setText(itemName + (sku.isEmpty() ? "" : "  ·  " + sku));
+            product.setTextColor(Color.parseColor("#101416"));
+            product.setTextSize(14);
+            product.setTypeface(null, Typeface.BOLD);
+            card.addView(product);
+
+            int quantity = movement.optInt("quantity");
+            int quantityColor = quantity < 0 ? Color.parseColor("#DC2626") : Color.parseColor("#059669");
+            TextView details = new TextView(this);
+            details.setText(type.replace("_", " ") + "  ·  " + (quantity > 0 ? "+" : "") + quantity
+                    + "\nStock: " + movement.optInt("stockBefore") + " → " + movement.optInt("stockAfter")
+                    + "\nWorker: " + workerName
+                    + "\n" + formatShortDate(movement.optString("createdAt", ""))
+                    + (reference.isEmpty() ? "" : "\nReference: " + reference)
+                    + (reason.isEmpty() ? "" : "\nReason: " + reason));
+            details.setTextColor(Color.parseColor("#68747A"));
+            details.setTextSize(12);
+            details.setPadding(0, dpToPx(4), 0, 0);
+            card.addView(details);
+
+            TextView quantityLabel = new TextView(this);
+            quantityLabel.setText((quantity > 0 ? "+" : "") + quantity);
+            quantityLabel.setTextColor(quantityColor);
+            quantityLabel.setTextSize(13);
+            quantityLabel.setTypeface(null, Typeface.BOLD);
+            card.addView(quantityLabel, 0);
+            stockMovementsListContainer.addView(card);
+        }
+        if (displayed == 0) showEmpty(stockMovementsListContainer, R.string.empty);
     }
 
     // === TECHNICIANS ===
