@@ -40,7 +40,7 @@ export default function DepartmentShell({
     setLoggingOut(true)
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/admin/login')
+      router.push(department === 'warehouse' ? '/warehouse' : '/admin/login')
     } finally {
       setLoggingOut(false)
     }

@@ -12,7 +12,11 @@ export default async function handler(req, res) {
 
   const email = String(req.body?.email || '').trim().toLowerCase()
   const password = String(req.body?.password || '')
+  const expectedRole = String(req.body?.expectedRole || '').trim().toUpperCase()
   if (!email || !password) return res.status(400).json({ error: 'Missing credentials' })
+  if (expectedRole && expectedRole !== 'WAREHOUSE') {
+    return res.status(400).json({ error: 'Unsupported sign-in portal' })
+  }
 
   try {
     if (await isRateLimited(req, 'staff-login', 10, 15 * 60 * 1000, email)) {
@@ -29,6 +33,10 @@ export default async function handler(req, res) {
 
     if (u.role === 'CLIENT') {
       return res.status(403).json({ error: 'Client accounts must use the client sign-in page.' })
+    }
+
+    if (expectedRole && u.role !== expectedRole) {
+      return res.status(403).json({ error: 'This sign-in page is for Warehouse accounts. Use the sign-in page for your department.' })
     }
 
     if (u.role !== 'ADMIN' && u.role !== 'TECH' && u.role !== 'SALES' && u.role !== 'WAREHOUSE') {

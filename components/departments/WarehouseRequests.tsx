@@ -41,7 +41,7 @@ export default function WarehouseRequests() {
     try {
       const response = await fetch('/api/warehouse-requests')
       if (response.status === 401) {
-        router.push('/admin/login')
+        router.push('/warehouse')
         return
       }
       const data = await response.json().catch(() => ({}))
