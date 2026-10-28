@@ -77,9 +77,6 @@ export default async function handler(req, res) {
       if (!body.name || !String(body.name).trim()) {
         return res.status(400).json({ error: 'Item name is required' })
       }
-      if (Number(body.quantity || 0) !== 0) {
-        return res.status(400).json({ error: 'Create products with zero stock, then record stock through warehouse receiving.' })
-      }
 
       const plan = planImage(body)
 
@@ -130,12 +127,12 @@ export default async function handler(req, res) {
 
       const data: any = {}
 
-      if (typeof body.quantity !== 'undefined') {
-        data.quantity = Math.max(0, Math.round(Number(body.quantity) || 0))
-      }
       if (typeof body.name !== 'undefined') {
         if (!String(body.name).trim()) return res.status(400).json({ error: 'Item name cannot be empty' })
         data.name = String(body.name).trim()
+      }
+      if (typeof body.quantity !== 'undefined') {
+        data.quantity = Math.max(0, Math.round(Number(body.quantity) || 0))
       }
       const optional = ['sku', 'category', 'brand', 'model', 'description', 'unit'] as const
       for (const key of optional) {
