@@ -5,7 +5,7 @@ import { requireActiveRole } from '../../lib/department-auth'
 
 const prisma = new PrismaClient()
 
-const REQUESTER_ROLES = ['SALES', 'WAREHOUSE', 'ADMIN'] as const
+const REQUESTER_ROLES = ['SALES', 'WAREHOUSE', 'ADMIN', 'TECH'] as const
 const MAX_REQUEST_LINES = 100
 const MAX_QUANTITY = 1_000_000
 
@@ -31,10 +31,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid request status' })
     }
 
+    const rawSource = typeof req.query.source === 'string' ? req.query.source : undefined
+    let sourceFilter: any = undefined
+    if (rawSource === 'SALES') {
+      sourceFilter = { in: ['INTERNAL_SALES', 'CLIENT_ORDER'] }
+    } else if (rawSource === 'TECHNICIAN') {
+      sourceFilter = 'TECHNICIAN'
+    } else if (rawSource && ['INTERNAL_SALES', 'CLIENT_ORDER', 'TECHNICIAN'].includes(rawSource)) {
+      sourceFilter = rawSource
+    }
+
     const requests = await prisma.warehouseRequest.findMany({
       where: {
         ...(user.role === 'SALES' ? { requesterId: user.id } : {}),
+        ...(user.role === 'TECH' ? { requesterId: user.id } : {}),
         ...(rawStatus ? { status: rawStatus as WarehouseRequestStatus } : {}),
+        ...(sourceFilter ? { source: sourceFilter } : {}),
       },
       orderBy: { createdAt: 'desc' },
       include: {
@@ -45,7 +57,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: true,
             fulfillmentMethod: true,
             paymentMethod: true,
-            paymentStatus: true
+            paymentStatus: true,
+            clientName: true,
+          }
+        },
+        booking: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            client: { select: { id: true, name: true, phone: true } },
+          }
+        },
+        materialRequest: {
+          select: {
+            id: true,
+            material: true,
+            priority: true,
+            reason: true,
+            status: true,
           }
         },
         items: {
@@ -218,7 +248,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!request) return res.status(404).json({ error: 'Warehouse request not found' })
 
     let allowed = false
-    if (user.role === 'SALES' && request.requesterId === user.id && status === 'CANCELLED') {
+    if ((user.role === 'SALES' || user.role === 'TECH') && request.requesterId === user.id && status === 'CANCELLED') {
       allowed = ['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0
     } else if (user.role === 'WAREHOUSE') {
       allowed =
@@ -253,6 +283,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             link: requester.role === 'CLIENT' ? '/client/dashboard' : '/sales/requests',
           },
         })
+      } else if (requester.role === 'TECH') {
+        await tx.notification.create({
+          data: {
+            userId: requester.id,
+            type: 'WAREHOUSE_REQUEST',
+            title: nextStatus === 'UNDER_REVIEW' ? 'Material Request Under Review' : nextStatus === 'REJECTED' ? 'Material Request Rejected' : 'Material Request Cancelled',
+            message: `Your material request ${request.reference} for ${request.projectReference || 'project'} is now ${nextStatus.toLowerCase().replace('_', ' ')}.`,
+            link: '/technician/dashboard',
+          },
+        })
+        if (request.materialRequestId) {
+          await tx.materialRequest.update({
+            where: { id: request.materialRequestId },
+            data: { status: nextStatus === 'UNDER_REVIEW' ? 'UNDER_REVIEW' : nextStatus === 'REJECTED' ? 'REJECTED' : 'CANCELLED' }
+          }).catch(() => {})
+        }
       }
 
       return tx.warehouseRequest.findUniqueOrThrow({

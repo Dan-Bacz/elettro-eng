@@ -12,15 +12,21 @@ export default async function handler(req: any, res: any) {
       const session = await getSessionUser(token)
       if (!session) return res.status(401).json({ error: 'Invalid session' })
 
-      if (session.role !== 'ADMIN' || session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
+      if (session.status !== 'ACTIVE' || (session.role !== 'ADMIN' && session.role !== 'SALES')) {
+        return res.status(403).json({ error: 'Forbidden' })
+      }
 
       const { role } = req.query || {}
+      if (session.role === 'SALES' && role !== 'RIDER') {
+        return res.status(403).json({ error: 'Sales department can only query riders' })
+      }
+
       const where: any = {}
 
-      if (role === 'TECH' || role === 'SALES' || role === 'WAREHOUSE') where.role = role
+      if (role === 'TECH' || role === 'SALES' || role === 'WAREHOUSE' || role === 'RIDER') where.role = role
       else if (role === 'CLIENT') where.role = 'CLIENT'
       else if (role === 'ADMIN') where.role = 'ADMIN'
-      else where.role = { in: ['ADMIN', 'SALES', 'WAREHOUSE', 'TECH', 'CLIENT'] }
+      else where.role = { in: ['ADMIN', 'SALES', 'WAREHOUSE', 'TECH', 'CLIENT', 'RIDER'] }
 
       const users = await prisma.user.findMany({
         where,

@@ -39,6 +39,10 @@ model User {
   warehouseRequests       WarehouseRequest[]       @relation("WarehouseRequestRequester")
   warehouseReleases       WarehouseRelease[]       @relation("WarehouseReleaseWorker")
   inventoryMovements      InventoryMovement[]      @relation("InventoryMovementWorker")
+  assignedDeliveries      Order[]                  @relation("OrderAssignedRider")
+  proofsOfDelivery        ProofOfDelivery[]        @relation("RiderProofOfDelivery")
+  deliveryHistories       DeliveryHistory[]        @relation("DeliveryHistoryActor")
+  salesReceivedReleases   WarehouseRelease[]       @relation("WarehouseReleaseSalesRecipient")
 }
 
 model EmailVerificationToken {
@@ -92,6 +96,7 @@ model Booking {
   technicianActivities TechnicianActivity[]
   reports              Report[]
   materialRequests     MaterialRequest[]
+  warehouseRequests    WarehouseRequest[]
   project              Project?
 }
 
@@ -187,9 +192,10 @@ model MaterialRequest {
   reason    String?
   priority  String   @default("NORMAL")
   status    String   @default("PENDING")
-  adminNote String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  adminNote        String?
+  warehouseRequest WarehouseRequest?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 }
 
 model Notification {
@@ -277,17 +283,25 @@ model Order {
   status            OrderStatus       @default(PENDING)
   total             Float             @default(0)
   // Rider assignment (managed by sales department)
-  riderId           String?
-  riderName         String?
-  riderAssignedAt   DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  items             OrderItem[]
-  warehouseRequest  WarehouseRequest?
+  riderId              String?
+  riderName            String?
+  riderAssignedAt      DateTime?
+  trackingNumber       String?           @unique
+  deliveryStatus       DeliveryStatus    @default(AWAITING_ASSIGNMENT)
+  deliveryFailedReason String?
+  assignedRider        User?             @relation("OrderAssignedRider", fields: [riderId], references: [id], onDelete: SetNull)
+  proofOfDelivery      ProofOfDelivery?
+  deliveryHistories    DeliveryHistory[]
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  items                OrderItem[]
+  warehouseRequest     WarehouseRequest?
 
   @@index([clientId])
   @@index([status])
   @@index([riderId])
+  @@index([trackingNumber])
+  @@index([deliveryStatus])
 }
 
 model OrderItem {
@@ -329,6 +343,7 @@ enum Role {
 enum WarehouseRequestSource {
   INTERNAL_SALES
   CLIENT_ORDER
+  TECHNICIAN
 }
 
 enum WarehouseRequestStatus {
@@ -356,6 +371,10 @@ model WarehouseRequest {
   requester         User                   @relation("WarehouseRequestRequester", fields: [requesterId], references: [id], onDelete: Restrict)
   orderId           String?                @unique
   order             Order?                 @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  bookingId         String?
+  booking           Booking?               @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  materialRequestId String?                @unique
+  materialRequest   MaterialRequest?       @relation(fields: [materialRequestId], references: [id], onDelete: SetNull)
   idempotencyKey    String?                @unique
   customerReference String?
   projectReference  String?
@@ -369,6 +388,7 @@ model WarehouseRequest {
   @@index([requesterId, createdAt])
   @@index([status, createdAt])
   @@index([source, createdAt])
+  @@index([bookingId])
 }
 
 model WarehouseRequestItem {
@@ -393,21 +413,26 @@ model WarehouseRequestItem {
 }
 
 model WarehouseRelease {
-  id             String                 @id @default(uuid())
-  requestId      String
-  request        WarehouseRequest       @relation(fields: [requestId], references: [id], onDelete: Restrict)
-  releasedById   String
-  releasedBy     User                   @relation("WarehouseReleaseWorker", fields: [releasedById], references: [id], onDelete: Restrict)
-  receiptNumber  String                 @unique
-  idempotencyKey String                 @unique
-  notes          String?
-  items          WarehouseReleaseItem[]
-  receipt        WarehouseReceipt?
-  movements      InventoryMovement[]
-  createdAt      DateTime               @default(now())
+  id                 String                 @id @default(uuid())
+  requestId          String
+  request            WarehouseRequest       @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  releasedById       String
+  releasedBy         User                   @relation("WarehouseReleaseWorker", fields: [releasedById], references: [id], onDelete: Restrict)
+  receiptNumber      String                 @unique
+  idempotencyKey     String                 @unique
+  notes              String?
+  receivedBySalesId  String?
+  receivedBySalesAt  DateTime?
+  salesReceivedNotes String?
+  salesRecipient     User?                  @relation("WarehouseReleaseSalesRecipient", fields: [receivedBySalesId], references: [id], onDelete: SetNull)
+  items              WarehouseReleaseItem[]
+  receipt            WarehouseReceipt?
+  movements          InventoryMovement[]
+  createdAt          DateTime               @default(now())
 
   @@index([requestId, createdAt])
   @@index([releasedById, createdAt])
+  @@index([receivedBySalesId])
 }
 
 model WarehouseReleaseItem {
@@ -496,3 +521,50 @@ enum LeaveType {
   SPECIAL_EMERGENCY
   OTHER
 }
+
+enum DeliveryStatus {
+  AWAITING_ASSIGNMENT
+  ASSIGNED
+  PREPARING_DISPATCH
+  IN_TRANSIT
+  DELIVERED
+  DELIVERY_FAILED
+  CANCELLATION_REQUESTED
+  CANCELLED
+  RETURN_REQUESTED
+  RETURNED
+}
+
+model ProofOfDelivery {
+  id             String   @id @default(uuid())
+  orderId        String   @unique
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  trackingNumber String
+  riderId        String
+  rider          User     @relation("RiderProofOfDelivery", fields: [riderId], references: [id], onDelete: Restrict)
+  imageUrl       String
+  imagePublicId  String?
+  notes          String?
+  recipientName  String?
+  deliveredAt    DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([riderId, createdAt])
+  @@index([trackingNumber])
+}
+
+model DeliveryHistory {
+  id             String         @id @default(uuid())
+  orderId        String
+  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  trackingNumber String?
+  status         DeliveryStatus
+  actorId        String?
+  actor          User?          @relation("DeliveryHistoryActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole      String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+
+  @@index([orderId, createdAt])
+}
+

@@ -139,6 +139,12 @@ export type OrderObj = {
     status: 'PENDING' | 'UNDER_REVIEW' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'REJECTED' | 'CANCELLED'
     _count: { releases: number }
   } | null
+  trackingNumber?: string | null
+  deliveryStatus?: string | null
+  deliveryFailedReason?: string | null
+  assignedRider?: { id: string; name: string; email: string; phone?: string | null } | null
+  proofOfDelivery?: { id: string; trackingNumber: string; imageUrl: string; deliveredAt: string; recipientName?: string | null; notes?: string | null } | null
+  deliveryHistories?: { id: string; trackingNumber: string; status: string; actorRole?: string | null; notes?: string | null; createdAt: string }[]
 }
 
 export type DashboardData = {

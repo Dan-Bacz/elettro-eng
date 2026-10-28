@@ -19,14 +19,16 @@ const NAVIGATION: Record<Department, NavItem[]> = {
   sales: [
     { key: 'dashboard', label: 'Dashboard', href: '/sales/dashboard', icon: GridIcon },
     { key: 'orders', label: 'Client Orders', href: '/sales/orders', icon: CartIcon },
+    { key: 'catalog', label: 'Product Catalog', href: '/sales/catalog', icon: PackageIcon },
+    { key: 'deliveries', label: 'Delivery Monitoring', href: '/sales/deliveries', icon: BarChartIcon },
     { key: 'requests', label: 'Warehouse Requests', href: '/sales/requests', icon: InboxIcon },
-    { key: 'receipts', label: 'Release Receipts', href: '/sales/receipts', icon: DocumentIcon },
+    { key: 'receipts', label: 'Materials Received', href: '/sales/receipts', icon: DocumentIcon },
   ],
   warehouse: [
     { key: 'dashboard', label: 'Dashboard', href: '/warehouse/dashboard', icon: GridIcon },
     { key: 'requests', label: 'Requests & Releases', href: '/warehouse/requests', icon: InboxIcon },
     { key: 'inventory', label: 'Inventory & Stock', href: '/warehouse/inventory', icon: PackageIcon },
-    { key: 'receipts', label: 'Receipts', href: '/warehouse/receipts', icon: BarChartIcon },
+    { key: 'receipts', label: 'Release Receipts', href: '/warehouse/receipts', icon: DocumentIcon },
   ],
 }
 

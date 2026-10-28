@@ -62,6 +62,8 @@ export default function InventoryPage(){
   const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
+  const [userRole, setUserRole] = useState<string>('')
+
   async function loadItems(){
     try {
       const res = await fetch('/api/inventory')
@@ -82,10 +84,11 @@ export default function InventoryPage(){
           return
         }
         const data = await res.json()
-        if (data?.user?.role !== 'ADMIN') {
+        if (data?.user?.role !== 'ADMIN' && data?.user?.role !== 'WAREHOUSE') {
           router.replace('/admin/login')
           return
         }
+        setUserRole(data?.user?.role || '')
         setAuthed(true)
       })
       .catch(() => router.replace('/admin/login'))
@@ -268,16 +271,26 @@ export default function InventoryPage(){
                 Track stock levels, equipment, and materials. Add, edit, and manage your inventory in one place.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={openAdd}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-brand-700 hover:bg-brand-50 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Item
-            </button>
+            {userRole === 'ADMIN' ? (
+              <div className="flex flex-col items-end gap-1">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-800/80 text-white rounded-lg text-xs font-bold border border-white/20">
+                  <span className="h-2 w-2 rounded-full bg-yellow-400" />
+                  Admin Read-Only Audit Mode
+                </span>
+                <span className="text-[11px] text-brand-100">Stock updates restricted to Warehouse Officers</span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={openAdd}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-brand-700 hover:bg-brand-50 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Item
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -402,16 +415,18 @@ export default function InventoryPage(){
                     <div className="p-3 sm:p-4 flex flex-col flex-1">
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-medium text-sm sm:text-base text-gray-900 truncate">{item.name}</h3>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(item)}
-                          className="p-1 text-gray-400 hover:text-brand-700 hover:bg-brand-50 rounded shrink-0 transition-colors"
-                          title="Edit item"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
+                        {userRole !== 'ADMIN' && (
+                          <button
+                            type="button"
+                            onClick={() => openEdit(item)}
+                            className="p-1 text-gray-400 hover:text-brand-700 hover:bg-brand-50 rounded shrink-0 transition-colors"
+                            title="Edit item"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {[item.brand, item.model, item.category].filter(Boolean).join(" · ") || "General"}
@@ -433,37 +448,47 @@ export default function InventoryPage(){
                         }`}>
                           {item.quantity} {item.unit || "pcs"}
                         </span>
-                        <div className="flex items-center gap-1">
+                        {userRole === 'ADMIN' ? (
                           <button
                             type="button"
-                            onClick={() => adjustStock(item, -1)}
-                            disabled={isBusy || item.quantity === 0}
-                            className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                            title="Decrease stock"
+                            onClick={() => openEdit(item)}
+                            className="px-2.5 py-1 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
                           >
-                            −
+                            View Specs
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => adjustStock(item, 1)}
-                            disabled={isBusy}
-                            className="w-7 h-7 flex items-center justify-center rounded bg-green-50 hover:bg-green-100 text-green-700 font-bold disabled:opacity-40 transition-colors"
-                            title="Increase stock"
-                          >
-                            +
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item)}
-                            disabled={isBusy}
-                            className="w-7 h-7 flex items-center justify-center rounded bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-40 transition-colors"
-                            title="Delete item"
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => adjustStock(item, -1)}
+                              disabled={isBusy || item.quantity === 0}
+                              className="w-7 h-7 flex items-center justify-center rounded bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                              title="Decrease stock"
+                            >
+                              −
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => adjustStock(item, 1)}
+                              disabled={isBusy}
+                              className="w-7 h-7 flex items-center justify-center rounded bg-green-50 hover:bg-green-100 text-green-700 font-bold disabled:opacity-40 transition-colors"
+                              title="Increase stock"
+                            >
+                              +
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item)}
+                              disabled={isBusy}
+                              className="w-7 h-7 flex items-center justify-center rounded bg-red-50 hover:bg-red-100 text-red-600 disabled:opacity-40 transition-colors"
+                              title="Delete item"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

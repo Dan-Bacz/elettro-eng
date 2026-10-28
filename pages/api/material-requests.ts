@@ -75,17 +75,81 @@ export default async function handler(req: any, res: any) {
         return res.status(403).json({ error: 'You can only request materials for your assigned projects' })
       }
 
+      const materialName = String(material).trim()
+      const reqQuantity = quantity != null ? Math.max(1, Math.round(Number(quantity))) : 1
+      const reqUnit = unit ? String(unit).trim() : 'pcs'
+
+      // Check or find matching inventory item
+      let inventoryItem = await prisma.inventoryItem.findFirst({
+        where: { name: { equals: materialName, mode: 'insensitive' } }
+      })
+      if (!inventoryItem) {
+        inventoryItem = await prisma.inventoryItem.findFirst({
+          where: { name: { contains: materialName, mode: 'insensitive' } }
+        })
+      }
+      if (!inventoryItem) {
+        inventoryItem = await prisma.inventoryItem.create({
+          data: {
+            name: materialName,
+            quantity: 0,
+            unit: reqUnit,
+            category: 'Materials'
+          }
+        })
+      }
+
       const request = await prisma.materialRequest.create({
         data: {
           techId: user.id,
           bookingId: booking.id,
-          material: String(material).trim(),
-          quantity: quantity != null ? Math.max(1, Math.round(Number(quantity))) : 1,
-          unit: unit || null,
-          reason: reason || null,
+          material: materialName,
+          quantity: reqQuantity,
+          unit: reqUnit,
+          reason: reason ? String(reason).trim() : null,
           priority: priority && String(priority).toUpperCase() === 'URGENT' ? 'URGENT' : 'NORMAL'
         }
       })
+
+      // Automatically create the linked WarehouseRequest
+      const reqUid = (await import('crypto')).randomUUID()
+      const whrReference = `WHR-TECH-${new Date().getFullYear()}-${reqUid.slice(0, 8).toUpperCase()}`
+
+      await prisma.warehouseRequest.create({
+        data: {
+          id: reqUid,
+          reference: whrReference,
+          source: 'TECHNICIAN',
+          status: 'PENDING',
+          requesterId: user.id,
+          bookingId: booking.id,
+          projectReference: booking.title,
+          materialRequestId: request.id,
+          notes: reason ? String(reason).trim() : (priority ? `Priority: ${priority}` : null),
+          items: {
+            create: [{
+              inventoryItemId: inventoryItem.id,
+              requestedQuantity: reqQuantity,
+              unit: reqUnit,
+              notes: priority ? `Priority: ${priority}` : null
+            }]
+          }
+        }
+      }).catch((e) => console.error('Failed to create linked warehouse request:', e))
+
+      // Notify warehouse workers about the new technician material request
+      const warehouseWorkers = await prisma.user.findMany({ where: { role: 'WAREHOUSE', status: 'ACTIVE' }, select: { id: true } })
+      if (warehouseWorkers.length) {
+        await prisma.notification.createMany({
+          data: warehouseWorkers.map((worker) => ({
+            userId: worker.id,
+            type: 'WAREHOUSE_REQUEST',
+            title: 'New Technician Material Request',
+            message: `${user.name} requested ${reqQuantity} ${reqUnit} of "${materialName}" for "${booking.title}".`,
+            link: '/warehouse/requests'
+          }))
+        }).catch(() => {})
+      }
 
       // Notify admins about the new request
       const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
@@ -101,7 +165,7 @@ export default async function handler(req: any, res: any) {
         })
       }
 
-      return res.status(201).json({ ok: true, request })
+      return res.status(201).json({ ok: true, request, warehouseReference: whrReference })
     } catch (error: any) {
       return res.status(500).json({ error: error.message || 'Internal server error' })
     }

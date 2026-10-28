@@ -27,10 +27,106 @@ function getIdempotencyKey(req: NextApiRequest): string | null {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const user = await requireActiveRole(req, res, ['WAREHOUSE'])
+  const user = await requireActiveRole(req, res, ['WAREHOUSE', 'SALES', 'ADMIN'])
   if (!user) return
 
+  if (req.method === 'GET') {
+    const requestId = typeof req.query.requestId === 'string' ? req.query.requestId.trim() : undefined
+    const releases = await prisma.warehouseRelease.findMany({
+      where: {
+        ...(requestId ? { requestId } : {}),
+        ...(user.role === 'SALES' ? { request: { OR: [{ requesterId: user.id }, { source: { in: ['INTERNAL_SALES', 'CLIENT_ORDER'] } }] } } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        releasedBy: { select: { id: true, name: true, email: true } },
+        salesRecipient: { select: { id: true, name: true, email: true } },
+        receipt: { select: { id: true, reference: true, createdAt: true, snapshot: true } },
+        request: {
+          select: {
+            id: true,
+            reference: true,
+            source: true,
+            status: true,
+            customerReference: true,
+            projectReference: true,
+            createdAt: true,
+            requester: { select: { id: true, name: true, role: true } },
+            order: { select: { id: true, status: true, total: true, clientName: true } },
+          },
+        },
+        items: {
+          include: {
+            requestItem: {
+              include: {
+                inventoryItem: { select: { id: true, name: true, sku: true, unit: true } },
+              },
+            },
+          },
+        },
+      },
+    })
+    return res.status(200).json({ releases })
+  }
+
+  if (req.method === 'PATCH') {
+    if (user.role !== 'SALES' && user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only Sales officers or administrators can acknowledge receipt of materials' })
+    }
+
+    const releaseId = typeof req.body?.releaseId === 'string' ? req.body.releaseId.trim() : ''
+    const notes = text(req.body?.notes, MAX_NOTES_LENGTH)
+
+    if (!releaseId) return res.status(400).json({ error: 'Release id is required' })
+
+    const existing = await prisma.warehouseRelease.findUnique({
+      where: { id: releaseId },
+      include: { releasedBy: { select: { id: true, name: true } }, request: { select: { id: true, reference: true } } },
+    })
+
+    if (!existing) return res.status(404).json({ error: 'Warehouse release not found' })
+
+    if (existing.receivedBySalesId) {
+      return res.status(409).json({ error: 'This release has already been acknowledged as received by Sales' })
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const release = await tx.warehouseRelease.update({
+        where: { id: releaseId },
+        data: {
+          receivedBySalesId: user.id,
+          receivedBySalesAt: new Date(),
+          salesReceivedNotes: notes,
+        },
+        include: {
+          releasedBy: { select: { id: true, name: true } },
+          salesRecipient: { select: { id: true, name: true } },
+          receipt: true,
+        },
+      })
+
+      // Notify the warehouse worker who released the items
+      await tx.notification.create({
+        data: {
+          userId: existing.releasedById,
+          type: 'WAREHOUSE_HANDOVER',
+          title: 'Material Handover Confirmed',
+          message: `${user.name} (Sales) physically received materials for release ${existing.receiptNumber}.`,
+          link: '/warehouse/receipts',
+        },
+      }).catch(() => {})
+
+      return release
+    })
+
+    return res.status(200).json({ ok: true, release: updated })
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  if (user.role !== 'WAREHOUSE') {
+    return res.status(403).json({ error: 'Only warehouse workers can release warehouse inventory' })
+  }
 
   const requestId = typeof req.body?.requestId === 'string' ? req.body.requestId.trim() : ''
   const idempotencyKey = getIdempotencyKey(req)
@@ -274,12 +370,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         title: 'ELETTRO ENGINEERING ENTERPRISES — WAREHOUSE MATERIAL RELEASE RECEIPT',
         receiptNumber,
         requestReference: request.reference,
+        requestSource: request.source === 'TECHNICIAN' ? 'TECHNICIAN' : request.source === 'CLIENT_ORDER' ? 'CLIENT_ORDER' : 'SALES',
+        requestingDepartment: request.source === 'TECHNICIAN' ? 'Field Engineering / Technician' : 'Sales Department',
         salesRequester: request.requester.name,
+        requestingUser: request.requester.name,
         warehouseWorker: user.name,
+        warehouseOfficer: user.name,
         customerReference: request.customerReference ?? '',
         projectReference: request.projectReference ?? '',
         releaseDate: now.toISOString(),
         notes: text(req.body?.notes, MAX_NOTES_LENGTH) ?? '',
+        signatures: {
+          releasedBy: user.name,
+          receivedBy: '',
+          authorizedBy: '',
+        },
         items: changedItems.map(({ line, item, stockBefore, stockAfter, remaining }) => ({
           name: item.inventoryItem.name,
           sku: item.inventoryItem.sku ?? '',
@@ -311,6 +416,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             link: request.requester.role === 'CLIENT' ? '/client/dashboard' : '/sales/receipts',
           },
         })
+      } else if (request.requester.role === 'TECH') {
+        await tx.notification.create({
+          data: {
+            userId: request.requesterId,
+            type: 'WAREHOUSE_RELEASE',
+            title: requestStatus === WarehouseRequestStatus.FULFILLED ? 'Materials Released' : 'Partial Materials Release',
+            message: `${receiptNumber} is ready for pickup for project "${request.projectReference || 'project'}".`,
+            link: '/technician/dashboard',
+          },
+        })
+        if (request.materialRequestId) {
+          await tx.materialRequest.update({
+            where: { id: request.materialRequestId },
+            data: { status: requestStatus === WarehouseRequestStatus.FULFILLED ? 'APPROVED' : 'PARTIALLY_FULFILLED' }
+          }).catch(() => {})
+        }
       }
 
       if (request.order) {

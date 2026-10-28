@@ -34,6 +34,12 @@ function withReference(order: any): any {
     riderId: order.riderId || null,
     riderName: order.riderName || null,
     riderAssignedAt: order.riderAssignedAt || null,
+    trackingNumber: order.trackingNumber || null,
+    deliveryStatus: order.deliveryStatus || 'AWAITING_ASSIGNMENT',
+    deliveryFailedReason: order.deliveryFailedReason || null,
+    proofOfDelivery: order.proofOfDelivery || null,
+    deliveryHistories: order.deliveryHistories || [],
+    assignedRider: order.assignedRider || null,
   }
 }
 
@@ -48,6 +54,9 @@ export default async function handler(req: any, res: any) {
         include: {
           items: { orderBy: { createdAt: 'asc' } },
           client: { select: { id: true, name: true, email: true, phone: true } },
+          assignedRider: { select: { id: true, name: true, email: true, phone: true } },
+          proofOfDelivery: true,
+          deliveryHistories: { orderBy: { createdAt: 'desc' }, take: 15 },
           warehouseRequest: {
             select: {
               id: true,
@@ -66,13 +75,17 @@ export default async function handler(req: any, res: any) {
       const { id, status, paymentStatus } = body
       const hasShipping = Object.prototype.hasOwnProperty.call(body, 'shipping')
       const hasFulfillmentNote = Object.prototype.hasOwnProperty.call(body, 'fulfillmentNote')
+      const hasRiderId = Object.prototype.hasOwnProperty.call(body, 'riderId')
       const hasRiderName = Object.prototype.hasOwnProperty.call(body, 'riderName')
+      const hasDeliveryStatus = Object.prototype.hasOwnProperty.call(body, 'deliveryStatus')
       const shipping = Number(body.shipping)
       const fulfillmentNote = String(body.fulfillmentNote ?? '').trim()
+      const riderId = String(body.riderId ?? '').trim()
       const riderName = String(body.riderName ?? '').trim()
+      const deliveryStatus = String(body.deliveryStatus ?? '').trim()
 
-      if (!id || (!status && !paymentStatus && !hasShipping && !hasFulfillmentNote && !hasRiderName)) {
-        return res.status(400).json({ error: 'Order id and an order, payment, shipping, fulfillment note, or rider update are required' })
+      if (!id || (!status && !paymentStatus && !hasShipping && !hasFulfillmentNote && !hasRiderId && !hasRiderName && !hasDeliveryStatus)) {
+        return res.status(400).json({ error: 'Order id and an update are required' })
       }
 
       if (hasShipping && (!Number.isFinite(shipping) || shipping < 0 || shipping > 1000000)) {
@@ -97,6 +110,16 @@ export default async function handler(req: any, res: any) {
 
       if (!order) return res.status(404).json({ error: 'Order not found' })
 
+      let assignedRiderUser: any = null
+      if (hasRiderId && riderId) {
+        assignedRiderUser = await prisma.user.findFirst({
+          where: { id: riderId, role: 'RIDER', status: 'ACTIVE' },
+        })
+        if (!assignedRiderUser) {
+          return res.status(400).json({ error: 'Selected rider is invalid or not an active rider account.' })
+        }
+      }
+
       const nextByStatus: Record<string, string[]> = {
         PENDING: ['APPROVED', 'CANCELLED'],
         APPROVED: ['PROCESSING', 'CANCELLED'],
@@ -120,8 +143,12 @@ export default async function handler(req: any, res: any) {
         return res.status(409).json({ error: 'Fulfillment instructions cannot be changed on a closed order.' })
       }
 
-      if (status && ['DELIVERED', 'READY_FOR_PICKUP'].includes(status)) {
-        return res.status(400).json({ error: 'Only the client can confirm that a delivered or pickup order was received.' })
+      if (status === 'DELIVERED') {
+        return res.status(400).json({ error: 'Customer orders can only be marked Delivered by the assigned rider upon photo proof submission.' })
+      }
+
+      if (status === 'READY_FOR_PICKUP' && order.fulfillmentMethod !== 'PICKUP') {
+        return res.status(400).json({ error: 'Only pickup orders can be marked ready for pickup.' })
       }
 
       if (status === 'PROCESSING' && order.warehouseRequest) {
@@ -157,27 +184,72 @@ export default async function handler(req: any, res: any) {
         }
       }
 
+      const generatedTracking = order.trackingNumber || `ELE-DLV-${new Date(order.createdAt).getFullYear()}-${order.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+
       const isApproval = status === 'APPROVED'
       const isCancellation = status === 'CANCELLED'
       const restoreLegacyStock = isCancellation && !order.warehouseRequest && ['APPROVED', 'PROCESSING'].includes(order.status)
 
       const result = await prisma.$transaction(async (tx) => {
+        const updateData: any = {
+          ...(status ? { status } : {}),
+          ...(paymentStatus ? { paymentStatus } : {}),
+          ...(hasShipping ? { shipping: Math.round(shipping * 100) / 100, shippingConfirmed: true } : {}),
+          ...(hasFulfillmentNote ? { fulfillmentNote: fulfillmentNote || null } : {}),
+        }
+
+        if (hasRiderId && assignedRiderUser) {
+          updateData.riderId = assignedRiderUser.id
+          updateData.riderName = assignedRiderUser.name
+          updateData.riderAssignedAt = new Date()
+          updateData.deliveryStatus = 'ASSIGNED'
+          updateData.trackingNumber = generatedTracking
+          if (order.status === 'PROCESSING') {
+            updateData.status = 'SHIPPED'
+          }
+        } else if (hasRiderName) {
+          updateData.riderName = riderName || null
+          updateData.riderAssignedAt = riderName ? new Date() : null
+          if (riderName && !order.trackingNumber) updateData.trackingNumber = generatedTracking
+        }
+
+        if (hasDeliveryStatus && ['CANCELLED', 'RETURNED'].includes(deliveryStatus)) {
+          updateData.deliveryStatus = deliveryStatus
+        }
+
         const claimed = await tx.order.updateMany({
           where: { id: String(id), status: order.status, paymentStatus: order.paymentStatus, updatedAt: order.updatedAt },
-          data: {
-            ...(status ? { status } : {}),
-            ...(paymentStatus ? { paymentStatus } : {}),
-            ...(hasShipping ? { shipping: Math.round(shipping * 100) / 100, shippingConfirmed: true } : {}),
-            ...(hasFulfillmentNote ? { fulfillmentNote: fulfillmentNote || null } : {}),
-            ...(hasRiderName ? { riderName: riderName || null, riderAssignedAt: riderName ? new Date() : null } : {}),
-          },
+          data: updateData,
         })
 
         if (claimed.count !== 1) throw new Error('ORDER_CHANGED')
 
+        if (hasRiderId && assignedRiderUser) {
+          await tx.deliveryHistory.create({
+            data: {
+              orderId: order.id,
+              trackingNumber: generatedTracking,
+              status: 'ASSIGNED',
+              actorId: user.id,
+              actorRole: user.role,
+              notes: `Assigned to rider ${assignedRiderUser.name} by ${user.name}`,
+            },
+          })
+
+          await tx.notification.create({
+            data: {
+              userId: assignedRiderUser.id,
+              type: 'DELIVERY_ASSIGNED',
+              title: 'New Delivery Assigned',
+              message: `You have been assigned to deliver order ${withReference(order).reference}. Tracking: ${generatedTracking}.`,
+              link: '/rider',
+            },
+          }).catch(() => {})
+        }
+
         const updated = await tx.order.findUniqueOrThrow({
           where: { id: String(id) },
-          include: { items: true },
+          include: { items: true, proofOfDelivery: true, deliveryHistories: true },
         })
 
         if (isApproval && !order.warehouseRequest) {
@@ -280,7 +352,7 @@ export default async function handler(req: any, res: any) {
       const paymentChanged = Boolean(paymentStatus && order.paymentStatus !== paymentStatus)
       const shippingChanged = hasShipping && (!order.shippingConfirmed || order.shipping !== Math.round(shipping * 100) / 100)
       const fulfillmentNoteChanged = hasFulfillmentNote && order.fulfillmentNote !== (fulfillmentNote || null)
-      const riderChanged = hasRiderName && order.riderName !== (riderName || null)
+      const riderChanged = (hasRiderName && order.riderName !== (riderName || null)) || Boolean(hasRiderId && assignedRiderUser)
 
       if (statusChanged || paymentChanged || shippingChanged || fulfillmentNoteChanged || riderChanged) {
         try {
@@ -296,7 +368,7 @@ export default async function handler(req: any, res: any) {
                   : fulfillmentNoteChanged
                     ? `The fulfillment instructions for ${withReference(result).reference} were updated.`
                     : riderChanged
-                      ? `A rider has been assigned to your order ${withReference(result).reference}: ${riderName}.`
+                      ? `A rider has been assigned to your order ${withReference(result).reference}: ${result.riderName}. Tracking: ${result.trackingNumber}.`
                       : `Your order ${withReference(result).reference} is now ${status.replace(/_/g, ' ')}.`,
               link: '/client/dashboard#orders',
             },
