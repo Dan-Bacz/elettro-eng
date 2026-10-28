@@ -1,8 +1,8 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
-import DepartmentShell from '../../components/departments/DepartmentShell'
-import { getSessionUser } from '../../lib/auth'
+import DepartmentShell from '../../../components/departments/DepartmentShell'
+import { getSessionUser } from '../../../lib/auth'
 
 export const metadata = { title: 'Sales | Elettro Engineering' }
 
