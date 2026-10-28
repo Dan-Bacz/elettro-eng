@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   const client = String(req.body?.client || '').trim()
   if (!email || !password) return res.status(400).json({ error: 'Missing credentials' })
   // Web portals
-  if (client !== 'app' && expectedRole && expectedRole !== 'WAREHOUSE' && expectedRole !== 'ADMIN') {
+  if (client !== 'app' && expectedRole && expectedRole !== 'WAREHOUSE' && expectedRole !== 'ADMIN' && expectedRole !== 'SALES') {
     return res.status(400).json({ error: 'Unsupported sign-in portal' })
   }
   // Android app - only TECH and RIDER allowed
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     }
 
     if (expectedRole && u.role !== expectedRole) {
-      const roleMap = { 'ADMIN': 'Admin', 'WAREHOUSE': 'Warehouse', 'TECH': 'Technician', 'RIDER': 'Rider' }
+      const roleMap = { 'ADMIN': 'Admin', 'WAREHOUSE': 'Warehouse', 'SALES': 'Sales', 'TECH': 'Technician', 'RIDER': 'Rider' }
       return res.status(403).json({ error: `This sign-in page is for ${roleMap[expectedRole] || expectedRole} accounts. Use the sign-in page for your department.` })
     }
 

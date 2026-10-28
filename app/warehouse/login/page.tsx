@@ -50,8 +50,8 @@ export default function WarehouseLoginPage(){
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-8">
-          <h2 className="text-lg font-bold text-white">Login to Warehouse</h2>
-          <p className="mt-1 text-sm text-gray-400">Sign in with your admin account to access the dashboard.</p>
+          <h2 className="text-lg font-bold text-white">Warehouse Login</h2>
+          <p className="mt-1 text-sm text-gray-400">Sign in with your warehouse account to access the dashboard.</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div>
@@ -99,6 +99,12 @@ export default function WarehouseLoginPage(){
         </div>
 
         <div className="mt-6 text-center">
+          <Link href="/warehouse/register" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-yellow-400 transition-colors">
+            Create warehouse account
+          </Link>
+        </div>
+
+        <div className="mt-4 text-center">
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-yellow-400 transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

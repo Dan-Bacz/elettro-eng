@@ -9,6 +9,6 @@ export const metadata = { title: 'Sales | Elettro Engineering' }
 export default async function SalesLayout({ children }: { children: ReactNode }) {
   const cookieStore = await cookies()
   const user = await getSessionUser(cookieStore.get('token')?.value)
-  if (!user || user.role !== 'SALES' || user.status !== 'ACTIVE') redirect('/admin/login')
+  if (!user || user.role !== 'SALES' || user.status !== 'ACTIVE') redirect('/sales/login')
   return <DepartmentShell department="sales" name={user.name}>{children}</DepartmentShell>
 }

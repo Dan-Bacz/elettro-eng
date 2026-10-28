@@ -42,11 +42,14 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' })
     }
 
-    // Only TECH and RIDER roles are allowed from the Android app
-    const validRoles = ['TECH', 'RIDER']
+    // Determine valid roles based on context
+    // Android app: TECH and RIDER only
+    // Web: TECH, RIDER, SALES, WAREHOUSE
     const userRole = role ? String(role).toUpperCase() : 'TECH'
+    const validRoles = ['TECH', 'RIDER', 'SALES', 'WAREHOUSE']
+    
     if (!validRoles.includes(userRole)) {
-      return res.status(400).json({ error: 'Invalid role. Only TECH and RIDER are allowed.' })
+      return res.status(400).json({ error: 'Invalid role. Only TECH, RIDER, SALES, and WAREHOUSE are allowed.' })
     }
 
     const existing = await prisma.user.findUnique({ where: { email } })
@@ -65,7 +68,7 @@ export default async function handler(req: any, res: any) {
         phone: phone || null,
         status: 'PENDING',
         approved: false,
-        role: userRole as 'TECH' | 'RIDER',
+        role: userRole as 'TECH' | 'RIDER' | 'SALES' | 'WAREHOUSE',
         address: address || null,
         specialization: specialization || null,
         yearsOfExperience: yearsOfExperience ? Math.max(0, Math.round(Number(yearsOfExperience))) : null,
@@ -74,21 +77,26 @@ export default async function handler(req: any, res: any) {
       }
     })
 
+    // All registrations (TECH, RIDER, SALES, WAREHOUSE) require admin approval
     // Notify admins in-app so the notifications center shows the pending registration
     const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
     if (admins.length) {
+      const roleLabels = { 'TECH': 'Technician', 'RIDER': 'Rider', 'SALES': 'Sales', 'WAREHOUSE': 'Warehouse' }
+      const roleLabel = roleLabels[userRole as keyof typeof roleLabels] || userRole
+      const linkMap = { 'TECH': '/admin/technicians', 'RIDER': '/admin/staff', 'SALES': '/admin/staff', 'WAREHOUSE': '/admin/staff' }
+      
       await prisma.notification.createMany({
         data: admins.map((admin) => ({
           userId: admin.id,
           type: 'REGISTRATION',
-          title: `New ${userRole === 'RIDER' ? 'Rider' : 'Technician'} Registration`,
-          message: `${user.name} (${user.email}) registered for a ${userRole === 'RIDER' ? 'rider' : 'technician'} account and is awaiting approval.`,
-          link: userRole === 'RIDER' ? '/admin/staff' : '/admin/technicians'
+          title: `New ${roleLabel} Registration`,
+          message: `${user.name} (${user.email}) registered for a ${roleLabel.toLowerCase()} account and is awaiting approval.`,
+          link: linkMap[userRole as keyof typeof linkMap] || '/admin/staff'
         }))
       })
     }
 
-    await sendAdminRegistrationNotification({ name, email, phone })
+    await sendAdminRegistrationNotification({ name, email, phone }, userRole)
 
     return res.status(201).json({
       ok: true,
