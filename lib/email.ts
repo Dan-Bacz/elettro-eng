@@ -331,14 +331,14 @@ export async function sendLeaveDecisionNotification(input: {
   }
 }
 
-export async function sendTechnicianApprovalNotification(user: { name: string; email: string }) {
+export async function sendTechnicianApprovalNotification(user: { name: string; email: string }, role: string = 'Technician') {
   for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
     try {
       const transporter = await getTransporter()
       await withTimeout(transporter.sendMail({
         from: `${process.env.GMAIL_USER || 'Elettro Engineering'} <${process.env.GMAIL_USER || 'noreply@elettro.com'}>`,
         to: user.email,
-        subject: 'Your Elettro Technician Account Has Been Approved',
+        subject: `Your Elettro ${role} Account Has Been Approved`,
         html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #0B0F10; padding: 20px; text-align: center;">
@@ -348,14 +348,15 @@ export async function sendTechnicianApprovalNotification(user: { name: string; e
           <div style="background-color: #f9f9f9; padding: 30px; border: 1px solid #e0e0e0;">
             <h2 style="color: #111; margin-top: 0;">Account Approved</h2>
             <p style="color: #555; font-size: 14px;">Good day <strong>${user.name}</strong>,</p>
-            <p style="color: #555; font-size: 14px;">Congratulations! Your technician account registration has been <strong style="color: #22A66F;">approved</strong> by the administrator.</p>
+            <p style="color: #555; font-size: 14px;">Congratulations! Your ${role.toLowerCase()} account registration has been <strong style="color: #22A66F;">approved</strong> by the administrator.</p>
             <div style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; margin: 20px 0;">
               <p style="margin: 8px 0;"><strong style="color: #333;">Email:</strong> ${user.email}</p>
+              <p style="margin: 8px 0;"><strong style="color: #333;">Role:</strong> ${role}</p>
               <p style="margin: 8px 0;"><strong style="color: #333;">Status:</strong> <span style="color: #22A66F; font-weight: bold;">APPROVED</span></p>
             </div>
-            <p style="color: #555; font-size: 14px;">You may now log in to the Elettro app using the email and password you registered with.</p>
+            <p style="color: #555; font-size: 14px;">You may now log in to the Elettro system using the email and password you registered with.</p>
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${getAppUrl()}/login" style="background-color: #F5C400; color: #111; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Login to Your Account</a>
+              <a href="${getAppUrl()}/" style="background-color: #F5C400; color: #111; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">Login to Your Account</a>
             </div>
           </div>
           <div style="background-color: #0B0F10; padding: 15px; text-align: center;">
@@ -368,7 +369,7 @@ export async function sendTechnicianApprovalNotification(user: { name: string; e
     } catch (error: any) {
       cachedIpv4 = null
       if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
-        console.error(`Failed to send technician approval notification email (attempt ${attempt}):`, error)
+        console.error(`Failed to send ${role.toLowerCase()} approval notification email (attempt ${attempt}):`, error)
       }
     }
   }

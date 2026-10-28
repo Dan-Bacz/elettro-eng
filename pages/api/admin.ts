@@ -34,6 +34,16 @@ async function notifyUser(userId: string, type: string, title: string, message: 
   }
 }
 
+function getLoginLink(role: string): string {
+  switch (role) {
+    case 'TECH': return '/technician/login'
+    case 'SALES': return '/sales/login'
+    case 'WAREHOUSE': return '/warehouse/login'
+    case 'RIDER': return '/technician/login' // Riders use Android app
+    default: return '/admin/login'
+  }
+}
+
 export default async function handler(req: any, res: any) {
   const user = await requireUser(req, res)
   if (!user) return
@@ -60,7 +70,7 @@ export default async function handler(req: any, res: any) {
 
       // --- User registration lifecycle (admin only) ---
 
-      if (action === 'approve_user' || action === 'reject_user' || action === 'suspend_user' || action === 'activate_user' || action === 'create_user' || action === 'delete_user') {
+      if (action === 'approve_user' || action === 'reject_user' || action === 'suspend_user' || action === 'activate_user' || action === 'delete_user') {
         if (user.role !== 'ADMIN') return res.status(403).json({ error: 'Forbidden' })
       }
 
@@ -117,13 +127,20 @@ export default async function handler(req: any, res: any) {
           data: { approved: true, status: 'ACTIVE', rejectionReason: null },
           select: { id: true, name: true, email: true, role: true, approved: true, status: true }
         })
-        await notifyUser(uid, 'ACCOUNT', 'Registration Approved', `Your technician account has been approved. You can now sign in and access your dashboard.`, '/technician/login')
-        await prisma.leaveCredits.upsert({
-          where: { techId: uid },
-          create: { techId: uid, vacation: 15, sick: 15 },
-          update: {}
-        })
-        await sendTechnicianApprovalNotification({ name: user.name, email: user.email })
+        const loginLink = getLoginLink(user.role)
+        await notifyUser(uid, 'ACCOUNT', 'Registration Approved', `Your ${user.role.toLowerCase()} account has been approved. You can now sign in and access your dashboard.`, loginLink)
+        
+        // Only create leave credits for technicians
+        if (user.role === 'TECH') {
+          await prisma.leaveCredits.upsert({
+            where: { techId: uid },
+            create: { techId: uid, vacation: 15, sick: 15 },
+            update: {}
+          })
+        }
+        
+        // Send email notification for approval
+        await sendTechnicianApprovalNotification({ name: user.name, email: user.email }, user.role)
         return res.json({ success: true, user })
       }
 
@@ -135,7 +152,8 @@ export default async function handler(req: any, res: any) {
           data: { approved: false, status: 'REJECTED', rejectionReason: reason || 'Your application was not approved at this time.' },
           select: { id: true, name: true, email: true, role: true, status: true }
         })
-        await notifyUser(uid, 'ACCOUNT', 'Registration Rejected', (reason || 'Your application was not approved at this time.'), '/technician/login')
+        const loginLink = getLoginLink(user.role)
+        await notifyUser(uid, 'ACCOUNT', 'Registration Rejected', (reason || 'Your application was not approved at this time.'), loginLink)
         return res.json({ success: true, user })
       }
 
@@ -361,40 +379,6 @@ export default async function handler(req: any, res: any) {
         await prisma.report.deleteMany({ where: { bookingId } })
         await prisma.booking.delete({ where: { id: bookingId } })
         return res.json({ success: true, deletedId: bookingId })
-      }
-
-      // --- User creation ---
-
-      if (action === 'create_user') {
-        if (!email || !name) {
-          return res.status(400).json({ error: 'Name and email are required' })
-        }
-        const requestedRole = role ? String(role).toUpperCase() : 'TECH'
-        const selectedRole =
-          requestedRole === 'TECH' ? Role.TECH :
-          requestedRole === 'SALES' ? Role.SALES :
-          requestedRole === 'WAREHOUSE' ? Role.WAREHOUSE :
-          null
-        if (!selectedRole) {
-          return res.status(400).json({ error: 'Role must be TECH, SALES, or WAREHOUSE' })
-        }
-        const existing = await prisma.user.findUnique({ where: { email } })
-        if (existing) {
-          return res.status(400).json({ error: 'User with this email already exists' })
-        }
-
-        const hashedPassword = password ? await bcrypt.hash(password, 10) : null
-        const newUser = await prisma.user.create({
-          data: {
-            name,
-            email,
-            password: hashedPassword,
-            role: selectedRole,
-            approved: true,
-            status: 'ACTIVE'
-          }
-        })
-        return res.status(201).json(newUser)
       }
 
       if (action === 'delete_user') {
