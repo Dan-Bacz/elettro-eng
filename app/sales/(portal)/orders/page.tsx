@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import EmptyState from '../../../components/admin/EmptyState'
-import { CartIcon } from '../../../components/admin/icons'
-import type { OrderObj } from '../../../components/admin/types'
+import EmptyState from '../../../../components/admin/EmptyState'
+import { CartIcon } from '../../../../components/admin/icons'
+import type { OrderObj } from '../../../../components/admin/types'
 
 type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
 

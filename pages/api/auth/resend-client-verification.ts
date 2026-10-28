@@ -1,1 +1,92 @@
-import { randomBytes, createHash } from 'crypto'import type { NextApiRequest, NextApiResponse } from 'next'import { isRateLimited } from '../../../lib/client-auth'import { getClientVerificationUrl, sendClientVerificationEmail } from '../../../lib/email'import { prisma } from '../../../lib/prisma'const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}?/const GENERIC_MESSAGE = 'Request processed. If an unverified client account matches this address, a verification email may be delivered. Delivery is not confirmed here; if no email arrives, try again later.'const VERIFY_TTL_MS = 24 * 60 * 60 * 1000const RESEND_COOLDOWN_MS = 60 * 1000function hashToken(token: string) {  return createHash('sha256').update(token).digest('hex')}function waitForMinimumResponse(startedAt: number) {  return new Promise<void>((resolve) => {    setTimeout(resolve, Math.max(0, 400 - (Date.now() - startedAt)))  })}export default async function handler(req: NextApiRequest, res: NextApiResponse) {  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })  const startedAt = Date.now()  const email = String(req.body?.email ?? '').trim().toLowerCase()  if (!EMAIL_RE.test(email) || email.length > 254) {    await waitForMinimumResponse(startedAt)    return res.status(200).json({ ok: true, message: GENERIC_MESSAGE })  }  try {    if (await isRateLimited(req, 'client-resend-verification', 5, 60 * 60 * 1000, email)) {      await waitForMinimumResponse(startedAt)      return res.status(429).json({ error: 'Too many resend requests. Please try again later.' })    }    const user = await prisma.user.findFirst({      where: { email: { equals: email, mode: 'insensitive' } },      select: { id: true, name: true, email: true, role: true, password: true, status: true, emailVerifiedAt: true },    })    if (user && user.role === 'CLIENT' && user.password && user.status === 'PENDING' && !user.emailVerifiedAt) {      const latest = await prisma.emailVerificationToken.findFirst({        where: { userId: user.id },        orderBy: { createdAt: 'desc' },        select: { createdAt: true, usedAt: true },      })      if (!latest || latest.usedAt || Date.now() - latest.createdAt.getTime() >= RESEND_COOLDOWN_MS) {        const token = randomBytes(32).toString('hex')        const now = new Date()        await prisma.?transaction(async (tx) => {          await tx.emailVerificationToken.updateMany({            where: { userId: user.id, usedAt: null },            data: { usedAt: now },          })          await tx.emailVerificationToken.create({            data: {              userId: user.id,              tokenHash: hashToken(token),              expiresAt: new Date(now.getTime() + VERIFY_TTL_MS),            },          })        })        try {          await sendClientVerificationEmail({            name: user.name,            email: user.email,            verificationUrl: getClientVerificationUrl(token),          })        } catch (error) {          console.error('Client verification resend failed:', error)        }      }    }    await waitForMinimumResponse(startedAt)    return res.status(200).json({ ok: true, message: GENERIC_MESSAGE })  } catch (error) {    console.error('Client verification resend request failed:', error)    return res.status(500).json({ error: 'Could not process the request right now. Please try again later.' })  }}export const config = {  api: { bodyParser: { sizeLimit: '4kb' } },}
+import { randomBytes, createHash } from 'crypto'
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { isRateLimited } from '../../../lib/client-auth'
+import { getClientVerificationUrl, sendClientVerificationEmail } from '../../../lib/email'
+import { prisma } from '../../../lib/prisma'
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}?/
+const GENERIC_MESSAGE = 'Request processed. If an unverified client account matches this address, a verification email may be delivered. Delivery is not confirmed here; if no email arrives, try again later.'
+const VERIFY_TTL_MS = 24 * 60 * 60 * 1000
+const RESEND_COOLDOWN_MS = 60 * 1000
+
+function hashToken(token: string) {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+function waitForMinimumResponse(startedAt: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, Math.max(0, 400 - (Date.now() - startedAt)))
+  })
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  const startedAt = Date.now()
+  const email = String(req.body?.email ?? '').trim().toLowerCase()
+
+  if (!EMAIL_RE.test(email) || email.length > 254) {
+    await waitForMinimumResponse(startedAt)
+    return res.status(200).json({ ok: true, message: GENERIC_MESSAGE })
+  }
+
+  try {
+    if (await isRateLimited(req, 'client-resend-verification', 5, 60 * 60 * 1000, email)) {
+      await waitForMinimumResponse(startedAt)
+      return res.status(429).json({ error: 'Too many resend requests. Please try again later.' })
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true, name: true, email: true, role: true, password: true, status: true, emailVerifiedAt: true },
+    })
+
+    if (user && user.role === 'CLIENT' && user.password && user.status === 'PENDING' && !user.emailVerifiedAt) {
+      const latest = await prisma.emailVerificationToken.findFirst({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true, usedAt: true },
+      })
+
+      if (!latest || latest.usedAt || Date.now() - latest.createdAt.getTime() >= RESEND_COOLDOWN_MS) {
+        const token = randomBytes(32).toString('hex')
+        const now = new Date()
+
+        await prisma.$transaction(async (tx) => {
+          await tx.emailVerificationToken.updateMany({
+            where: { userId: user.id, usedAt: null },
+            data: { usedAt: now },
+          })
+
+          await tx.emailVerificationToken.create({
+            data: {
+              userId: user.id,
+              tokenHash: hashToken(token),
+              expiresAt: new Date(now.getTime() + VERIFY_TTL_MS),
+            },
+          })
+        })
+
+        try {
+          await sendClientVerificationEmail({
+            name: user.name,
+            email: user.email,
+            verificationUrl: getClientVerificationUrl(token),
+          })
+        } catch (error) {
+          console.error('Client verification resend failed:', error)
+        }
+      }
+    }
+
+    await waitForMinimumResponse(startedAt)
+    return res.status(200).json({ ok: true, message: GENERIC_MESSAGE })
+  } catch (error) {
+    console.error('Client verification resend request failed:', error)
+    return res.status(500).json({ error: 'Could not process the request right now. Please try again later.' })
+  }
+}
+
+export const config = {
+  api: { bodyParser: { sizeLimit: '4kb' } },
+}

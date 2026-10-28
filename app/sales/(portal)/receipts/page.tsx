@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import EmptyState from '../../../components/admin/EmptyState'
+import EmptyState from '../../../../components/admin/EmptyState'
 
 export default function SalesReceiptsPage() {
   const router = useRouter()

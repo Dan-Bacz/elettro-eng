@@ -1,1 +1,36 @@
-import type { NextApiRequest, NextApiResponse } from 'next'import { isRateLimited, requireVerifiedClient } from '../../../lib/client-auth'import { sendClientFeedbackEmail } from '../../../lib/email'export default async function handler(req: NextApiRequest, res: NextApiResponse) {  if (req.method !== 'POST') {    res.setHeader('Allow', 'POST')    return res.status(405).json({ error: 'Method not allowed.' })  }  const client = await requireVerifiedClient(req, res)  if (!client) return  if (await isRateLimited(req, 'client-feedback', 5, 60 * 60 * 1000, client.email)) {    return res.status(429).json({ error: 'Too many feedback submissions. Please try again later.' })  }  const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : ''  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''  if (subject.length < 3 || subject.length > 120) {    return res.status(400).json({ error: 'Subject must be between 3 and 120 characters.' })  }  if (message.length < 10 || message.length > 5000) {    return res.status(400).json({ error: 'Feedback must be between 10 and 5,000 characters.' })  }  try {    await sendClientFeedbackEmail({ name: client.name, email: client.email, subject, message })    return res.status(200).json({ ok: true })  } catch (error) {    console.error('Client feedback email failed:', error)    return res.status(503).json({ error: 'Feedback could not be sent right now. Please try again later.' })  }}
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { isRateLimited, requireVerifiedClient } from '../../../lib/client-auth'
+import { sendClientFeedbackEmail } from '../../../lib/email'
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST')
+    return res.status(405).json({ error: 'Method not allowed.' })
+  }
+
+  const client = await requireVerifiedClient(req, res)
+  if (!client) return
+
+  if (await isRateLimited(req, 'client-feedback', 5, 60 * 60 * 1000, client.email)) {
+    return res.status(429).json({ error: 'Too many feedback submissions. Please try again later.' })
+  }
+
+  const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : ''
+  const message = typeof req.body?.message === 'string' ? req.body.message.trim() : ''
+
+  if (subject.length < 3 || subject.length > 120) {
+    return res.status(400).json({ error: 'Subject must be between 3 and 120 characters.' })
+  }
+
+  if (message.length < 10 || message.length > 5000) {
+    return res.status(400).json({ error: 'Feedback must be between 10 and 5,000 characters.' })
+  }
+
+  try {
+    await sendClientFeedbackEmail({ name: client.name, email: client.email, subject, message })
+    return res.status(200).json({ ok: true })
+  } catch (error) {
+    console.error('Client feedback email failed:', error)
+    return res.status(503).json({ error: 'Feedback could not be sent right now. Please try again later.' })
+  }
+}

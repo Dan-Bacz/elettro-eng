@@ -1,1 +1,72 @@
-import { createHash } from 'crypto'import type { NextApiRequest, NextApiResponse } from 'next'import { isRateLimited } from '../../../lib/client-auth'import { prisma } from '../../../lib/prisma'function hashToken(token: string) {  return createHash('sha256').update(token).digest('hex')}export default async function handler(req: NextApiRequest, res: NextApiResponse) {  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })  const token = String(req.body?.token ?? '')  if (!/^[a-f0-9]{64}?/i.test(token)) {    return res.status(400).json({ error: 'This verification link is invalid or has expired. Request a new email to continue.' })  }  try {    if (await isRateLimited(req, 'client-verify', 20, 60 * 60 * 1000)) {      return res.status(429).json({ error: 'Too many verification attempts. Please try again later.' })    }    const tokenHash = hashToken(token)    const record = await prisma.emailVerificationToken.findUnique({      where: { tokenHash },      select: { id: true, userId: true, expiresAt: true, usedAt: true, user: { select: { role: true, status: true } } },    })    if (      !record ||      record.usedAt ||      record.expiresAt <= new Date() ||      record.user.role !== 'CLIENT' ||      record.user.status === 'SUSPENDED' ||      record.user.status === 'REJECTED'    ) {      return res.status(400).json({ error: 'This verification link is invalid or has expired. Request a new email to continue.' })    }    const now = new Date()    const verified = await prisma.?transaction(async (tx) => {      const consumed = await tx.emailVerificationToken.updateMany({        where: { id: record.id, usedAt: null, expiresAt: { gt: now } },        data: { usedAt: now },      })      if (consumed.count !== 1) return false      const updated = await tx.user.updateMany({        where: { id: record.userId, role: 'CLIENT', status: { notIn: ['SUSPENDED', 'REJECTED'] } },        data: { emailVerifiedAt: now, status: 'ACTIVE', approved: true },      })      if (updated.count !== 1) return false      await tx.emailVerificationToken.updateMany({        where: { userId: record.userId, id: { not: record.id }, usedAt: null },        data: { usedAt: now },      })      await tx.notification.create({        data: {          userId: record.userId,          type: 'ACCOUNT',          title: 'Email Verified',          message: 'Your email address has been verified and your client account is active.',          link: '/client/dashboard',        },      })      return true    })    if (!verified) {      return res.status(400).json({ error: 'This verification link is invalid or has expired. Request a new email to continue.' })    }    return res.status(200).json({ ok: true, message: 'Your email is verified. You can now sign in to your client account.' })  } catch (error) {    console.error('Client email verification failed:', error)    return res.status(500).json({ error: 'Could not verify your email right now. Please try again later.' })  }}export const config = {  api: { bodyParser: { sizeLimit: '4kb' } },}
+import { createHash } from 'crypto'
+import type { NextApiRequest, NextApiResponse } from 'next'
+import { isRateLimited } from '../../../lib/client-auth'
+import { prisma } from '../../../lib/prisma'
+
+function hashToken(token: string) {
+  return createHash('sha256').update(token).digest('hex')
+}
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  const token = String(req.body?.token ?? '')
+  if (!/^[a-f0-9]{64}$/i.test(token)) {
+    return res.status(400).json({ error: 'This verification link is invalid or has expired. Request a new email to continue.' })
+  }
+
+  try {
+    if (await isRateLimited(req, 'client-verify', 20, 60 * 60 * 1000)) {
+      return res.status(429).json({ error: 'Too many verification attempts. Please try again later.' })
+    }
+
+    const tokenHash = hashToken(token)
+    const record = await prisma.emailVerificationToken.findUnique({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        expiresAt: true,
+        usedAt: true,
+        user: {
+          select: { role: true, status: true }
+        }
+      },
+    })
+
+    if (
+      !record ||
+      record.usedAt ||
+      record.expiresAt <= new Date() ||
+      record.user.role !== 'CLIENT' ||
+      record.user.status === 'SUSPENDED' ||
+      record.user.status === 'REJECTED'
+    ) {
+      return res.status(400).json({ error: 'This verification link is invalid or has expired. Request a new email to continue.' })
+    }
+
+    const now = new Date()
+    const verified = await prisma.$transaction(async (tx) => {
+      const consumed = await tx.emailVerificationToken.updateMany({
+        where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
+        data: { usedAt: now },
+      })
+      if (consumed.count !== 1) return false
+
+      const updated = await tx.user.updateMany({
+        where: { id: record.userId, role: 'CLIENT', status: { notIn: ['SUSPENDED', 'REJECTED'] } },
+        data: { emailVerifiedAt: now, status: 'ACTIVE', approved: true },
+      })
+      return updated.count === 1
+    })
+
+    if (!verified) {
+      return res.status(400).json({ error: 'This verification link is invalid or has expired. Request a new email to continue.' })
+    }
+
+    return res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error('verify-client-email error:', err)
+    return res.status(500).json({ error: 'Server error' })
+  }
+}
