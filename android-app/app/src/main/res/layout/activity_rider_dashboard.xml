@@ -102,7 +102,7 @@
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:layout_marginStart="10dp"
-                android:background="@drawable/bg_initial_circle">
+                android:background="@drawable/bg_icon_circle">
 
                 <TextView
                     android:id="@+id/header_user_initial"
@@ -167,7 +167,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:text="Keep up the great work!"
-                android:textColor="@color/el_muted"
+                android:textColor="@color/text_secondary"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -211,7 +211,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:text="Rider"
-                            android:textColor="@color/el_muted"
+                            android:textColor="@color/text_secondary"
                             android:textSize="14sp" />
 
                         <!-- Stats -->
@@ -244,7 +244,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
                                     android:text="Today"
-                                    android:textColor="@color/el_muted"
+                                    android:textColor="@color/text_secondary"
                                     android:textSize="11sp" />
                             </LinearLayout>
 
@@ -272,7 +272,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
                                     android:text="Pending"
-                                    android:textColor="@color/el_muted"
+                                    android:textColor="@color/text_secondary"
                                     android:textSize="11sp" />
                             </LinearLayout>
 
@@ -300,7 +300,7 @@
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
                                     android:text="Completed"
-                                    android:textColor="@color/el_muted"
+                                    android:textColor="@color/text_secondary"
                                     android:textSize="11sp" />
                             </LinearLayout>
                         </LinearLayout>
@@ -416,7 +416,7 @@
                                 android:layout_width="64dp"
                                 android:layout_height="64dp"
                                 android:layout_gravity="center"
-                                android:background="@drawable/bg_initial_circle">
+                                android:background="@drawable/bg_icon_circle">
 
                                 <TextView
                                     android:id="@+id/profile_initial"
@@ -447,7 +447,7 @@
                                 android:layout_gravity="center"
                                 android:layout_marginTop="4dp"
                                 android:text="email@example.com"
-                                android:textColor="@color/el_muted"
+                                android:textColor="@color/text_secondary"
                                 android:textSize="14sp" />
 
                             <TextView
@@ -457,7 +457,7 @@
                                 android:layout_gravity="center"
                                 android:layout_marginTop="4dp"
                                 android:text="+639123456789"
-                                android:textColor="@color/el_muted"
+                                android:textColor="@color/text_secondary"
                                 android:textSize="14sp" />
 
                             <Button
@@ -465,7 +465,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="20dp"
-                                android:background="@drawable/bg_button"
+                                android:background="@drawable/bg_action_yellow"
                                 android:text="Logout"
                                 android:textAllCaps="false"
                                 android:textColor="@color/el_ink"
@@ -485,8 +485,8 @@
         android:layout_gravity="start"
         android:background="@color/page_bg"
         app:headerLayout="@layout/drawer_header"
-        app:itemIconTint="@color/el_muted"
+        app:itemIconTint="@color/text_secondary"
         app:itemTextColor="@color/el_ink"
-        app:menu="@menu/rider_drawer_menu" />
+        app:menu="@menu/drawer_rider" />
 
 </androidx.drawerlayout.widget.DrawerLayout>

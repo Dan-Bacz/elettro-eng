@@ -156,8 +156,8 @@ public class RiderDashboardActivity extends AppCompatActivity {
         viewNotifications.setVisibility("notifications".equals(key) ? View.VISIBLE : View.GONE);
         viewProfile.setVisibility("profile".equals(key) ? View.VISIBLE : View.GONE);
 
-        int titleRes = R.string.drawer_dashboard;
-        int subRes = "Keep up the great work!";
+        String titleRes = "Dashboard";
+        String subRes = "Keep up the great work!";
         int menuRes = R.id.nav_home;
 
         switch (key) {

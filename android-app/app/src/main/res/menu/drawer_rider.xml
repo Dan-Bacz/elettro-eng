@@ -6,7 +6,7 @@
         android:title="Dashboard" />
     <item
         android:id="@+id/nav_deliveries"
-        android:icon="@drawable/ic_work"
+        android:icon="@drawable/ic_shopping_cart"
         android:title="My Deliveries" />
     <item
         android:id="@+id/nav_notifications"

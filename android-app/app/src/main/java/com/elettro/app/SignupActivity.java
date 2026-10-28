@@ -170,9 +170,11 @@ public class SignupActivity extends AppCompatActivity {
         String confirmPassword = confirmPasswordInput.getText() == null ? "" : confirmPasswordInput.getText().toString().trim();
 
         // Get selected role
-        String role = "TECH";
+        final String role;
         if (roleRider.isChecked()) {
             role = "RIDER";
+        } else {
+            role = "TECH";
         }
 
         if (TextUtils.isEmpty(name)) {
