@@ -97,7 +97,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     const verificationUrl = getClientVerificationUrl(token)
-    await sendClientVerificationEmail(result.user.email, result.user.name, verificationUrl)
+    await sendClientVerificationEmail({
+      email: result.user.email,
+      name: result.user.name,
+      verificationUrl,
+    })
 
     return res.status(201).json({ ok: true, message: GENERIC_MESSAGE })
   } catch (error) {
