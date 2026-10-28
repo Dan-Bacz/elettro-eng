@@ -1,4 +1,4 @@
-import SalesRequests from '../../../components/departments/SalesRequests'
+import SalesRequests from '../../components/departments/SalesRequests'
 
 export default function SalesRequestsPage() {
   return <SalesRequests />
