@@ -29,7 +29,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 
 function money(value: number | null | undefined, decimals = 2) {
   const n = Number(value ?? 0)
-  return `$${n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
+  return `₱${n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}`
 }
 
 export default function WarehouseInventory() {

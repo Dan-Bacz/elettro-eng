@@ -168,8 +168,8 @@ export default function InventoryForm({ initial, onSubmit, submitting, error }: 
           <Field label="Unit" value={form.unit} onChange={(v) => setField('unit', v)} placeholder="pcs, meters, liters…" />
           <Field label="Quantity" type="number" value={String(form.quantity)} onChange={(v) => setField('quantity', Math.max(0, Number(v) || 0))} min={0} />
           <Field label="Reorder Level" type="number" value={String(form.reorderLevel)} onChange={(v) => setField('reorderLevel', Math.max(0, Number(v) || 0))} min={0} />
-          <Field label="Buy Price ($)" type="number" value={String(form.buyPrice)} onChange={(v) => setField('buyPrice', v)} placeholder="Cost per unit" min={0} step="0.01" />
-          <Field label="Sell Price ($)" type="number" value={String(form.sellPrice)} onChange={(v) => setField('sellPrice', v)} placeholder="Retail price" min={0} step="0.01" />
+          <Field label="Buy Price (₱)" type="number" value={String(form.buyPrice)} onChange={(v) => setField('buyPrice', v)} placeholder="Cost per unit" min={0} step="0.01" />
+          <Field label="Sell Price (₱)" type="number" value={String(form.sellPrice)} onChange={(v) => setField('sellPrice', v)} placeholder="Retail price" min={0} step="0.01" />
         </div>
         <div className="mt-4">
           <label className="block text-xs font-bold text-slate-500 mb-1">Description</label>

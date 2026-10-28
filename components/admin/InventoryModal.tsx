@@ -363,8 +363,8 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <Field label="Model Number" value={model} onChange={setModel} placeholder="e.g. LED-12W-220V" />
               <Field label="SKU / Product Number" value={sku} onChange={setSku} placeholder="e.g. WH-001" />
               <Field label="Unit *" value={unit} onChange={setUnit} placeholder="pcs, meters, rolls…" required />
-              <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="$" />
-              <Field label="Sell Price" type="number" inputMode="decimal" min={0} step="0.01" value={sellPrice} onChange={setSellPrice} placeholder="Retail price" prefix="$" />
+              <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="₱" />
+              <Field label="Sell Price" type="number" inputMode="decimal" min={0} step="0.01" value={sellPrice} onChange={setSellPrice} placeholder="Retail price" prefix="₱" />
               <Field label="Initial Stock *" type="number" inputMode="numeric" min={0} step={1} value={quality} onChange={setQuality} placeholder="0" required />
               <Field label="Minimum Stock" type="number" inputMode="numeric" min={0} step={1} value={minStock} onChange={setMinStock} placeholder="10" />
             </div>
@@ -460,7 +460,7 @@ function Field({
       </label>
       {prefix ? (
         <div className="relative">
-          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">{prefix}</span>
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">₱</span>
           {inner}
         </div>
       ) : (
