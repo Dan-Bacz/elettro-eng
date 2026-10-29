@@ -3,13 +3,14 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { GridIcon, InboxIcon, HammerIcon, CalendarIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon, CartIcon } from './icons'
+import { GridIcon, InboxIcon, PackageIcon, BarChartIcon, LogoutIcon, CartIcon } from './icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/warehouse/dashboard' },
   { key: 'requests', label: 'Requests & Releases', icon: InboxIcon, href: '/warehouse/requests' },
   { key: 'inventory', label: 'Inventory & Stock', icon: PackageIcon, href: '/warehouse/inventory' },
   { key: 'receipts', label: 'Receipts', icon: BarChartIcon, href: '/warehouse/receipts' },
+  { key: 'sales', label: 'Sales Overview', icon: CartIcon, href: '/warehouse/sales' },
 ]
 
 export default function WarehouseSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {

@@ -35,27 +35,41 @@ export default async function handler(req: any, res: any) {
       },
       select: {
         id: true,
+        clientName: true,
+        total: true,
+        status: true,
+        paymentStatus: true,
+        createdAt: true,
         items: {
           select: {
             inventoryItemId: true,
+            name: true,
             quantity: true,
             unitPrice: true,
+            inventoryItem: { select: { category: true } },
           },
         },
       },
     })
 
     const byItem = new Map<string, { units: number; revenue: number; orders: number }>()
+    const byDay = new Map<string, { units: number; revenue: number; orders: number }>()
+    const byCategory = new Map<string, { units: number; revenue: number }>()
     let units = 0
     let revenue = 0
 
     for (const order of orders) {
       const countedItems = new Set<string>()
+      const day = order.createdAt.toISOString().slice(0, 10)
+      const daySummary = byDay.get(day) || { units: 0, revenue: 0, orders: 0 }
+      daySummary.orders += 1
       for (const item of order.items) {
         if (!item.inventoryItemId) continue
         const itemRevenue = Number(item.unitPrice) * item.quantity
         units += item.quantity
         revenue += itemRevenue
+        daySummary.units += item.quantity
+        daySummary.revenue += itemRevenue
         const current = byItem.get(item.inventoryItemId) || { units: 0, revenue: 0, orders: 0 }
         current.units += item.quantity
         current.revenue += itemRevenue
@@ -64,7 +78,13 @@ export default async function handler(req: any, res: any) {
           countedItems.add(item.inventoryItemId)
         }
         byItem.set(item.inventoryItemId, current)
+        const category = item.inventoryItem?.category || 'Uncategorized'
+        const categorySummary = byCategory.get(category) || { units: 0, revenue: 0 }
+        categorySummary.units += item.quantity
+        categorySummary.revenue += itemRevenue
+        byCategory.set(category, categorySummary)
       }
+      byDay.set(day, daySummary)
     }
 
     return res.json({
@@ -76,6 +96,27 @@ export default async function handler(req: any, res: any) {
         units: values.units,
         orders: values.orders,
         revenue: Math.round(values.revenue * 100) / 100,
+      })),
+      trend: Array.from(byDay.entries()).sort(([a], [b]) => a.localeCompare(b)).map(([date, values]) => ({
+        date,
+        orders: values.orders,
+        units: values.units,
+        revenue: Math.round(values.revenue * 100) / 100,
+      })),
+      categories: Array.from(byCategory.entries()).map(([category, values]) => ({
+        category,
+        units: values.units,
+        revenue: Math.round(values.revenue * 100) / 100,
+      })).sort((a, b) => b.revenue - a.revenue),
+      recentOrders: orders.slice(0, 10).map((order) => ({
+        id: order.id,
+        reference: `ORD-${order.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`,
+        customer: order.clientName,
+        amount: order.total,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        createdAt: order.createdAt,
+        itemCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
       })),
     })
   } catch (error) {

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PackageIcon, InboxIcon, DocumentIcon, BarChartIcon } from '../../../../components/admin/icons'
+import WarehouseSalesSnapshot from '../../../../components/warehouse/WarehouseSalesSnapshot'
+import StockHealthPanel from '../../../../components/warehouse/StockHealthPanel'
 
 type WarehouseStats = {
   totalProducts: number
@@ -28,6 +30,7 @@ export default function WarehouseDashboardPage() {
   const [technicianRequests, setTechnicianRequests] = useState<any[]>([])
   const [recentMovements, setRecentMovements] = useState<any[]>([])
   const [recentReceipts, setRecentReceipts] = useState<any[]>([])
+  const [inventoryItems, setInventoryItems] = useState<any[]>([])
   const [releasedTodayCount, setReleasedTodayCount] = useState(0)
 
   useEffect(() => {
@@ -46,6 +49,7 @@ export default function WarehouseDashboardPage() {
         setTechnicianRequests(data.technicianRequests || [])
         setRecentMovements(data.movements?.slice(0, 6) || [])
         setRecentReceipts(data.receipts?.slice(0, 6) || [])
+        setInventoryItems(data.inventory || [])
 
         // Count releases today
         const todayStr = new Date().toISOString().slice(0, 10)
@@ -64,6 +68,11 @@ export default function WarehouseDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <section className="rounded-2xl border border-slate-800 bg-[#0b0f10] p-6 text-white shadow-lg sm:p-8">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-yellow-400">ELETTRO Engineering Enterprises</p>
+        <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}</h1>
+        <p className="mt-2 text-sm text-slate-300">Here&apos;s what&apos;s happening with your warehouse today.</p>
+      </section>
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -183,6 +192,8 @@ export default function WarehouseDashboardPage() {
 
       {/* Main Grid: Incoming Sales & Technician Requests */}
       <div className="grid gap-6 lg:grid-cols-2">
+        <WarehouseSalesSnapshot />
+        <StockHealthPanel items={inventoryItems} />
         {/* Incoming Sales Material Requests */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
