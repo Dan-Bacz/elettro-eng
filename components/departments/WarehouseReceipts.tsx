@@ -131,7 +131,7 @@ export default function WarehouseReceipts() {
             return (
               <article
                 key={receipt.id}
-                className="receipt-card break-inside-avoid rounded-2xl border border-slate-300 bg-white p-5 shadow-sm sm:p-6"
+                className={`receipt-card ${managedReceiptId === receipt.id ? 'receipt-open' : ''} break-inside-avoid rounded-2xl border border-slate-300 bg-white p-5 shadow-sm sm:p-6`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
@@ -149,12 +149,17 @@ export default function WarehouseReceipts() {
                     onClick={() => setManagedReceiptId((current) => current === receipt.id ? null : receipt.id)}
                     className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white hover:bg-slate-700 print:hidden"
                   >
-                    {managedReceiptId === receipt.id ? 'Close' : 'Manage'}
+                    {managedReceiptId === receipt.id ? 'Close' : 'View'}
                   </button>
                 </div>
 
                 {managedReceiptId === receipt.id && (
-                  <div className="mt-5 border-t border-slate-100 pt-5">
+                  <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4">
+                    <div className="mx-auto my-6 max-w-6xl rounded-2xl bg-white p-5 shadow-2xl sm:p-8">
+                      <div className="mb-4 flex justify-end gap-2 print:hidden">
+                        <button type="button" onClick={() => window.print()} className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300">Print / Save PDF</button>
+                        <button type="button" onClick={() => setManagedReceiptId(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Close</button>
+                      </div>
                 {/* Official Receipt Header */}
                 <div className="border-b-2 border-slate-900 pb-5">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -286,6 +291,7 @@ export default function WarehouseReceipts() {
                   </div>
                 </div>
                   </div>
+                  </div>
                 )}
               </article>
             )
@@ -319,6 +325,9 @@ export default function WarehouseReceipts() {
             page-break-after: always;
             padding: 24px !important;
             margin: 0 0 20px 0 !important;
+          }
+          .receipt-card:not(.receipt-open) {
+            display: none !important;
           }
         }
       `}</style>

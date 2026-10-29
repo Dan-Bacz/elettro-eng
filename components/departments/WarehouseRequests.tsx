@@ -135,7 +135,9 @@ export default function WarehouseRequests() {
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Could not complete warehouse release.')
       setNotice(`Release ${data.release.receiptNumber} recorded successfully. Inventory updated atomically.`)
+      setManagedRequestId(null)
       await load()
+      router.push(`/warehouse/receipts?reference=${encodeURIComponent(data.receipt?.reference || data.release.receiptNumber)}`)
     } catch (releaseError) {
       setError(releaseError instanceof Error ? releaseError.message : 'Could not complete warehouse release.')
     } finally {
@@ -300,12 +302,17 @@ export default function WarehouseRequests() {
                     onClick={() => setManagedRequestId((current) => current === request.id ? null : request.id)}
                     className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white hover:bg-slate-700"
                   >
-                    {managedRequestId === request.id ? 'Close' : 'Manage'}
+                    {managedRequestId === request.id ? 'Close' : 'View'}
                   </button>
                 </div>
 
                 {managedRequestId === request.id && (
-                  <div className="mt-5 space-y-4 border-t border-slate-100 pt-5">
+                  <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4">
+                    <div className="mx-auto my-6 max-w-7xl space-y-4 rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div><h2 className="text-lg font-black text-slate-900">Request {request.reference}</h2><p className="text-xs text-slate-500">Verify each requested material before release.</p></div>
+                        <button type="button" onClick={() => setManagedRequestId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50">Close</button>
+                      </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
                       <div className="flex flex-wrap gap-x-4 gap-y-1">
                         <span><strong>Requester:</strong> {request.requester.name} ({request.requester.role})</span>
@@ -484,6 +491,7 @@ export default function WarehouseRequests() {
                     )}
                   </div>
                 )}
+                    </div>
                   </div>
                 )}
               </article>
