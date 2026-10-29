@@ -8,7 +8,7 @@ import { GridIcon, InboxIcon, CartIcon, DocumentIcon, PackageIcon, LogoutIcon } 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/sales/dashboard' },
   { key: 'orders', label: 'Client Orders', icon: CartIcon, href: '/sales/orders' },
-  { key: 'pos', label: 'Create POS Sale', icon: CartIcon, href: '/sales/pos' },
+  { key: 'pos', label: 'Create Sale', icon: CartIcon, href: '/sales/pos' },
   { key: 'stock', label: 'Sales Stock', icon: PackageIcon, href: '/sales/stock' },
   { key: 'requests', label: 'Warehouse Requests', icon: InboxIcon, href: '/sales/requests' },
   { key: 'receipts', label: 'Release Receipts', icon: DocumentIcon, href: '/sales/receipts' },
