@@ -16,9 +16,6 @@ export default function SalesRequests() {
   const [requests, setRequests] = useState<Request[]>([])
   const [lines, setLines] = useState<Line[]>([])
   const [search, setSearch] = useState('')
-  const [customerReference, setCustomerReference] = useState('')
-  const [projectReference, setProjectReference] = useState('')
-  const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -63,10 +60,10 @@ export default function SalesRequests() {
     if (!lines.length) { setError('Add at least one product to the request.'); return }
     setSaving(true); setError(''); setNotice('')
     try {
-      const response = await fetch('/api/warehouse-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: lines, customerReference, projectReference, notes, idempotencyKey: window.crypto.randomUUID() }) })
+      const response = await fetch('/api/warehouse-requests', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: lines, idempotencyKey: window.crypto.randomUUID() }) })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Could not submit the warehouse request.')
-      setLines([]); setCustomerReference(''); setProjectReference(''); setNotes(''); setNotice(`Request ${data.request.reference} was sent to warehouse.`); await load()
+      setLines([]); setNotice(`Request ${data.request.reference} was sent to warehouse.`); await load()
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Could not submit the warehouse request.')
     } finally {
@@ -91,8 +88,6 @@ export default function SalesRequests() {
       <form onSubmit={submitRequest} className="space-y-5 border-t border-slate-200 pt-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-base font-black text-slate-900">Your request</h2><p className="text-xs text-slate-500">Review the selected materials, add details, then continue.</p></div><span className="text-xs font-black text-slate-400">{lines.length} material{lines.length === 1 ? '' : 's'} selected</span></div>
         {lines.length ? <div className="divide-y divide-slate-100 border-y border-slate-200 bg-white">{lines.map((line) => { const item = inventoryById.get(line.inventoryItemId); return <div key={line.inventoryItemId} className="flex items-center gap-3 px-2 py-3 sm:px-3"><div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-50">{item?.imageUrl ? <Image src={item.imageUrl} alt="" width={48} height={48} className="h-full w-full object-contain" /> : <PackageIcon className="h-5 w-5 text-slate-300" />}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-black text-slate-800">{item?.name}</div><div className="text-[10px] text-slate-500">{item?.sku || 'No SKU'} · {item?.unit || 'pcs'}</div></div><input type="number" min={1} max={1_000_000} value={line.quantity} onChange={(event) => updateQuantity(line.inventoryItemId, Number(event.target.value))} aria-label={`Quantity for ${item?.name}`} className="w-20 rounded-lg border border-slate-200 px-2 py-2 text-center text-xs font-black" /><button type="button" onClick={() => setLines((current) => current.filter((entry) => entry.inventoryItemId !== line.inventoryItemId))} className="text-xs font-bold text-red-600 hover:underline">Remove</button></div>})}</div> : <div className="border-y border-dashed border-slate-300 py-8 text-center text-sm text-slate-500">No materials selected yet. Add products above to begin.</div>}
-        <div className="grid gap-3 sm:grid-cols-2"><label className="text-xs font-bold text-slate-600">Customer / job reference<input value={customerReference} onChange={(event) => setCustomerReference(event.target.value)} maxLength={200} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" /></label><label className="text-xs font-bold text-slate-600">Project reference<input value={projectReference} onChange={(event) => setProjectReference(event.target.value)} maxLength={200} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" /></label></div>
-        <label className="block text-xs font-bold text-slate-600">Notes<textarea value={notes} onChange={(event) => setNotes(event.target.value)} maxLength={1000} rows={3} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm" /></label>
         <button disabled={saving || loading || !lines.length} className="rounded-xl bg-yellow-400 px-5 py-3 text-xs font-black text-black shadow-sm hover:bg-yellow-500 disabled:opacity-50">{saving ? 'Submitting...' : 'Continue request'}</button>
       </form>
 
