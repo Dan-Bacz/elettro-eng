@@ -43,6 +43,7 @@ model User {
   proofsOfDelivery        ProofOfDelivery[]        @relation("RiderProofOfDelivery")
   deliveryHistories       DeliveryHistory[]        @relation("DeliveryHistoryActor")
   salesReceivedReleases   WarehouseRelease[]       @relation("WarehouseReleaseSalesRecipient")
+  salesCreated             SalesSale[]             @relation("SalesSaleCreator")
 }
 
 model EmailVerificationToken {
@@ -161,6 +162,7 @@ model InventoryItem {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   orderItems            OrderItem[]
+  salesSaleItems        SalesSaleItem[]
   warehouseRequestItems WarehouseRequestItem[]
   inventoryMovements    InventoryMovement[]
 }
@@ -318,6 +320,38 @@ model OrderItem {
   warehouseRequestItem WarehouseRequestItem?
 
   @@index([orderId])
+}
+
+// Internal point-of-sale transactions created by the Sales department from
+// stock physically received from Warehouse.
+model SalesSale {
+  id          String         @id @default(uuid())
+  reference   String         @unique
+  customerName String?
+  customerContact String?
+  total       Float          @default(0)
+  createdById String
+  createdBy   User           @relation("SalesSaleCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  items       SalesSaleItem[]
+  createdAt   DateTime       @default(now())
+
+  @@index([createdAt])
+  @@index([createdById, createdAt])
+}
+
+model SalesSaleItem {
+  id              String        @id @default(uuid())
+  saleId          String
+  sale            SalesSale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  name            String
+  quantity        Int
+  unit            String?
+  unitPrice       Float
+
+  @@index([saleId])
+  @@index([inventoryItemId])
 }
 
 enum OrderStatus {
@@ -567,4 +601,3 @@ model DeliveryHistory {
 
   @@index([orderId, createdAt])
 }
-

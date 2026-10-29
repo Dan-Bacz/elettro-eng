@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
+import { PackageIcon } from '../admin/icons'
 
-type InventoryItem = { id: string; name: string; sku: string | null; unit: string | null; quantity: number; sellPrice: number | null }
+type InventoryItem = { id: string; name: string; sku: string | null; unit: string | null; quantity: number; sellPrice: number | null; category?: string | null; imageUrl?: string | null }
 type RequestItem = { id: string; requestedQuantity: number; releasedQuantity: number; unavailableQuantity: number; unit: string | null; inventoryItem: { name: string; sku: string | null } }
 type Request = {
   id: string
@@ -31,6 +33,7 @@ export default function SalesRequests() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [search, setSearch] = useState('')
 
   const inventoryById = useMemo(() => new Map(inventory.map((item) => [item.id, item])), [inventory])
 
@@ -41,7 +44,7 @@ export default function SalesRequests() {
         fetch('/api/warehouse-requests'),
       ])
       if (inventoryResponse.status === 401 || requestResponse.status === 401) {
-        router.push('/admin/login')
+        router.push('/sales/login')
         return
       }
       if (!inventoryResponse.ok || !requestResponse.ok) throw new Error('Could not load products or requests.')
@@ -72,6 +75,16 @@ export default function SalesRequests() {
     setError('')
     setLines((current) => [...current, { inventoryItemId: item.id, quantity: amount }])
     setQuantity('1')
+  }
+
+  function addProduct(item: InventoryItem) {
+    const existing = lines.find((line) => line.inventoryItemId === item.id)
+    if (existing) {
+      setLines((current) => current.map((line) => line.inventoryItemId === item.id ? { ...line, quantity: line.quantity + 1 } : line))
+      return
+    }
+    setLines((current) => [...current, { inventoryItemId: item.id, quantity: 1 }])
+    setError('')
   }
 
   async function submitRequest(event: React.FormEvent<HTMLFormElement>) {
@@ -119,6 +132,23 @@ export default function SalesRequests() {
 
       {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
       {notice && <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{notice}</div>}
+
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div><h2 className="text-base font-black text-slate-900">Request products from Warehouse</h2><p className="mt-1 text-xs text-slate-500">Browse the Warehouse catalog and add several materials to one request.</p></div>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products or SKU…" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold sm:w-64" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {inventory.filter((item) => !search.trim() || `${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(search.toLowerCase())).map((item) => (
+            <article key={item.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <div className="flex h-24 items-center justify-center rounded-lg bg-white">{item.imageUrl ? <Image src={item.imageUrl} alt="" width={96} height={96} className="h-full w-full object-contain" /> : <PackageIcon className="h-9 w-9 text-slate-300" />}</div>
+              <h3 className="mt-2 truncate text-xs font-black text-slate-800">{item.name}</h3>
+              <p className="mt-1 text-[10px] text-slate-500">{item.sku || 'No SKU'} · Warehouse stock: {item.quantity} {item.unit || 'pcs'}</p>
+              <button type="button" onClick={() => addProduct(item)} className="mt-2 w-full rounded-lg bg-yellow-400 px-2 py-2 text-[11px] font-black text-slate-900 hover:bg-yellow-300">Add to request</button>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <form onSubmit={submitRequest} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-base font-black text-slate-900">New Request</h2>

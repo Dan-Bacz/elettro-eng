@@ -1,0 +1,6 @@
+-- The department workflow schema is already provisioned in the deployment
+-- database. This migration file is retained to restore the migration history
+-- entry that exists in _prisma_migrations.
+--
+-- Do not use this file to provision a fresh database. Use `prisma db push`
+-- or a complete baseline migration for a new database.
