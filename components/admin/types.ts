@@ -122,6 +122,7 @@ export type OrderObj = {
   notes?: string | null
   status: 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
   total: number
+  isFullyReceived?: boolean
   createdAt: string
   updatedAt?: string
   paymentReference?: string | null

@@ -8,6 +8,7 @@ import { CartIcon, PackageIcon, InboxIcon, DocumentIcon, BarChartIcon } from '..
 type SalesReportData = {
   summary: {
     totalOrders: number
+    receivedOrders: number
     pendingOrders: number
     ordersAwaitingFulfillment: number
     inTransitDeliveries: number
@@ -103,12 +104,12 @@ export default function SalesDashboardPage() {
           {/* Total Customer Orders */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Total Orders</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Completed Sales</span>
               <CartIcon className="h-5 w-5 text-slate-400" />
             </div>
-            <div className="mt-3 text-3xl font-black text-slate-900">{s?.totalOrders ?? 0}</div>
+            <div className="mt-3 text-3xl font-black text-slate-900">{s?.receivedOrders ?? 0}</div>
             <div className="mt-1 text-xs text-slate-500">
-              ₱{(s?.totalSalesRevenue ?? 0).toLocaleString()} paid revenue
+              ₱{(s?.totalSalesRevenue ?? 0).toLocaleString()} received sales value
             </div>
           </div>
 

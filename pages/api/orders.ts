@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import jwt from 'jsonwebtoken'
 import { getJwtSecret } from '../../lib/auth'
+import { isFullyReceivedSale } from '../../lib/sales-metrics'
 
 const prisma = new PrismaClient()
 
@@ -40,6 +41,7 @@ function withReference(order: any): any {
     proofOfDelivery: order.proofOfDelivery || null,
     deliveryHistories: order.deliveryHistories || [],
     assignedRider: order.assignedRider || null,
+    isFullyReceived: isFullyReceivedSale(order),
   }
 }
 

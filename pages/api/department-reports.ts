@@ -1,6 +1,7 @@
 import { PrismaClient, WarehouseRequestSource, DeliveryStatus } from '@prisma/client'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireActiveRole } from '../../lib/department-auth'
+import { isFullyReceivedSale } from '../../lib/sales-metrics'
 
 const prisma = new PrismaClient()
 
@@ -173,15 +174,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const failedDeliveries = orders.filter((o) => o.deliveryStatus === 'DELIVERY_FAILED')
       const cancelledOrders = orders.filter((o) => o.status === 'CANCELLED' || o.deliveryStatus === 'CANCELLED')
       const returnedOrders = orders.filter((o) => o.deliveryStatus === 'RETURNED' || o.deliveryStatus === 'RETURN_REQUESTED')
+      const receivedSalesOrders = orders.filter(isFullyReceivedSale)
 
-      const totalSalesRevenue = orders
-        .filter((o) => o.paymentStatus === 'PAID')
+      const totalSalesRevenue = receivedSalesOrders
         .reduce((sum, o) => sum + o.total, 0)
 
       return res.status(200).json({
         department: 'SALES',
         summary: {
           totalOrders: orders.length,
+          receivedOrders: receivedSalesOrders.length,
           pendingOrders: pendingOrders.length,
           ordersAwaitingFulfillment: approvedOrders.length,
           inTransitDeliveries: inTransitOrders.length,

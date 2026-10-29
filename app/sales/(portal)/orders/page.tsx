@@ -206,7 +206,7 @@ export default function SalesOrdersPage() {
           </p>
         </div>
         <span className="rounded-xl bg-yellow-400 px-3 py-2 text-xs font-black text-black shadow-sm">
-          ₱{orders.reduce((sum, o) => sum + Number(o.total || 0), 0).toLocaleString()} Total Sales
+          ₱{orders.filter((o) => o.isFullyReceived).reduce((sum, o) => sum + Number(o.total || 0), 0).toLocaleString()} Completed Sales
         </span>
       </div>
 
