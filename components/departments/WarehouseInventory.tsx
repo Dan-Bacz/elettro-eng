@@ -5,8 +5,7 @@ import InventoryModal from '../admin/InventoryModal'
 import type { InventoryItemObj } from '../admin/types'
 
 type StockStatus = 'IN' | 'LOW' | 'OUT'
-type SortKey = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'stock-asc' | 'stock-desc' | 'sales-quantity' | 'sales-revenue'
-type SalesPeriod = 'DAY' | 'WEEK' | 'MONTH' | 'CUSTOM'
+type SortKey = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'stock-asc' | 'stock-desc'
 
 const BASE_CATEGORIES = [
   'Lighting',
@@ -26,25 +25,7 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
   { value: 'name-desc', label: 'Name Z-A' },
   { value: 'stock-asc', label: 'Stock Low-High' },
   { value: 'stock-desc', label: 'Stock High-Low' },
-  { value: 'sales-quantity', label: 'Sales Qty High-Low' },
-  { value: 'sales-revenue', label: 'Sales Revenue High-Low' },
 ]
-
-type SalesMetric = { units: number; orders: number; revenue: number }
-
-function dateInputValue(date: Date) {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
-
-function dateDaysAgo(days: number) {
-  const date = new Date()
-  date.setHours(0, 0, 0, 0)
-  date.setDate(date.getDate() - days)
-  return dateInputValue(date)
-}
 
 function money(value: number | null | undefined, decimals = 2) {
   const n = Number(value ?? 0)
@@ -59,13 +40,6 @@ export default function WarehouseInventory() {
   const [category, setCategory] = useState('ALL')
   const [stockFilter, setStockFilter] = useState<StockStatus | 'ALL'>('ALL')
   const [sort, setSort] = useState<SortKey>('newest')
-  const [salesPeriod, setSalesPeriod] = useState<SalesPeriod>('DAY')
-  const [salesFrom, setSalesFrom] = useState(dateInputValue(new Date()))
-  const [salesTo, setSalesTo] = useState(dateInputValue(new Date()))
-  const [sales, setSales] = useState<Record<string, SalesMetric>>({})
-  const [salesSummary, setSalesSummary] = useState({ orders: 0, units: 0, revenue: 0 })
-  const [salesLoading, setSalesLoading] = useState(false)
-  const [salesError, setSalesError] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<InventoryItemObj | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -88,40 +62,6 @@ export default function WarehouseInventory() {
     setLoading(true)
     load()
   }, [load])
-
-  const loadSales = useCallback(async (from: string, to: string) => {
-    setSalesLoading(true)
-    try {
-      const response = await fetch(`/api/warehouse-sales?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`)
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data.error || 'Could not load sales summary')
-      setSales(Object.fromEntries((data.sales || []).map((item: SalesMetric & { inventoryItemId: string }) => [item.inventoryItemId, item])))
-      setSalesSummary(data.summary || { orders: 0, units: 0, revenue: 0 })
-      setSalesError('')
-    } catch (e: any) {
-      setSalesError(e.message || 'Could not load sales summary')
-    } finally {
-      setSalesLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (salesPeriod === 'DAY') {
-      const today = dateInputValue(new Date())
-      setSalesFrom(today)
-      setSalesTo(today)
-    } else if (salesPeriod === 'WEEK') {
-      setSalesFrom(dateDaysAgo(6))
-      setSalesTo(dateInputValue(new Date()))
-    } else if (salesPeriod === 'MONTH') {
-      setSalesFrom(dateDaysAgo(29))
-      setSalesTo(dateInputValue(new Date()))
-    }
-  }, [salesPeriod])
-
-  useEffect(() => {
-    if (salesFrom && salesTo) void loadSales(salesFrom, salesTo)
-  }, [loadSales, salesFrom, salesTo])
 
   function stockOf(item: InventoryItemObj): StockStatus {
     const q = Number(item.quantity) || 0
@@ -192,17 +132,11 @@ export default function WarehouseInventory() {
       case 'stock-desc':
         sorted.sort((a, b) => (Number(b.quantity) || 0) - (Number(a.quantity) || 0))
         break
-      case 'sales-quantity':
-        sorted.sort((a, b) => (sales[b.id]?.units || 0) - (sales[a.id]?.units || 0))
-        break
-      case 'sales-revenue':
-        sorted.sort((a, b) => (sales[b.id]?.revenue || 0) - (sales[a.id]?.revenue || 0))
-        break
       default:
         sorted.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     }
     return sorted
-  }, [items, query, category, stockFilter, sort, sales])
+  }, [items, query, category, stockFilter, sort])
 
   const statusBadge: Record<StockStatus, { label: string; className: string }> = {
     IN: { label: 'IN STOCK', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -218,9 +152,6 @@ export default function WarehouseInventory() {
     { label: 'Low Stock', value: summary.lowStock, icon: 'alert', className: 'text-amber-600 bg-amber-100' },
     { label: 'Out of Stock', value: summary.outOfStock, icon: 'x', className: 'text-red-600 bg-red-100' },
     { label: 'Inventory Value', value: money(summary.inventoryValue), icon: 'tag', className: 'text-yellow-600 bg-yellow-100' },
-    { label: 'Sales Orders', value: salesSummary.orders, icon: 'cart', className: 'text-blue-600 bg-blue-100' },
-    { label: 'Units Sold', value: salesSummary.units, icon: 'sales', className: 'text-emerald-600 bg-emerald-100' },
-    { label: 'Sales Revenue', value: money(salesSummary.revenue), icon: 'money', className: 'text-violet-600 bg-violet-100' },
   ]
 
   async function handleSubmitItem(data: Record<string, any>) {
@@ -267,7 +198,7 @@ export default function WarehouseInventory() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {statCards.map((card) => (
           <div key={card.label} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.className}`}>
@@ -291,11 +222,6 @@ export default function WarehouseInventory() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                 </svg>
               )}
-              {(card.icon === 'cart' || card.icon === 'sales' || card.icon === 'money') && (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l2.4 11.2a2 2 0 002 1.6h7.8a2 2 0 002-1.6L21 7H6m3 13h.01M17 20h.01M9 11h8" />
-                </svg>
-              )}
             </div>
             <div className="min-w-0">
               <div className="truncate text-lg font-black leading-none text-slate-900">{card.value}</div>
@@ -303,34 +229,6 @@ export default function WarehouseInventory() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Sales period */}
-      <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <h2 className="text-sm font-black text-slate-900">Sales performance</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Customer sales only; internal warehouse requests are excluded.</p>
-          </div>
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">Period
-              <select value={salesPeriod} onChange={(e) => setSalesPeriod(e.target.value as SalesPeriod)} className={`${selectClass} mt-1 block`}>
-                <option value="DAY">Today</option>
-                <option value="WEEK">Last 7 days</option>
-                <option value="MONTH">Last 30 days</option>
-                <option value="CUSTOM">Custom dates</option>
-              </select>
-            </label>
-            <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">From
-              <input type="date" value={salesFrom} onChange={(e) => { setSalesPeriod('CUSTOM'); setSalesFrom(e.target.value) }} className={`${selectClass} mt-1 block`} />
-            </label>
-            <label className="text-[10px] font-black uppercase tracking-wide text-slate-500">To
-              <input type="date" value={salesTo} onChange={(e) => { setSalesPeriod('CUSTOM'); setSalesTo(e.target.value) }} className={`${selectClass} mt-1 block`} />
-            </label>
-          </div>
-        </div>
-        {salesError && <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">{salesError}</div>}
-        {salesLoading && <div className="mt-3 text-xs font-semibold text-blue-700">Updating sales totals…</div>}
       </div>
 
       {/* Toolbar */}
@@ -405,8 +303,6 @@ export default function WarehouseInventory() {
                 <th className="px-3 py-3 font-black">Category</th>
                 <th className="px-3 py-3 text-right font-black">Buy Price</th>
                 <th className="px-3 py-3 text-right font-black">Sell Price</th>
-                <th className="px-3 py-3 text-center font-black">Sold</th>
-                <th className="px-3 py-3 text-right font-black">Sales</th>
                 <th className="px-3 py-3 text-center font-black">Stock</th>
                 <th className="px-3 py-3 text-center font-black">Status</th>
               </tr>
@@ -415,7 +311,6 @@ export default function WarehouseInventory() {
               {visible.map((item, idx) => {
                 const status = statusBadge[stockOf(item)]
                 const q = Number(item.quantity) || 0
-                const itemSales = sales[item.id] || { units: 0, orders: 0, revenue: 0 }
                 return (
                   <tr key={item.id} className="border-b border-slate-50 transition-colors last:border-0 hover:bg-yellow-50/40">
                     <td className="px-4 py-2.5 text-xs font-bold text-slate-300">{idx + 1}</td>
@@ -446,8 +341,6 @@ export default function WarehouseInventory() {
                     </td>
                     <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-700">{item.buyPrice != null ? money(item.buyPrice) : '—'}</td>
                     <td className="px-3 py-2.5 text-right text-xs font-semibold text-slate-700">{item.sellPrice != null ? money(item.sellPrice) : '—'}</td>
-                    <td className="px-3 py-2.5 text-center"><div className="text-xs font-black text-blue-700">{itemSales.units}</div><div className="text-[9px] text-slate-400">{itemSales.orders} orders</div></td>
-                    <td className="px-3 py-2.5 text-right text-xs font-black text-emerald-700">{money(itemSales.revenue)}</td>
                     <td className="px-3 py-2.5 text-center">
                       <div className="text-xs font-black text-slate-800">{q}</div>
                       <div className="text-[9px] font-medium uppercase tracking-wide text-slate-400">{item.unit || 'pcs'}</div>
@@ -481,7 +374,6 @@ export default function WarehouseInventory() {
           visible.map((item) => {
             const status = statusBadge[stockOf(item)]
             const q = Number(item.quantity) || 0
-            const itemSales = sales[item.id] || { units: 0, orders: 0, revenue: 0 }
             return (
               <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start gap-3">
@@ -522,12 +414,7 @@ export default function WarehouseInventory() {
                       {q} <span className="font-medium text-slate-400">{item.unit || 'pcs'}</span>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Sold</div>
-                    <div className="text-xs font-black text-blue-700">{itemSales.units}</div>
-                  </div>
                 </div>
-                <div className="mt-2 text-right text-[11px] font-bold text-emerald-700">Sales: {money(itemSales.revenue)} · {itemSales.orders} order(s)</div>
 
               </div>
             )

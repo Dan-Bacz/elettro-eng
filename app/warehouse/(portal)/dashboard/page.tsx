@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PackageIcon, InboxIcon, DocumentIcon, BarChartIcon } from '../../../../components/admin/icons'
-import WarehouseSalesSnapshot from '../../../../components/warehouse/WarehouseSalesSnapshot'
 import StockHealthPanel from '../../../../components/warehouse/StockHealthPanel'
 
 type WarehouseStats = {
@@ -192,7 +191,6 @@ export default function WarehouseDashboardPage() {
 
       {/* Main Grid: Incoming Sales & Technician Requests */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <WarehouseSalesSnapshot />
         <StockHealthPanel items={inventoryItems} />
         {/* Incoming Sales Material Requests */}
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
