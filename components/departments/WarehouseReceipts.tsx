@@ -48,6 +48,7 @@ export default function WarehouseReceipts() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchFilter, setSearchFilter] = useState('')
+  const [managedReceiptId, setManagedReceiptId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -130,8 +131,30 @@ export default function WarehouseReceipts() {
             return (
               <article
                 key={receipt.id}
-                className="receipt-card break-inside-avoid rounded-2xl border border-slate-300 bg-white p-6 shadow-sm sm:p-8"
+                className="receipt-card break-inside-avoid rounded-2xl border border-slate-300 bg-white p-5 shadow-sm sm:p-6"
               >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-mono text-base font-black text-slate-900">{snap.requestReference || receipt.reference}</h2>
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black uppercase text-emerald-800">Released</span>
+                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase ${isTech ? 'bg-purple-100 text-purple-800' : snap.requestSource === 'CLIENT_ORDER' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        From: {isTech ? 'Technician' : snap.requestSource === 'CLIENT_ORDER' ? 'Sales / Client Order' : 'Sales Department'}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">Release receipt {snap.receiptNumber || receipt.reference} · {formattedDate}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setManagedReceiptId((current) => current === receipt.id ? null : receipt.id)}
+                    className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white hover:bg-slate-700 print:hidden"
+                  >
+                    {managedReceiptId === receipt.id ? 'Close' : 'Manage'}
+                  </button>
+                </div>
+
+                {managedReceiptId === receipt.id && (
+                  <div className="mt-5 border-t border-slate-100 pt-5">
                 {/* Official Receipt Header */}
                 <div className="border-b-2 border-slate-900 pb-5">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -262,6 +285,8 @@ export default function WarehouseReceipts() {
                     <div className="mt-1 text-[10px] text-slate-500">ELETTRO Engineering Enterprises</div>
                   </div>
                 </div>
+                  </div>
+                )}
               </article>
             )
           })}

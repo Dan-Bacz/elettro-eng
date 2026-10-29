@@ -44,6 +44,7 @@ export default function WarehouseRequests() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [managedRequestId, setManagedRequestId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceTab, setSourceTab] = useState<SourceTab>('ALL')
   const [statusTab, setStatusTab] = useState<StatusTab>('ALL')
@@ -263,18 +264,11 @@ export default function WarehouseRequests() {
             const canReview = request.status === 'PENDING'
             const canRelease = ['UNDER_REVIEW', 'PARTIALLY_FULFILLED'].includes(request.status)
 
-            let totalRequested = 0
-            let totalReleased = 0
-            for (const item of request.items) {
-              totalRequested += item.requestedQuantity
-              totalReleased += item.releasedQuantity
-            }
-
             return (
-              <article key={request.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+              <article key={request.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 {/* Header Info */}
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-base font-black text-slate-900">{request.reference}</h2>
                       <span
@@ -293,67 +287,53 @@ export default function WarehouseRequests() {
                         {request.status.replace(/_/g, ' ')}
                       </span>
 
-                      {isTechnician ? (
-                        <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-black uppercase text-purple-800">
-                          Technician Request
-                        </span>
-                      ) : isClientOrder ? (
-                        <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-black uppercase text-blue-800">
-                          Client Sales Order
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-[10px] font-black uppercase text-yellow-800">
-                          Sales Department
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                      <span>
-                        <strong>Requester:</strong> {request.requester.name} ({request.requester.role})
-                      </span>
-                      {request.projectReference && (
-                        <span>
-                          <strong>Project:</strong> {request.projectReference}
-                        </span>
-                      )}
-                      {request.customerReference && (
-                        <span>
-                          <strong>Client/Customer:</strong> {request.customerReference}
-                        </span>
-                      )}
-                      <span>
-                        <strong>Date:</strong> {new Date(request.createdAt).toLocaleString()}
+                      <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase ${
+                        isTechnician ? 'bg-purple-100 text-purple-800' : isClientOrder ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        From: {isTechnician ? 'Technician' : isClientOrder ? 'Sales / Client Order' : 'Sales Department'}
                       </span>
                     </div>
-
-                    {request.notes && (
-                      <p className="mt-2 text-xs text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                        <strong>Purpose / Notes:</strong> {request.notes}
-                      </p>
-                    )}
+                    <p className="mt-1 text-xs text-slate-500">Requested by {request.requester.name} · {new Date(request.createdAt).toLocaleString()}</p>
                   </div>
-
-                  {/* Actions for Pending */}
-                  {canReview && (
-                    <div className="flex gap-2">
-                      <button
-                        disabled={busyId === request.id}
-                        onClick={() => void changeStatus(request, 'UNDER_REVIEW')}
-                        className="rounded-xl bg-yellow-400 px-3.5 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300 disabled:opacity-50"
-                      >
-                        Accept for review
-                      </button>
-                      <button
-                        disabled={busyId === request.id}
-                        onClick={() => void changeStatus(request, 'REJECTED')}
-                        className="rounded-xl border border-red-200 px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setManagedRequestId((current) => current === request.id ? null : request.id)}
+                    className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white hover:bg-slate-700"
+                  >
+                    {managedRequestId === request.id ? 'Close' : 'Manage'}
+                  </button>
                 </div>
+
+                {managedRequestId === request.id && (
+                  <div className="mt-5 space-y-4 border-t border-slate-100 pt-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        <span><strong>Requester:</strong> {request.requester.name} ({request.requester.role})</span>
+                        {request.projectReference && <span><strong>Project:</strong> {request.projectReference}</span>}
+                        {request.customerReference && <span><strong>Client/Customer:</strong> {request.customerReference}</span>}
+                      </div>
+                      {request.notes && <span><strong>Notes:</strong> {request.notes}</span>}
+                    </div>
+
+                    {/* Actions for Pending */}
+                    {canReview && (
+                      <div className="flex gap-2">
+                        <button
+                          disabled={busyId === request.id}
+                          onClick={() => void changeStatus(request, 'UNDER_REVIEW')}
+                          className="rounded-xl bg-yellow-400 px-3.5 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300 disabled:opacity-50"
+                        >
+                          Accept for review
+                        </button>
+                        <button
+                          disabled={busyId === request.id}
+                          onClick={() => void changeStatus(request, 'REJECTED')}
+                          className="rounded-xl border border-red-200 px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
 
                 {/* Items Verification Table */}
                 <div className="overflow-x-auto rounded-xl border border-slate-200">
@@ -502,6 +482,8 @@ export default function WarehouseRequests() {
                           </Link>
                         )
                     )}
+                  </div>
+                )}
                   </div>
                 )}
               </article>
