@@ -16,6 +16,7 @@ type InventoryModalProps = {
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_FILE_BYTES = 8 * 1024 * 1024
 const MAX_EDGE = 1280
+const UNIT_OPTIONS = ['pcs', 'meters', 'rolls', 'boxes', 'sets', 'packs', 'pairs', 'kg', 'liters', 'units']
 
 const EMPTY_IMAGE = { url: '', dataUrl: '', preview: '' }
 
@@ -194,16 +195,25 @@ export default function InventoryModal({ open, initial, categories, submitting, 
       setSystemError('Unit is required')
       return
     }
+    const buy = buyPrice === '' ? null : Number(buyPrice)
+    const sell = sellPrice === '' ? null : Number(sellPrice)
+    if ((buy !== null && (!Number.isFinite(buy) || buy < 0)) || (sell !== null && (!Number.isFinite(sell) || sell < 0))) {
+      setSystemError('Prices must be valid non-negative numbers')
+      return
+    }
+    if (buy !== null && sell !== null && sell < buy) {
+      setSystemError('Sell price cannot be less than the buy price')
+      return
+    }
     const payload: Record<string, any> = {
       name: name.trim(),
-      sku: sku.trim() || undefined,
       category: category.trim(),
       brand: brand.trim() || undefined,
       model: model.trim() || undefined,
       description: description.trim() || undefined,
       unit: unit.trim() || 'pcs',
-      buyPrice: buyPrice !== '' ? Number(buyPrice) : null,
-      sellPrice: sellPrice !== '' ? Number(sellPrice) : null,
+      buyPrice: buy,
+      sellPrice: sell,
       reorderLevel: Math.max(0, Number(minStock) || 0),
       imageUrl: image.url || undefined,
       imageData: image.dataUrl || undefined,
@@ -364,8 +374,11 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <Select label="Category *" value={category} onChange={setCategory} options={categories} required />
               <Field label="Manufacturer / Brand" value={brand} onChange={setBrand} placeholder="e.g. Philips" />
               <Field label="Model Number" value={model} onChange={setModel} placeholder="e.g. LED-12W-220V" />
-              <Field label="SKU / Product Number" value={sku} onChange={setSku} placeholder="e.g. WH-001" />
-              <Field label="Unit *" value={unit} onChange={setUnit} placeholder="pcs, meters, rolls…" required />
+              <div>
+                <label className="mb-1 block text-xs font-bold text-slate-500">SKU / Product Number</label>
+                <div className="flex h-[38px] items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500">{initial?.sku || 'Generated automatically: ELETTRO-###'}</div>
+              </div>
+              <Select label="Unit *" value={unit} onChange={setUnit} options={Array.from(new Set([...UNIT_OPTIONS, ...(unit && !UNIT_OPTIONS.includes(unit) ? [unit] : [])]))} required />
               <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="₱" />
               <Field label="Sell Price" type="number" inputMode="decimal" min={0} step="0.01" value={sellPrice} onChange={setSellPrice} placeholder="Retail price" prefix="₱" />
               <Field label={initial?.id ? 'Current Stock' : 'Initial Stock *'} type="number" inputMode="numeric" min={0} step={1} value={quality} onChange={setQuality} placeholder="0" required={!initial?.id} />
@@ -428,6 +441,7 @@ function Field({
   step,
   prefix,
   inputMode,
+  readOnly,
 }: {
   label: string
   value: string
@@ -439,6 +453,7 @@ function Field({
   step?: string | number
   prefix?: string
   inputMode?: 'text' | 'decimal' | 'numeric'
+  readOnly?: boolean
 }) {
   const fieldClass =
     'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-shadow'
@@ -452,6 +467,7 @@ function Field({
       min={min}
       step={step}
       inputMode={inputMode}
+      readOnly={readOnly}
       className={`${fieldClass} ${prefix ? 'pl-8' : ''}`}
     />
   )

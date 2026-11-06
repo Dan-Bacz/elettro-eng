@@ -4,6 +4,24 @@ import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 
 const prisma = new PrismaClient()
 
+async function nextElettroSku() {
+  const existing = await prisma.inventoryItem.findMany({
+    where: { sku: { startsWith: 'ELETTRO-' } },
+    select: { sku: true },
+  })
+  const highest = existing.reduce((max, item) => {
+    const match = item.sku?.match(/^ELETTRO-(\d+)$/)
+    return match ? Math.max(max, Number(match[1])) : max
+  }, 0)
+  return `ELETTRO-${String(highest + 1).padStart(3, '0')}`
+}
+
+function parsePrice(value: unknown): number | null {
+  if (value === undefined || value === null || value === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : NaN
+}
+
 // Allow larger request bodies so camera/photo images (base64 data URLs) can be uploaded
 export const config = {
   api: {
@@ -80,6 +98,13 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Item name is required' })
       }
 
+      const buyPrice = parsePrice(body.buyPrice)
+      const sellPrice = parsePrice(body.sellPrice)
+      if (Number.isNaN(buyPrice) || Number.isNaN(sellPrice)) return res.status(400).json({ error: 'Prices must be valid non-negative numbers' })
+      if (buyPrice !== null && sellPrice !== null && sellPrice < buyPrice) {
+        return res.status(400).json({ error: 'Sell price cannot be less than the buy price' })
+      }
+
       const plan = planImage(body)
       let imageUrl: string | null = null
       let imagePublicId: string | null = null
@@ -96,24 +121,30 @@ export default async function handler(req, res) {
         imageUrl = plan.imageUrl!
       }
 
-      const item = await prisma.inventoryItem.create({
-        data: {
+      const data = {
           name: String(body.name).trim(),
-          sku: body.sku ? String(body.sku).trim() : undefined,
           category: body.category ? String(body.category).trim() : undefined,
           brand: body.brand ? String(body.brand).trim() : undefined,
           model: body.model ? String(body.model).trim() : undefined,
           description: body.description ? String(body.description).trim() : undefined,
           unit: body.unit ? String(body.unit).trim() : 'pcs',
           quantity: Math.max(0, Math.round(Number(body.quantity) || 0)),
-          buyPrice: typeof body.buyPrice !== 'undefined' && body.buyPrice !== '' ? Number(body.buyPrice) : null,
-          sellPrice: typeof body.sellPrice !== 'undefined' && body.sellPrice !== '' ? Number(body.sellPrice) : null,
+          buyPrice,
+          sellPrice,
           reorderLevel: typeof body.reorderLevel !== 'undefined' ? Math.max(0, Math.round(Number(body.reorderLevel) || 0)) : 10,
           imageUrl: imageUrl ?? undefined,
           imagePublicId: imagePublicId ?? undefined,
           imageData: imageData ?? undefined
         }
-      })
+      let item
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          item = await prisma.inventoryItem.create({ data: { ...data, sku: await nextElettroSku() } })
+          break
+        } catch (error: any) {
+          if (error?.code !== 'P2002' || attempt === 2) throw error
+        }
+      }
       return res.status(201).json(item)
     }
 
@@ -125,6 +156,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Use the warehouse stock action to receive or adjust stock.' })
       }
 
+      const existing = await prisma.inventoryItem.findUnique({ where: { id: String(id) } })
+      if (!existing || existing.deletedAt) return res.status(404).json({ error: 'Inventory item not found' })
       const data: any = {}
       if (typeof body.name !== 'undefined') {
         if (!String(body.name).trim()) return res.status(400).json({ error: 'Item name cannot be empty' })
@@ -146,6 +179,12 @@ export default async function handler(req, res) {
       }
       if (typeof body.sellPrice !== 'undefined') {
         data.sellPrice = body.sellPrice === '' || body.sellPrice === null ? null : Number(body.sellPrice)
+      }
+      const effectiveBuyPrice = typeof body.buyPrice !== 'undefined' ? parsePrice(body.buyPrice) : existing.buyPrice
+      const effectiveSellPrice = typeof body.sellPrice !== 'undefined' ? parsePrice(body.sellPrice) : existing.sellPrice
+      if (Number.isNaN(effectiveBuyPrice) || Number.isNaN(effectiveSellPrice)) return res.status(400).json({ error: 'Prices must be valid non-negative numbers' })
+      if (effectiveBuyPrice !== null && effectiveSellPrice !== null && effectiveSellPrice < effectiveBuyPrice) {
+        return res.status(400).json({ error: 'Sell price cannot be less than the buy price' })
       }
       if (typeof body.reorderLevel !== 'undefined') {
         data.reorderLevel = Math.max(0, Math.round(Number(body.reorderLevel) || 0))
