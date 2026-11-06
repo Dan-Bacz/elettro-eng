@@ -159,19 +159,37 @@ export default function WarehouseInventory() {
     setSubmitError('')
     try {
       const res = await fetch('/api/inventory', {
-        method: 'POST',
+        method: editingItem?.id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(editingItem?.id ? { ...data, id: editingItem.id } : data),
       })
       const result = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(result.error || 'Failed to create item')
+      if (!res.ok) throw new Error(result.error || (editingItem?.id ? 'Failed to update item' : 'Failed to create item'))
       setModalOpen(false)
       setEditingItem(null)
       await load()
     } catch (e: any) {
-      setSubmitError(e.message || 'Failed to create item')
+      setSubmitError(e.message || (editingItem?.id ? 'Failed to update item' : 'Failed to create item'))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  async function handleDeleteItem(item: InventoryItemObj) {
+    const confirmed = window.confirm(`Delete “${item.name}”? This cannot be undone.`)
+    if (!confirmed) return
+    setLoadError('')
+    try {
+      const res = await fetch('/api/inventory', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id }),
+      })
+      const result = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(result.error || 'Failed to delete item')
+      await load()
+    } catch (e: any) {
+      setLoadError(e.message || 'Failed to delete item')
     }
   }
 
@@ -305,6 +323,7 @@ export default function WarehouseInventory() {
                 <th className="px-3 py-3 text-right font-black">Sell Price</th>
                 <th className="px-3 py-3 text-center font-black">Stock</th>
                 <th className="px-3 py-3 text-center font-black">Status</th>
+                <th className="px-3 py-3 text-right font-black">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -347,6 +366,12 @@ export default function WarehouseInventory() {
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <span className={`inline-flex rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${status.className}`}>{status.label}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button type="button" onClick={() => { setEditingItem(item); setSubmitError(''); setModalOpen(true) }} className="rounded-md px-2 py-1 text-[10px] font-black text-blue-700 hover:bg-blue-50">Edit</button>
+                        <button type="button" onClick={() => void handleDeleteItem(item)} className="rounded-md px-2 py-1 text-[10px] font-black text-red-600 hover:bg-red-50">Delete</button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -414,6 +439,11 @@ export default function WarehouseInventory() {
                       {q} <span className="font-medium text-slate-400">{item.unit || 'pcs'}</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
+                  <button type="button" onClick={() => { setEditingItem(item); setSubmitError(''); setModalOpen(true) }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-[10px] font-black text-blue-700 hover:bg-blue-50">Edit product</button>
+                  <button type="button" onClick={() => void handleDeleteItem(item)} className="rounded-lg border border-red-200 px-3 py-1.5 text-[10px] font-black text-red-600 hover:bg-red-50">Delete</button>
                 </div>
 
               </div>

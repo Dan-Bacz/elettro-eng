@@ -194,21 +194,24 @@ export default function InventoryModal({ open, initial, categories, submitting, 
       setSystemError('Unit is required')
       return
     }
-    void onSubmit({
+    const payload: Record<string, any> = {
       name: name.trim(),
       sku: sku.trim() || undefined,
       category: category.trim(),
       brand: brand.trim() || undefined,
       model: model.trim() || undefined,
       description: description.trim() || undefined,
-      quantity: Math.max(0, Number(quality) || 0),
       unit: unit.trim() || 'pcs',
       buyPrice: buyPrice !== '' ? Number(buyPrice) : null,
       sellPrice: sellPrice !== '' ? Number(sellPrice) : null,
       reorderLevel: Math.max(0, Number(minStock) || 0),
       imageUrl: image.url || undefined,
       imageData: image.dataUrl || undefined,
-    })
+    }
+    // Existing stock must continue through the warehouse stock-adjustment flow;
+    // editing a product should not silently overwrite its quantity.
+    if (!initial?.id) payload.quantity = Math.max(0, Number(quality) || 0)
+    void onSubmit(payload)
   }
 
   const fieldClass =
@@ -365,7 +368,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <Field label="Unit *" value={unit} onChange={setUnit} placeholder="pcs, meters, rolls…" required />
               <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="₱" />
               <Field label="Sell Price" type="number" inputMode="decimal" min={0} step="0.01" value={sellPrice} onChange={setSellPrice} placeholder="Retail price" prefix="₱" />
-              <Field label="Initial Stock *" type="number" inputMode="numeric" min={0} step={1} value={quality} onChange={setQuality} placeholder="0" required />
+              <Field label={initial?.id ? 'Current Stock' : 'Initial Stock *'} type="number" inputMode="numeric" min={0} step={1} value={quality} onChange={setQuality} placeholder="0" required={!initial?.id} />
               <Field label="Minimum Stock" type="number" inputMode="numeric" min={0} step={1} value={minStock} onChange={setMinStock} placeholder="10" />
             </div>
             <div>
