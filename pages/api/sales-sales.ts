@@ -62,9 +62,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   if (req.method === 'GET') {
     const stock = await getSalesStock(prisma)
+    const preset = String(req.query.preset || 'all')
+    const from = String(req.query.from || '')
+    const to = String(req.query.to || '')
+    const now = new Date()
+    let dateFrom: Date | undefined
+    let dateTo: Date | undefined
+    if (preset === 'today') {
+      dateFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    } else if (preset === 'week') {
+      dateFrom = new Date(now)
+      dateFrom.setDate(now.getDate() - 6)
+      dateFrom.setHours(0, 0, 0, 0)
+    } else if (preset === 'month') {
+      dateFrom = new Date(now.getFullYear(), now.getMonth(), 1)
+    }
+    if (from) {
+      const parsed = new Date(`${from}T00:00:00`)
+      if (!Number.isNaN(parsed.getTime())) dateFrom = parsed
+    }
+    if (to) {
+      const parsed = new Date(`${to}T23:59:59.999`)
+      if (!Number.isNaN(parsed.getTime())) dateTo = parsed
+    }
     const sales = await prisma.salesSale.findMany({
+      where: {
+        ...(dateFrom || dateTo ? { createdAt: { ...(dateFrom ? { gte: dateFrom } : {}), ...(dateTo ? { lte: dateTo } : {}) } } : {}),
+      },
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: 200,
       include: { items: true, createdBy: { select: { name: true } } },
     })
     return res.status(200).json({ stock, sales })
