@@ -47,6 +47,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       if (!['ADMIN', 'WAREHOUSE', 'SALES'].includes(session.role)) return res.status(403).json({ error: 'Forbidden' })
       const items = await prisma.inventoryItem.findMany({
+        where: { deletedAt: null },
         orderBy: { createdAt: 'desc' },
         ...(session.role === 'SALES'
           ? {
@@ -188,22 +189,43 @@ export default async function handler(req, res) {
       const body = req.body || {}
       const { id } = body
       if (!id) return res.status(400).json({ error: 'Inventory item id required' })
+      const deletionReason = String(body.reason || '').trim().slice(0, 1000)
+      if (!deletionReason) return res.status(400).json({ error: 'A reason is required when deleting an inventory item' })
 
       const item = await prisma.inventoryItem.findUnique({
         where: { id: String(id) },
         select: {
+          id: true,
+          name: true,
+          sku: true,
+          deletedAt: true,
           quantity: true,
-          _count: { select: { orderItems: true, warehouseRequestItems: true, inventoryMovements: true } },
         },
       })
 
       if (!item) return res.status(404).json({ error: 'Inventory item not found' })
-      if (item.quantity !== 0 || item._count.orderItems > 0 || item._count.warehouseRequestItems > 0 || item._count.inventoryMovements > 0) {
-        return res.status(409).json({ error: 'Inventory items with stock or transaction history cannot be deleted.' })
-      }
+      if (item.deletedAt) return res.status(409).json({ error: 'Inventory item has already been deleted.' })
 
-      await prisma.inventoryItem.delete({ where: { id: String(id) } })
-      return res.status(200).json({ ok: true })
+      await prisma.$transaction(async (tx) => {
+        await tx.inventoryItem.update({
+          where: { id: item.id },
+          data: { deletedAt: new Date(), deletionReason, deletedById: session.id, quantity: 0 },
+        })
+
+        const admins = await tx.user.findMany({ where: { role: 'ADMIN', status: 'ACTIVE' }, select: { id: true } })
+        if (admins.length) {
+          await tx.notification.createMany({
+            data: admins.map((admin) => ({
+              userId: admin.id,
+              type: 'INVENTORY_DELETED',
+              title: 'Warehouse inventory item deleted',
+              message: `${item.name}${item.sku ? ` (${item.sku})` : ''} was removed by warehouse. Reason: ${deletionReason}`,
+              link: '/admin/inventory',
+            })),
+          })
+        }
+      })
+      return res.status(200).json({ ok: true, archived: true })
     }
 
     return res.status(405).json({ error: 'Method not allowed' })

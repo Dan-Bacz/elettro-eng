@@ -22,7 +22,7 @@ async function getSalesStock(tx: PrismaClient | Prisma.TransactionClient) {
               select: {
                 inventoryItemId: true,
                 inventoryItem: {
-                  select: { id: true, name: true, sku: true, unit: true, sellPrice: true, imageUrl: true, category: true },
+                  select: { id: true, name: true, sku: true, unit: true, sellPrice: true, imageUrl: true, category: true, deletedAt: true },
                 },
               },
             },
@@ -41,6 +41,7 @@ async function getSalesStock(tx: PrismaClient | Prisma.TransactionClient) {
 
   for (const release of released) {
     for (const line of release.items) {
+      if (!line.requestItem.inventoryItem || line.requestItem.inventoryItem.deletedAt) continue
       const id = line.requestItem.inventoryItemId
       const current = stock.get(id) || { item: line.requestItem.inventoryItem, released: 0, sold: soldByItem.get(id) || 0 }
       current.released += line.quantity

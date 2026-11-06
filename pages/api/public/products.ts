@@ -23,6 +23,7 @@ export default async function handler(req: any, res: any) {
 
   try {
     const items = await prisma.inventoryItem.findMany({
+      where: { deletedAt: null },
       orderBy: { createdAt: 'desc' }
     })
 

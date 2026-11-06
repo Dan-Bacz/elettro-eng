@@ -57,10 +57,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const movement = await prisma.$transaction(async (tx) => {
       const inventory = await tx.inventoryItem.findUnique({
         where: { id: inventoryItemId },
-        select: { id: true, name: true, quantity: true, reorderLevel: true },
+        select: { id: true, name: true, quantity: true, reorderLevel: true, deletedAt: true },
       })
 
       if (!inventory) throw new Error('INVENTORY_NOT_FOUND')
+      if (inventory.deletedAt) throw new Error('INVENTORY_DELETED')
 
       const stockAfter = inventory.quantity + quantity
       if (stockAfter < 0) throw new Error('NEGATIVE_STOCK')
@@ -107,6 +108,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error instanceof Error) {
       const errors: Record<string, { status: number; message: string }> = {
         INVENTORY_NOT_FOUND: { status: 404, message: 'Inventory item not found' },
+        INVENTORY_DELETED: { status: 409, message: 'This inventory item was deleted and cannot receive stock adjustments.' },
         NEGATIVE_STOCK: { status: 409, message: 'Stock cannot be adjusted below zero' },
         STOCK_CHANGED: { status: 409, message: 'Stock changed during this action. Refresh and retry.' },
       }

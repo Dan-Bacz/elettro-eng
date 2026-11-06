@@ -159,12 +159,17 @@ model InventoryItem {
   imageUrl              String?
   imagePublicId         String?
   imageData             String?
+  deletedAt             DateTime?
+  deletionReason       String?
+  deletedById           String?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   orderItems            OrderItem[]
   salesSaleItems        SalesSaleItem[]
   warehouseRequestItems WarehouseRequestItem[]
   inventoryMovements    InventoryMovement[]
+
+  @@index([deletedAt])
 }
 
 model Report {

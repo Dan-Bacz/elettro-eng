@@ -176,14 +176,16 @@ export default function WarehouseInventory() {
   }
 
   async function handleDeleteItem(item: InventoryItemObj) {
-    const confirmed = window.confirm(`Delete “${item.name}”? This cannot be undone.`)
+    const reason = window.prompt(`Why are you deleting “${item.name}”? This reason will be sent to Admin.`)?.trim() || ''
+    if (!reason) return
+    const confirmed = window.confirm(`Delete “${item.name}” from Warehouse inventory? Historical records will remain.\n\nReason: ${reason}`)
     if (!confirmed) return
     setLoadError('')
     try {
       const res = await fetch('/api/inventory', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id }),
+        body: JSON.stringify({ id: item.id, reason }),
       })
       const result = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(result.error || 'Failed to delete item')
