@@ -376,7 +376,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <Field label="Model Number" value={model} onChange={setModel} placeholder="e.g. LED-12W-220V" />
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-500">SKU / Product Number</label>
-                <div className="flex h-[38px] items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500">{initial?.sku || 'Generated automatically: ELETTRO-###'}</div>
+                <div className="flex h-[38px] items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500">{initial?.sku || 'ELETTRO-###'}</div>
               </div>
               <Select label="Unit *" value={unit} onChange={setUnit} options={Array.from(new Set([...UNIT_OPTIONS, ...(unit && !UNIT_OPTIONS.includes(unit) ? [unit] : [])]))} required />
               <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="₱" />
