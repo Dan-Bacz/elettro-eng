@@ -10,7 +10,6 @@ const NAV_ITEMS = [
   { key: 'bookings', label: 'Bookings', icon: InboxIcon, href: '/admin/bookings' },
   { key: 'sales', label: 'Sales', icon: CartIcon, href: '/admin/sales' },
   { key: 'clients', label: 'Clients', icon: UsersIcon, href: '/admin/clients' },
-  { key: 'beneficiaries', label: 'Beneficiaries', icon: UsersIcon, href: '/admin/beneficiaries' },
   { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
   { key: 'leave', label: 'Leave Requests', icon: CalendarIcon, href: '/admin/leave' },
     { key: 'inventory', label: 'Inventory', icon: PackageIcon, href: '/admin/inventory' },

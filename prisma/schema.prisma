@@ -44,7 +44,6 @@ model User {
   deliveryHistories       DeliveryHistory[]        @relation("DeliveryHistoryActor")
   salesReceivedReleases   WarehouseRelease[]       @relation("WarehouseReleaseSalesRecipient")
   salesCreated             SalesSale[]             @relation("SalesSaleCreator")
-  assignedBeneficiaries    Beneficiary[]           @relation("BeneficiaryAssignedOfficer")
 }
 
 model EmailVerificationToken {
@@ -218,33 +217,6 @@ model Notification {
   createdAt DateTime @default(now())
 }
 
-model Beneficiary {
-  id                 String   @id @default(uuid())
-  beneficiaryId      String   @unique
-  firstName          String
-  lastName           String
-  middleName         String?
-  suffix             String?
-  sex                String
-  dateOfBirth        DateTime?
-  civilStatus        String?
-  category           String
-  contactNumber      String?
-  email              String?
-  address            String
-  barangay           String
-  municipality       String   @default("Mahayag")
-  province           String?
-  assignedOfficerId  String?
-  assignedOfficer    User?    @relation("BeneficiaryAssignedOfficer", fields: [assignedOfficerId], references: [id], onDelete: SetNull)
-  status             String   @default("ACTIVE")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  @@index([category])
-  @@index([assignedOfficerId])
-  @@index([barangay])
-}
 
 // Leave management (based on CSC Form No. 6 - Application for Leave)
 model LeaveRequest {
