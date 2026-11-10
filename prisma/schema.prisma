@@ -336,6 +336,8 @@ model SalesSale {
   customerName String?
   customerContact String?
   total       Float          @default(0)
+  paymentAmount Float        @default(0)
+  changeAmount  Float        @default(0)
   createdById String
   createdBy   User           @relation("SalesSaleCreator", fields: [createdById], references: [id], onDelete: Restrict)
   items       SalesSaleItem[]

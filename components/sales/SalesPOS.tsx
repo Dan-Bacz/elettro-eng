@@ -14,6 +14,7 @@ function printReceipt(sale: any) {
   const rows = (sale.items || []).map((item: any) => `<tr><td>${item.quantity} × ${item.name}</td><td style="text-align:right">₱${Number(item.unitPrice * item.quantity).toFixed(2)}</td></tr>`).join('')
   receipt.document.write(`<html><head><title>${sale.reference}</title><style>body{font-family:Arial,sans-serif;width:320px;margin:24px auto;color:#111}h1{text-align:center;font-size:18px;margin:0}p{text-align:center;font-size:11px;color:#555}table{width:100%;border-collapse:collapse;margin:20px 0;font-size:12px}td{padding:7px 0;border-bottom:1px solid #ddd}.total{display:flex;justify-content:space-between;border-top:2px solid #111;padding-top:12px;font-weight:bold;font-size:16px}.meta{font-size:11px;color:#555;line-height:1.6}</style></head><body><h1>ELETTRO ENGINEERING</h1><p>SALES RECEIPT</p><div class="meta">Receipt: ${sale.reference}<br/>Date: ${new Date(sale.createdAt).toLocaleString()}<br/>Customer: ${sale.customerName || 'Walk-in customer'}</div><table>${rows}</table><div class="total"><span>TOTAL</span><span>₱${Number(sale.total).toFixed(2)}</span></div><p>Thank you for your purchase.</p><script>window.onload=function(){window.print()}</script></body></html>`)
   receipt.document.close()
+  receipt.document.body?.insertAdjacentHTML('beforeend', `<div style="font-size:12px;line-height:1.8">Cash received: ₱${Number(sale.paymentAmount).toFixed(2)}<br/>Change: ₱${Number(sale.changeAmount).toFixed(2)}</div>`)
 }
 
 export default function SalesPOS() {
@@ -23,6 +24,7 @@ export default function SalesPOS() {
   const [category, setCategory] = useState('ALL')
   const [customerName, setCustomerName] = useState('')
   const [customerContact, setCustomerContact] = useState('')
+  const [paymentAmount, setPaymentAmount] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState('')
@@ -40,6 +42,10 @@ export default function SalesPOS() {
   const categories = useMemo(() => ['ALL', ...Array.from(new Set(stock.map((item) => item.category).filter(Boolean) as string[]))], [stock])
   const lines = sale.map((line) => ({ ...line, item: stockById.get(line.inventoryItemId) })).filter((line) => line.item)
   const total = lines.reduce((sum, line) => sum + Number(line.item?.sellPrice || 0) * line.quantity, 0)
+  const payment = Number(paymentAmount)
+  const hasPayment = paymentAmount.trim() !== '' && Number.isFinite(payment)
+  const change = hasPayment ? Math.max(0, payment - total) : 0
+  const paymentSufficient = hasPayment && payment >= total
   const filtered = stock.filter((item) => (category === 'ALL' || item.category === category) && `${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(query.trim().toLowerCase()))
 
   function add(item: SalesStockItem) {
@@ -51,13 +57,15 @@ export default function SalesPOS() {
   function handleScan(event: React.KeyboardEvent<HTMLInputElement>) { if (event.key !== 'Enter') return; const item = stock.find((entry) => entry.sku?.toLowerCase() === query.trim().toLowerCase() || entry.name.toLowerCase() === query.trim().toLowerCase()); if (item) { add(item); setQuery('') } }
   async function completeSale(event: React.FormEvent) {
     event.preventDefault(); if (!sale.length) { setError('Scan or add at least one product.'); return }
+    if (!paymentSufficient) { setError('Enter an amount equal to or greater than the sale total.'); return }
     setSaving(true); setError(''); setNotice('')
-    try { const response = await fetch('/api/sales-sales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: sale, customerName, customerContact }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not complete sale.'); setNotice(`Receipt ${data.sale.reference} created. The print dialog is ready.`); printReceipt(data.sale); setSale([]); setCustomerName(''); setCustomerContact(''); await load(); searchRef.current?.focus() }
+    try { const response = await fetch('/api/sales-sales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: sale, customerName, customerContact, paymentAmount: payment }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Could not complete sale.'); setNotice(`Receipt ${data.sale.reference} saved. The print dialog is ready.`); printReceipt(data.sale); setSale([]); setCustomerName(''); setCustomerContact(''); setPaymentAmount(''); await load(); searchRef.current?.focus() }
     catch (err) { setError(err instanceof Error ? err.message : 'Could not complete sale.') }
     finally { setSaving(false) }
   }
 
   return <div className="space-y-5">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex sm:items-end sm:justify-between sm:gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Payment</p><p className="mt-1 text-sm font-bold text-slate-700">Enter the customer payment before completing the sale.</p></div><div className="mt-3 flex items-end gap-3 sm:mt-0"><label className="text-xs font-black text-slate-600">Amount received<input type="number" min="0" step="0.01" inputMode="decimal" value={paymentAmount} onChange={(event) => { setPaymentAmount(event.target.value); setError('') }} placeholder="0.00" className="mt-1 w-44 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-black outline-none focus:border-yellow-400" /></label><div className={`rounded-lg px-4 py-2.5 ${paymentSufficient ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}><div className="text-[10px] font-black uppercase">Change</div><div className="text-lg font-black">{money(change)}</div></div></div></div>
     <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 sm:flex-row sm:items-end sm:justify-between"><div><div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-emerald-600"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Counter open</div><h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">Point of Sale</h1><p className="mt-1 text-sm font-medium text-slate-500">Scan a product, take payment, and hand over the receipt.</p></div><div className="flex gap-2"><Link href="/sales/sales-receipts" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-600 shadow-sm hover:bg-slate-50"><DocumentIcon className="h-4 w-4" /> Sales receipts</Link><button type="button" onClick={() => setSale([])} disabled={!sale.length} className="rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-black text-red-600 disabled:opacity-40">Clear sale</button></div></div>
     {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-700">{error}</div>}
     {notice && <div role="status" className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700"><CheckCircleIcon className="h-4 w-4" />{notice}</div>}

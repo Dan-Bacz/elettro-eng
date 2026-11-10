@@ -10,6 +10,8 @@ type Sale = {
   customerName: string | null
   customerContact: string | null
   total: number
+  paymentAmount: number
+  changeAmount: number
   createdAt: string
   createdBy?: { name: string } | null
   items: { id: string; name: string; quantity: number; unit: string | null; unitPrice: number }[]

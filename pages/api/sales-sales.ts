@@ -115,6 +115,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const customerName = String(req.body?.customerName || '').trim().slice(0, 200) || null
   const customerContact = String(req.body?.customerContact || '').trim().slice(0, 100) || null
+  const paymentAmount = Number(req.body?.paymentAmount)
+  if (!Number.isFinite(paymentAmount) || paymentAmount < 0) {
+    return res.status(400).json({ error: 'Enter a valid customer payment amount.' })
+  }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -136,6 +140,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       })
 
+      const roundedTotal = Math.round(total * 100) / 100
+      const roundedPayment = Math.round(paymentAmount * 100) / 100
+      if (roundedPayment < roundedTotal) throw new Error('INSUFFICIENT_PAYMENT')
+
       const id = randomUUID()
       const sale = await tx.salesSale.create({
         data: {
@@ -143,7 +151,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           reference: `POS-${new Date().getFullYear()}-${id.slice(0, 8).toUpperCase()}`,
           customerName,
           customerContact,
-          total: Math.round(total * 100) / 100,
+          total: roundedTotal,
+          paymentAmount: roundedPayment,
+          changeAmount: Math.round((roundedPayment - roundedTotal) * 100) / 100,
           createdById: user.id,
           items: { create: items },
         },
@@ -158,6 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (message === 'PRODUCT_NOT_IN_SALES_STOCK') return res.status(409).json({ error: 'A selected product is not in Sales stock. Request it from Warehouse first.' })
     if (message.startsWith('INSUFFICIENT_SALES_STOCK:')) return res.status(409).json({ error: `Not enough Sales stock for ${message.slice('INSUFFICIENT_SALES_STOCK:'.length)}.` })
     if (message.startsWith('PRICE_NOT_SET:')) return res.status(409).json({ error: `Selling price is not set for ${message.slice('PRICE_NOT_SET:'.length)}.` })
+    if (message === 'INSUFFICIENT_PAYMENT') return res.status(400).json({ error: 'Customer payment is less than the sale total.' })
     if (message.includes('Serializable')) return res.status(409).json({ error: 'Sales stock changed while saving. Refresh and try again.' })
     console.error('Sales POS sale failed', error)
     return res.status(500).json({ error: 'Could not save the sale.' })
