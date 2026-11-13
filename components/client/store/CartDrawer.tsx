@@ -1,13 +1,16 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useCart } from "./CartContext"
 import ProductImage from "./ProductImage"
 import { CartIcon, CloseIcon, MinusIcon, PlusIcon, TrashIcon } from "./storeIcons"
 import { formatPeso } from "./storeUtils"
 
 export default function CartDrawer() {
+  const router = useRouter()
   const { items, count, subtotal, drawerOpen, closeCart, removeItem, setQuantity, openCheckout } = useCart()
+  const [checkingSession, setCheckingSession] = useState(false)
 
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? "hidden" : ""
@@ -15,6 +18,23 @@ export default function CartDrawer() {
       document.body.style.overflow = ""
     }
   }, [drawerOpen])
+
+  async function proceedToCheckout() {
+    if (checkingSession) return
+    setCheckingSession(true)
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" })
+      const data = response.ok ? await response.json() : null
+      const user = data?.user
+      const canCheckout = user?.role === "CLIENT" && user.status === "ACTIVE" && user.emailVerifiedAt
+      if (canCheckout) openCheckout()
+      else router.push("/client/login")
+    } catch {
+      router.push("/client/login")
+    } finally {
+      setCheckingSession(false)
+    }
+  }
 
   return (
     <div
@@ -139,10 +159,11 @@ export default function CartDrawer() {
 
               <button
                 type="button"
-                onClick={openCheckout}
-                className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99]"
+                onClick={() => void proceedToCheckout()}
+                disabled={checkingSession}
+                className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
               >
-                Proceed to Checkout
+                {checkingSession ? "Checking client account..." : "Proceed to Checkout"}
               </button>
               <p className="mt-2 text-center text-[10px] text-gray-400">
                 Shipping fee and payment confirmation handled by our team after you place the order.
