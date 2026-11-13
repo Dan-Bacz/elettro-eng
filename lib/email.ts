@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer'
+import nodemailer, { type SendMailOptions } from 'nodemailer'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'lanzaderasjezamae959@gmail.com'
 const SMTP_HOST = 'smtp.gmail.com'
@@ -28,6 +28,35 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       (err) => { clearTimeout(timer); reject(err) }
     )
   })
+}
+
+async function sendVerificationWithFallback(message: SendMailOptions) {
+  const transports = [
+    getTransporter(),
+    Promise.resolve(nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: 587,
+      secure: false,
+      requireTLS: true,
+      connectionTimeout: 20000,
+      greetingTimeout: 20000,
+      socketTimeout: 30000,
+      auth: {
+        user: process.env.GMAIL_USER?.trim(),
+        pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ''),
+      },
+    })),
+  ]
+  let lastError: unknown
+  for (const transporterPromise of transports) {
+    try {
+      const transporter = await transporterPromise
+      return await withTimeout(transporter.sendMail(message), 25000)
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('Email delivery failed.')
 }
 
 function getAppUrl() {
@@ -425,9 +454,7 @@ export async function sendClientVerificationEmail(input: {
 
   const name = escapeHtml(input.name)
   const verificationUrl = escapeHtml(input.verificationUrl)
-  const info = await withTimeout((async () => {
-    const transporter = await getTransporter()
-    return transporter.sendMail({
+  const info = await sendVerificationWithFallback({
       from: `${process.env.GMAIL_USER} <${process.env.GMAIL_USER}>`,
       to: input.email,
       subject: 'Verify your Elettro client account',
@@ -452,8 +479,7 @@ export async function sendClientVerificationEmail(input: {
           </div>
         </div>
       `,
-    })
-  })(), 25000)
+  })
 
   if (!info.accepted.some((address) => String(address).toLowerCase() === input.email.toLowerCase())) {
     throw new Error('The email provider did not accept the verification message.')
