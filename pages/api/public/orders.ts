@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import { sendOrderSubmittedNotification } from '../../../lib/email'
 import { requireVerifiedClient } from '../../../lib/client-auth'
+import { calculateShipping } from '../../../lib/shipping'
 
 const prisma = new PrismaClient()
 
@@ -122,7 +123,10 @@ export default async function handler(req: any, res: any) {
 
     // Shipping is confirmed by the team after review - never trusted from the
     // browser. Everything below is recomputed from database values.
-    const shipping = 0
+    const shippingEstimate = fulfillmentMethod === 'DELIVERY'
+      ? await calculateShipping({ address, barangay, city, province, postalCode })
+      : { distanceKm: 0, shippingFee: 0 }
+    const shipping = shippingEstimate.shippingFee
 
     // Deduplicate items by inventory id.
     const grouped = new Map<string, { inventoryItemId: string; quantity: number }>()
@@ -198,7 +202,7 @@ export default async function handler(req: any, res: any) {
           paymentMethod,
           paymentStatus,
           fulfillmentMethod,
-          shippingConfirmed: fulfillmentMethod === 'PICKUP',
+           shippingConfirmed: true,
           shipping,
           status: 'PENDING',
           total: round2(total),
@@ -293,7 +297,7 @@ export default async function handler(req: any, res: any) {
       email: cleanEmail,
       reference,
       items: orderItems.map((it) => ({ name: it.name, quantity: it.quantity, unit: it.unit, unitPrice: it.unitPrice })),
-      total,
+       total: total + shipping,
     })
 
     return res.status(201).json({
@@ -304,7 +308,10 @@ export default async function handler(req: any, res: any) {
       paymentStatus,
       fulfillmentMethod,
       status: 'PENDING',
-      total: round2(total),
+       total: round2(total + shipping),
+       subtotal: round2(total),
+       shipping,
+       distanceKm: shippingEstimate.distanceKm,
       message: `Order submitted successfully. Your reference number is ${reference}.`,
     })
   } catch (error: any) {

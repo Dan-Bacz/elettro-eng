@@ -44,6 +44,8 @@ type FormField = "clientName" | "email" | "phone" | "address" | "barangay" | "ci
 type Confirmation = {
   reference: string
   total: number
+  shipping: number
+  distanceKm: number
   paymentMethod: string
   fulfillmentMethod: string
   status: string
@@ -73,6 +75,9 @@ export default function CheckoutModal() {
   const [submitting, setSubmitting] = useState(false)
   const [serverError, setServerError] = useState("")
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
+  const [shippingEstimate, setShippingEstimate] = useState<{ distanceKm: number; shippingFee: number } | null>(null)
+  const [shippingLoading, setShippingLoading] = useState(false)
+  const [shippingError, setShippingError] = useState("")
 
   useEffect(() => {
     if (!checkoutOpen) return
@@ -91,6 +96,41 @@ export default function CheckoutModal() {
       .catch((reason) => console.error("Could not load client contact details:", reason))
     return () => { active = false }
   }, [checkoutOpen])
+
+  useEffect(() => {
+    if (!checkoutOpen || fulfillmentMethod !== "DELIVERY") {
+      setShippingEstimate(null)
+      setShippingError("")
+      return
+    }
+    if (!form.address.trim() || !form.city.trim() || !form.province.trim()) {
+      setShippingEstimate(null)
+      setShippingError("")
+      return
+    }
+
+    const timer = window.setTimeout(async () => {
+      setShippingLoading(true)
+      setShippingError("")
+      try {
+        const response = await fetch("/api/public/shipping-estimate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        })
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data?.error || "Could not calculate shipping.")
+        setShippingEstimate({ distanceKm: Number(data.distanceKm), shippingFee: Number(data.shippingFee) })
+      } catch (error: any) {
+        setShippingEstimate(null)
+        setShippingError(error?.message || "Could not calculate shipping.")
+      } finally {
+        setShippingLoading(false)
+      }
+    }, 600)
+
+    return () => window.clearTimeout(timer)
+  }, [checkoutOpen, fulfillmentMethod, form.address, form.barangay, form.city, form.province, form.postalCode])
 
   const paymentLabel = useMemo(
     () => PAYMENT_METHODS.find((p) => p.id === paymentMethod)?.label || paymentMethod,
@@ -126,6 +166,10 @@ export default function CheckoutModal() {
     if (items.length === 0) return
     setServerError("")
     if (!validate()) return
+    if (fulfillmentMethod === "DELIVERY" && !shippingEstimate) {
+      setServerError(shippingError || "Complete the delivery address so we can calculate the shipping fee.")
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -152,6 +196,8 @@ export default function CheckoutModal() {
       setConfirmation({
         reference: data.reference,
         total: Number(data.total ?? subtotal),
+        shipping: Number(data.shipping ?? 0),
+        distanceKm: Number(data.distanceKm ?? 0),
         paymentMethod: data.paymentMethod || paymentMethod,
         fulfillmentMethod: data.fulfillmentMethod || fulfillmentMethod,
         status: data.status || "PENDING",
@@ -193,6 +239,10 @@ export default function CheckoutModal() {
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Total Amount</p>
                     <p className="text-sm font-black text-gray-900">{formatPeso(confirmation.total, 2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Shipping Fee</p>
+                    <p className="text-sm font-black text-gray-900">{confirmation.shipping ? `${formatPeso(confirmation.shipping, 2)} · ${confirmation.distanceKm} km` : "No delivery fee"}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Payment Method</p>
@@ -419,11 +469,12 @@ export default function CheckoutModal() {
                   </div>
                   <div className="flex items-center justify-between text-gray-600">
                     <dt>Shipping</dt>
-                    <dd className="text-xs font-semibold text-gray-400">{fulfillmentMethod === "PICKUP" ? "No delivery fee" : "To be calculated"}</dd>
+                    <dd className={shippingEstimate ? "font-bold text-gray-900" : "text-xs font-semibold text-gray-400"}>{fulfillmentMethod === "PICKUP" ? "No delivery fee" : shippingLoading ? "Calculating…" : shippingEstimate ? `${formatPeso(shippingEstimate.shippingFee, 2)} · ${shippingEstimate.distanceKm} km` : "Enter address"}</dd>
                   </div>
+                  {shippingError && fulfillmentMethod === "DELIVERY" && <div className="rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold leading-4 text-red-600">{shippingError}</div>}
                   <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-base">
                     <dt className="font-black text-gray-900">Total</dt>
-                    <dd className="font-black text-gray-900">{formatPeso(subtotal, 2)}</dd>
+                    <dd className="font-black text-gray-900">{formatPeso(subtotal + (fulfillmentMethod === "DELIVERY" ? shippingEstimate?.shippingFee || 0 : 0), 2)}</dd>
                   </div>
                 </dl>
 
@@ -432,7 +483,7 @@ export default function CheckoutModal() {
                   disabled={submitting}
                   className="mt-5 w-full rounded-xl bg-yellow-400 px-4 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:opacity-60"
                 >
-                  {submitting ? "Placing Order…" : `Place Order · ${formatPeso(subtotal, 2)}`}
+                  {submitting ? "Placing Order…" : `Place Order · ${formatPeso(subtotal + (fulfillmentMethod === "DELIVERY" ? shippingEstimate?.shippingFee || 0 : 0), 2)}`}
                 </button>
                 <p className="mt-2 text-center text-[10px] text-gray-400">
                   A valid email and mobile number are required so we can confirm your order.
