@@ -61,7 +61,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (password !== confirmPassword) return res.status(400).json({ error: 'Passwords do not match.' })
 
   try {
-    if (await isRateLimited(req, 'client-register', 5, 60 * 60 * 1000, email)) {
+    // Use a versioned scope so stale counters from the previous registration
+    // flow cannot block a legitimate first attempt after the flow is fixed.
+    if (await isRateLimited(req, 'client-register-v2', 5, 60 * 60 * 1000, email)) {
       return res.status(429).json({ error: 'Too many registration attempts. Please try again later.' })
     }
 

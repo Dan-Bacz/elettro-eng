@@ -69,6 +69,7 @@ export async function isRateLimited(
     SET
       "count" = CASE
         WHEN "AuthRateLimit"."windowStartedAt" <= ${windowStart} THEN 1
+        WHEN "AuthRateLimit"."count" >= ${limit} THEN "AuthRateLimit"."count"
         ELSE "AuthRateLimit"."count" + 1
       END,
       "windowStartedAt" = CASE
