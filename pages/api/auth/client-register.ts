@@ -17,6 +17,31 @@ function hashToken(token: string) {
   return createHash('sha256').update(token).digest('hex')
 }
 
+async function issueVerificationEmail(user: { id: string; name: string; email: string }) {
+  const token = randomBytes(32).toString('hex')
+  const now = new Date()
+
+  await prisma.$transaction(async (tx) => {
+    await tx.emailVerificationToken.updateMany({
+      where: { userId: user.id, usedAt: null },
+      data: { usedAt: now },
+    })
+    await tx.emailVerificationToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: hashToken(token),
+        expiresAt: new Date(now.getTime() + VERIFY_TTL_MS),
+      },
+    })
+  })
+
+  await sendClientVerificationEmail({
+    name: user.name,
+    email: user.email,
+    verificationUrl: getClientVerificationUrl(token),
+  })
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -50,8 +75,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (existing.role === 'CLIENT' && existing.emailVerifiedAt) {
         return res.status(400).json({ error: 'An account with this email already exists and is verified.' })
       }
-      // If a pending client account exists, treat as success (will resend verification in a separate flow).
+      // If a pending client account exists, issue a fresh token so a failed or
+      // missed first delivery does not leave the account stuck.
       if (existing.role === 'CLIENT' && existing.status === 'PENDING' && !existing.emailVerifiedAt) {
+        const pendingUser = await prisma.user.findUnique({ where: { id: existing.id }, select: { id: true, name: true, email: true } })
+        if (pendingUser) await issueVerificationEmail(pendingUser)
         return res.status(200).json({ ok: true, message: GENERIC_MESSAGE })
       }
       // Staff accounts cannot be registered via client portal.
@@ -96,11 +124,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return { user, verificationToken }
     })
 
-    const verificationUrl = getClientVerificationUrl(token)
     await sendClientVerificationEmail({
       email: result.user.email,
       name: result.user.name,
-      verificationUrl,
+      verificationUrl: getClientVerificationUrl(token),
     })
 
     return res.status(201).json({ ok: true, message: GENERIC_MESSAGE })
