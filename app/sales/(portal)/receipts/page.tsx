@@ -142,7 +142,7 @@ export default function SalesReceiptsPage() {
         <div>
           <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Materials Received & Warehouse Receipts</h1>
           <p className="mt-0.5 text-xs font-medium text-slate-500">
-            View warehouse releases, verify physically released quantities, and acknowledge physical handover.
+            View warehouse releases, verify physically released quantities, and acknowledge physical handover. A release is not added to Sales Stock until Sales accepts custody.
           </p>
         </div>
         <div className="flex items-center gap-2">

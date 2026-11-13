@@ -43,13 +43,13 @@ export default function SalesStock() {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.18em] text-yellow-700">Sales stock</p>
           <h1 className="mt-1 text-2xl font-black text-slate-900">Available for Sales</h1>
-          <p className="mt-1 text-sm text-slate-500">Materials released by Warehouse appear here immediately and are available for POS sales.</p>
+          <p className="mt-1 text-sm text-slate-500">Only materials received and accepted by Sales are available for POS sales.</p>
         </div>
         <Link href="/sales/pos" className="rounded-xl bg-yellow-400 px-4 py-2.5 text-xs font-black text-slate-900 shadow-sm hover:bg-yellow-300">Create POS Sale</Link>
       </div>
       {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>}
       {loading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[1, 2, 3, 4].map((n) => <div key={n} className="h-64 animate-pulse rounded-2xl bg-slate-200" />)}</div> : stock.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><PackageIcon className="mx-auto h-10 w-10 text-slate-300" /><h2 className="mt-3 font-black text-slate-800">No Sales stock yet</h2><p className="mt-1 text-sm text-slate-500">Sales stock appears after Warehouse releases materials for a Sales request.</p><Link href="/sales/requests" className="mt-4 inline-block text-xs font-black text-yellow-700 hover:underline">Request materials →</Link></div>
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center"><PackageIcon className="mx-auto h-10 w-10 text-slate-300" /><h2 className="mt-3 font-black text-slate-800">No Sales stock yet</h2><p className="mt-1 text-sm text-slate-500">Sales stock appears after Sales receives and acknowledges the Warehouse release in Warehouse Receipts.</p><Link href="/sales/receipts" className="mt-4 inline-block text-xs font-black text-yellow-700 hover:underline">View materials received →</Link></div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {stock.map((item) => (

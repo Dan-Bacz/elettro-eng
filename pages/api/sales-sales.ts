@@ -11,6 +11,7 @@ async function getSalesStock(tx: PrismaClient | Prisma.TransactionClient) {
   const [released, sold] = await Promise.all([
     tx.warehouseRelease.findMany({
       where: {
+        receivedBySalesId: { not: null },
         request: { source: 'INTERNAL_SALES' },
       },
       select: {
