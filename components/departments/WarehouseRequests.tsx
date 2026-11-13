@@ -33,7 +33,7 @@ type WarehouseRequest = {
 type Verification = { quantity: string; unavailableQuantity: string; discrepancyNotes: string; verified: boolean }
 
 type SourceTab = 'ALL' | 'SALES' | 'TECHNICIAN'
-type StatusTab = 'ALL' | 'PENDING' | 'UNDER_REVIEW' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'REJECTED' | 'CANCELLED'
+type StatusTab = 'ALL' | 'PENDING' | 'UNDER_REVIEW' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLATION_REQUESTED' | 'REJECTED' | 'CANCELLED'
 
 export default function WarehouseRequests() {
   const router = useRouter()
@@ -71,7 +71,7 @@ export default function WarehouseRequests() {
     void load()
   }, [load])
 
-  async function changeStatus(request: WarehouseRequest, status: 'UNDER_REVIEW' | 'REJECTED') {
+  async function changeStatus(request: WarehouseRequest, status: 'UNDER_REVIEW' | 'REJECTED' | 'CANCELLED') {
     setBusyId(request.id)
     setError('')
     setNotice('')
@@ -83,7 +83,7 @@ export default function WarehouseRequests() {
       })
       const data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.error || 'Could not update request status.')
-      setNotice(`${request.reference} ${status === 'UNDER_REVIEW' ? 'accepted for review' : 'rejected'}.`)
+      setNotice(`${request.reference} ${status === 'UNDER_REVIEW' ? 'accepted for review' : status === 'REJECTED' ? 'rejected' : 'cancellation approved'}.`)
       await load()
     } catch (changeError) {
       setError(changeError instanceof Error ? changeError.message : 'Could not update request status.')
@@ -229,7 +229,7 @@ export default function WarehouseRequests() {
 
         {/* Status Filter Tabs */}
         <div className="flex flex-wrap gap-1 border-t border-slate-100 pt-2 text-xs">
-          {(['ALL', 'PENDING', 'UNDER_REVIEW', 'PARTIALLY_FULFILLED', 'FULFILLED', 'REJECTED', 'CANCELLED'] as StatusTab[]).map(
+          {(['ALL', 'PENDING', 'UNDER_REVIEW', 'PARTIALLY_FULFILLED', 'FULFILLED', 'CANCELLATION_REQUESTED', 'REJECTED', 'CANCELLED'] as StatusTab[]).map(
             (status) => (
               <button
                 key={status}
@@ -283,6 +283,8 @@ export default function WarehouseRequests() {
                             ? 'bg-emerald-100 text-emerald-800'
                             : request.status === 'PARTIALLY_FULFILLED'
                             ? 'bg-indigo-100 text-indigo-800'
+                            : request.status === 'CANCELLATION_REQUESTED'
+                            ? 'bg-orange-100 text-orange-800'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
@@ -339,6 +341,13 @@ export default function WarehouseRequests() {
                         >
                           Reject
                         </button>
+                      </div>
+                    )}
+
+                    {request.status === 'CANCELLATION_REQUESTED' && (
+                      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+                        <p className="flex-1 text-xs font-semibold text-orange-900">Sales requested cancellation. Approve it only after confirming that no materials were released.</p>
+                        <button disabled={busyId === request.id} onClick={() => void changeStatus(request, 'CANCELLED')} className="rounded-xl bg-orange-500 px-3.5 py-2 text-xs font-black text-white hover:bg-orange-600 disabled:opacity-50">{busyId === request.id ? 'Approving...' : 'Approve cancellation'}</button>
                       </div>
                     )}
 

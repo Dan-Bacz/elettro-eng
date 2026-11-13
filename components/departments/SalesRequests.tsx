@@ -16,6 +16,7 @@ function statusStyle(status: string) {
   if (status === 'FULFILLED') return 'bg-emerald-100 text-emerald-700'
   if (status === 'PARTIALLY_FULFILLED') return 'bg-blue-100 text-blue-700'
   if (status === 'REJECTED' || status === 'CANCELLED') return 'bg-red-100 text-red-700'
+  if (status === 'CANCELLATION_REQUESTED') return 'bg-orange-100 text-orange-700'
   if (status === 'UNDER_REVIEW') return 'bg-violet-100 text-violet-700'
   return 'bg-amber-100 text-amber-700'
 }
@@ -28,6 +29,7 @@ export default function SalesRequests() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -81,6 +83,22 @@ export default function SalesRequests() {
     }
   }
 
+  async function requestCancellation(request: Request) {
+    if (!window.confirm(`Send a cancellation request for ${request.reference}? Warehouse must approve it.`)) return
+    setCancellingId(request.id); setError(''); setNotice('')
+    try {
+      const response = await fetch('/api/warehouse-requests', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: request.id, status: 'CANCELLATION_REQUESTED' }) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'Could not request cancellation.')
+      setNotice(`Cancellation requested for ${request.reference}. Warehouse approval is required.`)
+      await load()
+    } catch (cancelError) {
+      setError(cancelError instanceof Error ? cancelError.message : 'Could not request cancellation.')
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
   const visibleInventory = inventory.filter((item) => !search.trim() || `${item.name} ${item.sku || ''} ${item.category || ''}`.toLowerCase().includes(search.toLowerCase()))
   const pendingRequests = requests.filter((request) => !isFulfilled(request))
   const fulfilledRequests = requests.filter(isFulfilled)
@@ -101,7 +119,7 @@ export default function SalesRequests() {
         <div className="grid gap-2 sm:grid-cols-2">
           {request.items.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5"><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-slate-100">{item.inventoryItem.imageUrl ? <Image src={item.inventoryItem.imageUrl} alt={item.inventoryItem.name} width={44} height={44} className="h-full w-full object-contain" /> : <PackageIcon className="h-5 w-5 text-slate-300" />}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-black text-slate-800">{item.inventoryItem.name}</div><div className="mt-0.5 text-[10px] font-semibold text-slate-500">{item.releasedQuantity}/{item.requestedQuantity} {item.unit || 'pcs'} released</div></div></div>)}
         </div>
-        {request.releases.map((release) => release.receipt && <a key={release.receipt.reference} href={`/sales/receipts?reference=${encodeURIComponent(release.receipt.reference)}`} className="inline-flex items-center text-xs font-black text-blue-700 hover:underline">View warehouse receipt {release.receipt.reference} →</a>)}
+        <div className="flex flex-wrap items-center justify-between gap-3">{request.releases.map((release) => release.receipt && <a key={release.receipt.reference} href={`/sales/receipts?reference=${encodeURIComponent(release.receipt.reference)}`} className="inline-flex items-center text-xs font-black text-blue-700 hover:underline">View warehouse receipt {release.receipt.reference} →</a>)}{['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0 && <button type="button" onClick={() => void requestCancellation(request)} disabled={cancellingId === request.id} className="rounded-lg border border-red-200 px-3 py-2 text-[11px] font-black text-red-600 transition hover:bg-red-50 disabled:opacity-50">{cancellingId === request.id ? 'Requesting...' : 'Request cancellation'}</button>}</div>
       </div>
     </article>
   }

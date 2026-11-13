@@ -249,12 +249,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!request) return res.status(404).json({ error: 'Warehouse request not found' })
 
     let allowed = false
-    if ((user.role === 'SALES' || user.role === 'TECH') && request.requesterId === user.id && status === 'CANCELLED') {
+    if ((user.role === 'SALES' || user.role === 'TECH') && request.requesterId === user.id && status === 'CANCELLATION_REQUESTED') {
       allowed = ['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0
     } else if (user.role === 'WAREHOUSE') {
       allowed =
         (status === 'UNDER_REVIEW' && request.status === 'PENDING') ||
-        (status === 'REJECTED' && ['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0)
+        (status === 'REJECTED' && ['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0) ||
+        (status === 'CANCELLED' && request.status === 'CANCELLATION_REQUESTED' && request.releases.length === 0)
     }
 
     if (!allowed) return res.status(403).json({ error: 'This request transition is not permitted' })
@@ -274,12 +275,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         select: { id: true, role: true },
       })
 
+      if (nextStatus === 'CANCELLATION_REQUESTED') {
+        const warehouseWorkers = await tx.user.findMany({
+          where: { role: 'WAREHOUSE', status: 'ACTIVE' },
+          select: { id: true },
+        })
+        if (warehouseWorkers.length) {
+          await tx.notification.createMany({
+            data: warehouseWorkers.map((worker) => ({
+              userId: worker.id,
+              type: 'WAREHOUSE_REQUEST',
+              title: 'Sales Cancellation Approval Needed',
+              message: `${request.reference} was marked for cancellation by Sales. Review and approve it in Warehouse Requests.`,
+              link: '/warehouse/requests',
+            })),
+          })
+        }
+      }
+
       if (requester.role === 'SALES' || requester.role === 'CLIENT') {
         await tx.notification.create({
           data: {
             userId: requester.id,
             type: 'WAREHOUSE_REQUEST',
-            title: nextStatus === 'UNDER_REVIEW' ? 'Warehouse Request Accepted' : nextStatus === 'REJECTED' ? 'Warehouse Request Rejected' : 'Warehouse Request Cancelled',
+            title: nextStatus === 'UNDER_REVIEW' ? 'Warehouse Request Accepted' : nextStatus === 'REJECTED' ? 'Warehouse Request Rejected' : nextStatus === 'CANCELLATION_REQUESTED' ? 'Cancellation Requested' : 'Warehouse Request Cancelled',
             message: `Request ${request.reference} is now ${nextStatus.toLowerCase().replace('_', ' ')}.`,
             link: requester.role === 'CLIENT' ? '/client/dashboard' : '/sales/requests',
           },
@@ -289,7 +308,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data: {
             userId: requester.id,
             type: 'WAREHOUSE_REQUEST',
-            title: nextStatus === 'UNDER_REVIEW' ? 'Material Request Under Review' : nextStatus === 'REJECTED' ? 'Material Request Rejected' : 'Material Request Cancelled',
+            title: nextStatus === 'UNDER_REVIEW' ? 'Material Request Under Review' : nextStatus === 'REJECTED' ? 'Material Request Rejected' : nextStatus === 'CANCELLATION_REQUESTED' ? 'Cancellation Requested' : 'Material Request Cancelled',
             message: `Your material request ${request.reference} for ${request.projectReference || 'project'} is now ${nextStatus.toLowerCase().replace('_', ' ')}.`,
             link: '/technician/dashboard',
           },
