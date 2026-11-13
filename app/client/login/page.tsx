@@ -70,53 +70,69 @@ function ClientLoginForm() {
     }
   }
 
-  const inputClass = "w-full rounded-lg border border-gray-300 bg-white px-3.5 py-3 text-sm text-gray-900 outline-none focus:border-yellow-500 focus:ring-2 focus:ring-yellow-200"
+  const inputClass = "w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-yellow-400 focus:bg-white/10 focus:ring-2 focus:ring-yellow-400/20"
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10 sm:px-6">
-      <div className="mx-auto max-w-md">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm font-black tracking-wide text-gray-900">
-          <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-xl object-cover" />
-          ELETTRO <span className="font-medium text-gray-500">Engineering</span>
-        </Link>
-        <section className="mt-7 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-700">Client portal</p>
-          <h1 className="mt-2 text-2xl font-black text-gray-900">Sign in</h1>
-          <p className="mt-2 text-sm text-gray-600">Sign in to view your service bookings and product orders.</p>
-          {checkoutPrompt && <p role="status" className="mt-4 rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-bold leading-5 text-yellow-900">Please log in or sign up to continue checkout.</p>}
-          <form onSubmit={submit} className="mt-6 space-y-4">
-            <label className="block space-y-1.5 text-sm font-semibold text-gray-700">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0b0f10] px-4 py-10 sm:px-6">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(245,196,0,0.14),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,rgba(34,211,238,0.08),transparent_50%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400" />
+
+      <div className="relative w-full max-w-md">
+        <div className="mb-8 text-center">
+          <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={64} height={64} className="mx-auto h-16 w-16 rounded-2xl object-cover shadow-xl shadow-yellow-400/20" />
+          <h1 className="mt-4 text-2xl font-black tracking-wide text-white">ELETTRO</h1>
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-gray-400">Engineering Enterprises</p>
+        </div>
+
+        <section className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur-sm sm:p-8">
+          <div className="mb-6">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-400">Client portal</p>
+            <h2 className="mt-2 text-xl font-black text-white">Welcome back</h2>
+            <p className="mt-1 text-sm leading-5 text-gray-400">Sign in to manage your orders, bookings, and account.</p>
+          </div>
+
+          {checkoutPrompt && <div role="status" className="mb-5 rounded-xl border border-yellow-400/25 bg-yellow-400/10 px-4 py-3 text-sm font-bold leading-5 text-yellow-200">Please log in or sign up to continue checkout.</div>}
+
+          <form onSubmit={submit} className="space-y-4">
+            <label className="block text-sm font-semibold text-gray-300">
               Email address
-              <input className={inputClass} type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required />
+              <input id="client-email" className={`mt-1.5 ${inputClass}`} type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" autoComplete="email" required />
             </label>
-            <label className="block space-y-1.5 text-sm font-semibold text-gray-700">
+
+            <label className="block text-sm font-semibold text-gray-300">
               Password
-              <span className="flex gap-2">
-                <input className={inputClass} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required />
-                <button type="button" onClick={() => setShowPassword((value) => !value)} className="shrink-0 rounded-lg border border-gray-300 px-3 text-xs font-bold text-gray-600" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? "Hide" : "Show"}</button>
+              <span className="mt-1.5 flex gap-2">
+                <input id="client-password" className={inputClass} type={showPassword ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" autoComplete="current-password" required />
+                <button type="button" onClick={() => setShowPassword((value) => !value)} className="shrink-0 rounded-xl border border-white/15 px-3 text-xs font-bold text-gray-400 transition hover:border-yellow-400 hover:text-yellow-300" aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? "Hide" : "Show"}</button>
               </span>
             </label>
-            {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-            {message && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">{message}</p>}
-            <button type="submit" disabled={submitting} className="w-full rounded-lg bg-yellow-400 px-5 py-3.5 text-sm font-black text-black transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? "Signing in..." : "Sign in"}
+
+            {error && <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm font-medium text-red-300">{error}</p>}
+            {message && <p role="status" className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-300">{message}</p>}
+
+            <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center rounded-xl bg-yellow-400 px-6 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/20 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? "Signing in..." : "Sign in to client portal"}
             </button>
           </form>
-          <div className="mt-4 text-center">
-            <button type="button" disabled={!email || resending} onClick={resend} className="text-sm font-semibold text-yellow-800 hover:underline disabled:text-gray-400">
-              {resending ? "Sending..." : "Resend verification email"}
-            </button>
-          </div>
-          <p className="mt-6 text-center text-sm text-gray-600">
-            New to ELETTRO? <Link href="/client/register" className="font-bold text-yellow-700 hover:underline">Create an account</Link>
-          </p>
+
+          <button type="button" disabled={!email || resending} onClick={resend} className="mt-4 w-full text-center text-sm font-semibold text-gray-400 transition hover:text-yellow-400 disabled:cursor-not-allowed disabled:text-gray-600">
+            {resending ? "Sending verification email..." : "Resend verification email"}
+          </button>
         </section>
-        <Link href="/" className="mt-5 block text-center text-sm text-gray-500 hover:text-gray-900">Back to ELETTRO website</Link>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-400">New to ELETTRO? <Link href="/client/register" className="font-bold text-yellow-400 transition hover:text-yellow-300">Create a client account</Link></p>
+        </div>
+        <Link href="/" className="mt-5 flex items-center justify-center gap-2 text-sm text-gray-400 transition hover:text-yellow-400">
+          <span aria-hidden="true">←</span> Back to Website
+        </Link>
       </div>
-    </main>
+    </div>
   )
 }
 
 export default function ClientLoginPage() {
-  return <Suspense fallback={<div className="min-h-screen bg-gray-50" />}><ClientLoginForm /></Suspense>
+  return <Suspense fallback={<div className="min-h-screen bg-[#0b0f10]" />}><ClientLoginForm /></Suspense>
 }
+
