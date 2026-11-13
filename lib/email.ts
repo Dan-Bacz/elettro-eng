@@ -5,7 +5,14 @@ const SMTP_HOST = 'smtp.gmail.com'
 const ADMIN_NOTIFICATION_MAX_ATTEMPTS = 2
 let cachedIpv4: string | null = null
 
+function getGmailCredentials() {
+  const user = process.env.GMAIL_USER?.trim().replace(/^['"]|['"]$/g, '')
+  const appPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '').replace(/^['"]|['"]$/g, '')
+  return { user, appPassword }
+}
+
 async function getTransporter() {
+  const { user, appPassword } = getGmailCredentials()
   return nodemailer.createTransport({
     // Use Nodemailer's Gmail preset instead of resolving smtp.gmail.com to an
     // IP address. The IP/TLS combination is unreliable in serverless deploys.
@@ -14,8 +21,8 @@ async function getTransporter() {
     greetingTimeout: 20000,
     socketTimeout: 30000,
     auth: {
-      user: process.env.GMAIL_USER?.trim(),
-      pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '')
+      user,
+      pass: appPassword
     }
   })
 }
@@ -31,6 +38,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 async function sendVerificationWithFallback(message: SendMailOptions) {
+  const { user, appPassword } = getGmailCredentials()
   const transports = [
     getTransporter(),
     Promise.resolve(nodemailer.createTransport({
@@ -42,8 +50,8 @@ async function sendVerificationWithFallback(message: SendMailOptions) {
       greetingTimeout: 20000,
       socketTimeout: 30000,
       auth: {
-        user: process.env.GMAIL_USER?.trim(),
-        pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ''),
+        user,
+        pass: appPassword,
       },
     })),
   ]
@@ -448,14 +456,15 @@ export async function sendClientVerificationEmail(input: {
   email: string
   verificationUrl: string
 }) {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  const { user, appPassword } = getGmailCredentials()
+  if (!user || !appPassword) {
     throw new Error('Email delivery is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD.')
   }
 
   const name = escapeHtml(input.name)
   const verificationUrl = escapeHtml(input.verificationUrl)
   const info = await sendVerificationWithFallback({
-      from: `${process.env.GMAIL_USER} <${process.env.GMAIL_USER}>`,
+      from: `${user} <${user}>`,
       to: input.email,
       subject: 'Verify your Elettro client account',
       text: `Hello ${input.name}, verify your Elettro client account using this link: ${input.verificationUrl}\n\nThis link expires in 24 hours and can only be used once.`,
