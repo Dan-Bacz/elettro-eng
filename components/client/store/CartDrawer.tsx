@@ -28,9 +28,9 @@ export default function CartDrawer() {
       const user = data?.user
       const canCheckout = user?.role === "CLIENT" && user.status === "ACTIVE" && user.emailVerifiedAt
       if (canCheckout) openCheckout()
-      else router.push("/client/login")
+      else router.push("/client/login?reason=checkout")
     } catch {
-      router.push("/client/login")
+      router.push("/client/login?reason=checkout")
     } finally {
       setCheckingSession(false)
     }

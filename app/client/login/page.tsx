@@ -15,6 +15,7 @@ function ClientLoginForm() {
   const [resending, setResending] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
+  const checkoutPrompt = searchParams?.get("reason") === "checkout"
 
   useEffect(() => {
     setEmail(searchParams?.get("email") || "")
@@ -82,6 +83,7 @@ function ClientLoginForm() {
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-700">Client portal</p>
           <h1 className="mt-2 text-2xl font-black text-gray-900">Sign in</h1>
           <p className="mt-2 text-sm text-gray-600">Sign in to view your service bookings and product orders.</p>
+          {checkoutPrompt && <p role="status" className="mt-4 rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-bold leading-5 text-yellow-900">Please log in or sign up to continue checkout.</p>}
           <form onSubmit={submit} className="mt-6 space-y-4">
             <label className="block space-y-1.5 text-sm font-semibold text-gray-700">
               Email address
