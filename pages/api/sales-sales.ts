@@ -49,12 +49,14 @@ async function getSalesStock(tx: PrismaClient | Prisma.TransactionClient) {
     }
   }
 
-  return [...stock.values()].map(({ item, released: releasedQuantity, sold: soldQuantity }) => ({
-    ...item,
-    releasedQuantity,
-    soldQuantity,
-    availableQuantity: Math.max(0, releasedQuantity - soldQuantity),
-  }))
+  return [...stock.values()]
+    .map(({ item, released: releasedQuantity, sold: soldQuantity }) => ({
+      ...item,
+      releasedQuantity,
+      soldQuantity,
+      availableQuantity: Math.max(0, releasedQuantity - soldQuantity),
+    }))
+    .filter((item) => item.availableQuantity > 0)
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
