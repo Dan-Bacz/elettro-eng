@@ -133,6 +133,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({ ok: true, message: GENERIC_MESSAGE })
   } catch (error) {
     console.error('Client registration error:', error)
+    const reason = error instanceof Error ? error.message : ''
+    if (/email|gmail|smtp|verification link|timed out/i.test(reason)) {
+      return res.status(503).json({
+        error: 'Your account was created, but the verification email could not be sent. Please check your inbox later or use Resend verification email from the client login page.',
+      })
+    }
     return res.status(500).json({ error: 'Server error' })
   }
 }
