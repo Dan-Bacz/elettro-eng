@@ -1,41 +1,21 @@
 import nodemailer from 'nodemailer'
-import dns from 'dns/promises'
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'lanzaderasjezamae959@gmail.com'
 const SMTP_HOST = 'smtp.gmail.com'
 const ADMIN_NOTIFICATION_MAX_ATTEMPTS = 2
-
 let cachedIpv4: string | null = null
-let cachedIpv4At = 0
-
-async function getIpv4Host() {
-  const cacheMs = 5 * 60 * 1000
-  if (cachedIpv4 && Date.now() - cachedIpv4At < cacheMs) return cachedIpv4
-  try {
-    const addresses = await dns.resolve4(SMTP_HOST)
-    cachedIpv4 = addresses[0]
-    cachedIpv4At = Date.now()
-  } catch {
-    cachedIpv4 = SMTP_HOST
-  }
-  return cachedIpv4 ?? SMTP_HOST
-}
 
 async function getTransporter() {
-  const host = await getIpv4Host()
   return nodemailer.createTransport({
-    host,
-    port: 465,
-    secure: true,
+    // Use Nodemailer's Gmail preset instead of resolving smtp.gmail.com to an
+    // IP address. The IP/TLS combination is unreliable in serverless deploys.
+    service: 'gmail',
     connectionTimeout: 20000,
     greetingTimeout: 20000,
     socketTimeout: 30000,
-    tls: {
-      servername: SMTP_HOST
-    },
     auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_APP_PASSWORD
+      user: process.env.GMAIL_USER?.trim(),
+      pass: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '')
     }
   })
 }
