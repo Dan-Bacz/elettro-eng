@@ -83,8 +83,8 @@ export default function ClientShell({ user, children }: ClientShellProps) {
         {collapsed && <button type="button" onClick={() => setCollapsed(false)} aria-label="Expand sidebar" className="hidden h-10 items-center justify-center border-b border-white/10 text-gray-400 hover:bg-white/10 hover:text-white md:flex">›</button>}
         <nav aria-label="Client navigation" className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
           {navItems.map((item) => (
-            <Link key={item.label} href={item.href} title={collapsed ? item.label : undefined} onClick={() => setMobileOpen(false)} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${activeItem(item.href) ? "bg-yellow-400 text-black shadow-md shadow-yellow-400/20" : "text-gray-400 hover:bg-white/5 hover:text-white"}`}>
-              <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center text-base">{item.icon}</span>
+            <Link key={item.label} href={item.href} title={collapsed ? item.label : undefined} onClick={() => setMobileOpen(false)} className={`group relative flex items-center gap-3 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-all duration-200 ${activeItem(item.href) ? "border-yellow-300/70 bg-gradient-to-r from-yellow-400 to-amber-300 text-black shadow-[0_8px_20px_-10px_rgba(250,204,21,.9)]" : "border-transparent text-slate-400 hover:-translate-y-0.5 hover:border-yellow-300/25 hover:bg-gradient-to-r hover:from-white/10 hover:to-yellow-300/5 hover:text-white hover:shadow-[inset_3px_0_0_rgba(250,204,21,.8),0_8px_20px_-16px_rgba(250,204,21,.8)]"}`}>
+              <span aria-hidden="true" className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-base transition-transform duration-200 group-hover:scale-110 ${activeItem(item.href) ? "text-black" : "text-slate-500 group-hover:text-yellow-300"}`}>{item.icon}</span>
               {!collapsed && <span className="truncate">{item.label}</span>}
             </Link>
           ))}
