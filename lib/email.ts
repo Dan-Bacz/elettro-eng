@@ -8,7 +8,14 @@ let cachedIpv4: string | null = null
 function getGmailCredentials() {
   const user = process.env.GMAIL_USER?.trim().replace(/^['"]|['"]$/g, '')
   const appPassword = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '').replace(/^['"]|['"]$/g, '')
-  return { user, appPassword }
+  const adminEmail = process.env.ADMIN_EMAIL?.trim().replace(/^['"]|['"]$/g, '')
+  // Gmail only permits the authenticated mailbox (or one of its verified
+  // aliases) as the sender. Prefer the configured admin mailbox when it is
+  // the same account, otherwise fall back to the authenticated account.
+  const sender = adminEmail && user && adminEmail.toLowerCase() === user.toLowerCase()
+    ? adminEmail
+    : user
+  return { user, appPassword, sender }
 }
 
 async function getTransporter() {
@@ -458,15 +465,15 @@ export async function sendClientVerificationEmail(input: {
   email: string
   verificationUrl: string
 }) {
-  const { user, appPassword } = getGmailCredentials()
-  if (!user || !appPassword) {
+  const { user, appPassword, sender } = getGmailCredentials()
+  if (!user || !appPassword || !sender) {
     throw new Error('Email delivery is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD.')
   }
 
   const name = escapeHtml(input.name)
   const verificationUrl = escapeHtml(input.verificationUrl)
   const info = await sendVerificationWithFallback({
-      from: `${user} <${user}>`,
+      from: `Elettro Engineering Admin <${sender}>`,
       to: input.email,
       subject: 'Verify your Elettro client account',
       text: `Hello ${input.name}, verify your Elettro client account using this link: ${input.verificationUrl}\n\nThis link expires in 24 hours and can only be used once.`,
