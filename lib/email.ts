@@ -56,27 +56,29 @@ async function sendVerificationWithFallback(message: SendMailOptions) {
     })),
   ]
   let lastError: unknown
+  const errors: string[] = []
   for (const transporterPromise of transports) {
     try {
       const transporter = await transporterPromise
       return await withTimeout(transporter.sendMail(message), 25000)
     } catch (error) {
       lastError = error
+      errors.push(error instanceof Error ? error.message : String(error))
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('Email delivery failed.')
+  const detail = errors.filter(Boolean).join(' | ')
+  throw new Error(detail || (lastError instanceof Error ? lastError.message : 'Email delivery failed.'))
 }
 
 function getAppUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || 'https://elettro-eng-one.vercel.app'
+  return (process.env.NEXT_PUBLIC_APP_URL || 'https://elettro-eng-one.vercel.app')
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
 }
 
 export function getClientVerificationUrl(token: string) {
-  const configuredUrl = process.env.NEXT_PUBLIC_APP_URL
-  if (!configuredUrl && process.env.NODE_ENV === 'production') {
-    throw new Error('NEXT_PUBLIC_APP_URL must be configured in production for verification links.')
-  }
-  const appUrl = new URL(configuredUrl || 'http://localhost:3000')
+  const configuredUrl = getAppUrl()
+  const appUrl = new URL(configuredUrl)
   if (process.env.NODE_ENV === 'production' && appUrl.protocol !== 'https:') {
     throw new Error('NEXT_PUBLIC_APP_URL must use HTTPS in production.')
   }
