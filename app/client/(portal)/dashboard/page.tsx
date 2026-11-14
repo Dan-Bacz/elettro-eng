@@ -310,26 +310,50 @@ export default function ClientDashboardPage() {
   const gcashAccountName = process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME || ""
   const gcashAccountNumber = process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER || ""
   const cards = [
-    { label: "Total Service Bookings", value: data.counts.bookings, detail: "All submitted requests" },
-    { label: "Under Review", value: data.counts.pendingBookings, detail: "Awaiting team review" },
-    { label: "Active Services", value: data.counts.activeBookings, detail: "Approved, assigned or in progress" },
-    { label: "Product Orders", value: data.counts.orders, detail: "All orders placed" },
-    { label: "Awaiting Fulfillment", value: data.counts.awaitingOrders, detail: "Pending or approved orders" },
+    { label: "Service bookings", value: data.counts.bookings, detail: "All submitted requests", icon: "✦", accent: "from-cyan-500 to-blue-600" },
+    { label: "Under review", value: data.counts.pendingBookings, detail: "Awaiting team review", icon: "◌", accent: "from-amber-400 to-orange-500" },
+    { label: "Active services", value: data.counts.activeBookings, detail: "Approved or in progress", icon: "↗", accent: "from-emerald-400 to-teal-600" },
+    { label: "Product orders", value: data.counts.orders, detail: "All orders placed", icon: "▣", accent: "from-violet-500 to-indigo-600" },
+    { label: "Awaiting fulfillment", value: data.counts.awaitingOrders, detail: "Pending or approved", icon: "◷", accent: "from-rose-400 to-pink-600" },
+  ]
+  const completionRate = data.counts.bookings ? Math.round((data.counts.activeBookings / data.counts.bookings) * 100) : 0
+  const fulfillmentRate = data.counts.orders ? Math.max(0, Math.round(((data.counts.orders - data.counts.awaitingOrders) / data.counts.orders) * 100)) : 0
+  const activityBars = [
+    Math.max(18, Math.min(92, data.counts.bookings * 11 + 18)),
+    Math.max(24, Math.min(96, data.counts.activeBookings * 17 + 28)),
+    Math.max(20, Math.min(88, data.counts.orders * 13 + 22)),
+    Math.max(30, Math.min(98, (data.counts.orders - data.counts.awaitingOrders) * 19 + 34)),
+    Math.max(26, Math.min(90, data.notifications.length * 8 + 30)),
+    Math.max(32, Math.min(96, completionRate + 24)),
+    Math.max(35, Math.min(98, fulfillmentRate + 20)),
   ]
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="-mx-4 -my-5 min-h-full overflow-hidden bg-[#edf2f7] px-4 py-5 sm:-mx-6 sm:-my-6 sm:px-6 sm:py-6 lg:-mx-8 lg:-my-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="relative isolate overflow-hidden rounded-[2rem] border border-slate-700/60 bg-[#0b1118] p-6 text-white shadow-[0_24px_60px_-28px_rgba(15,23,42,0.85)] sm:p-8">
+          <div className="pointer-events-none absolute -right-20 -top-32 -z-10 h-80 w-80 rounded-full bg-cyan-400/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-36 left-1/3 -z-10 h-80 w-80 rounded-full bg-yellow-400/15 blur-3xl" />
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-yellow-700">Client workspace</p>
-              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Welcome back, {data.user.name}</h1>
-              <p className="mt-1 text-sm text-slate-500">Manage your services, orders, and account updates in one place.</p>
-              <p className="mt-2 text-xs font-medium text-slate-400">{new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(new Date())}</p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_12px_#6ee7b7]" /> Client command center</div>
+              <h1 className="mt-4 max-w-2xl text-3xl font-black tracking-tight text-white sm:text-4xl">Welcome back, {data.user.name}</h1>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">Your services, orders, and account updates are organized in one intelligent workspace.</p>
+              <p className="mt-4 text-xs font-medium text-slate-400">{new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(new Date())}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/book-service" className="rounded-lg bg-yellow-400 px-4 py-2.5 text-sm font-bold text-black hover:bg-yellow-300">Book a service</Link>
-              <Link href="/products" className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-yellow-500">Shop products</Link>
+            <div className="flex flex-col gap-4 sm:flex-row lg:flex-col lg:items-end">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-4 shadow-inner shadow-white/5 backdrop-blur-sm">
+                <div className="flex items-center gap-4">
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full" style={{ background: `conic-gradient(#facc15 ${Math.min(completionRate, 100)}%, rgba(255,255,255,.1) 0)` }}>
+                    <div className="flex h-[4.25rem] w-[4.25rem] items-center justify-center rounded-full bg-[#101923] text-xl font-black text-white">{completionRate}%</div>
+                  </div>
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Service momentum</p><p className="mt-1 text-sm font-bold text-white">{data.counts.activeBookings ? "Your services are moving" : "Ready when you are"}</p><p className="mt-1 text-xs text-slate-400">Live from your account activity</p></div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/book-service" className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-black text-black shadow-[0_8px_20px_-8px_rgba(250,204,21,.9)] transition hover:-translate-y-0.5 hover:bg-yellow-300">Book a service</Link>
+                <Link href="/products" className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/15">Shop products</Link>
+              </div>
             </div>
           </div>
         </section>
@@ -340,14 +364,26 @@ export default function ClientDashboardPage() {
           </div>
         )}
 
-        <section aria-label="Account overview" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <section aria-label="Account overview" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {cards.map((card, index) => (
-            <article key={card.label} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{card.label}</p>
-              <p className={`mt-2 text-3xl font-black ${index === 1 || index === 4 ? "text-yellow-700" : "text-gray-900"}`}>{card.value}</p>
-              <p className="mt-1 text-xs text-gray-500">{card.detail}</p>
+            <article key={card.label} className="group relative overflow-hidden rounded-2xl border border-white bg-white p-5 shadow-[0_16px_35px_-24px_rgba(15,23,42,.65)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_22px_42px_-22px_rgba(15,23,42,.55)]">
+              <div className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${card.accent} opacity-10 blur-xl transition group-hover:opacity-20`} />
+              <div className="relative flex items-start justify-between"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">{card.label}</p><span className={`flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${card.accent} text-sm font-black text-white shadow-lg`}>{card.icon}</span></div>
+              <p className="relative mt-5 text-4xl font-black tracking-tight text-slate-900">{card.value}</p>
+              <p className="relative mt-1 text-xs font-medium text-slate-500">{card.detail}</p>
             </article>
           ))}
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.4fr_.8fr]">
+          <article className="rounded-[1.75rem] border border-slate-200 bg-white p-5 shadow-[0_18px_45px_-30px_rgba(15,23,42,.55)] sm:p-6">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Live overview</p><h2 className="mt-1 text-xl font-black text-slate-900">Your activity pulse</h2><p className="mt-1 text-sm text-slate-500">A visual snapshot of your client workspace.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-emerald-700">Updated live</span></div>
+            <div className="mt-7 flex h-48 items-end gap-2 rounded-2xl bg-gradient-to-b from-slate-50 to-white px-3 pb-3 pt-6 sm:gap-4 sm:px-6">
+              {activityBars.map((height, index) => <div key={index} className="group flex h-full flex-1 items-end"><div className={`relative w-full rounded-t-xl bg-gradient-to-t ${index % 2 ? "from-cyan-600 to-cyan-300" : "from-slate-800 to-slate-500"} shadow-[0_10px_18px_-10px_rgba(8,47,73,.8)] transition duration-500 group-hover:scale-x-105`} style={{ height: `${height}%` }}><span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[9px] font-black text-slate-400">{index === 0 ? "BOOK" : index === 1 ? "LIVE" : index === 2 ? "ORD" : index === 3 ? "FUL" : index === 4 ? "NEWS" : index === 5 ? "SERV" : "DONE"}</span></div></div>)}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold text-slate-500"><span><i className="mr-2 inline-block h-2 w-2 rounded-full bg-slate-700" />Account activity</span><span><i className="mr-2 inline-block h-2 w-2 rounded-full bg-cyan-500" />Progress signals</span></div>
+          </article>
+          <article className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-[#111c2b] via-[#14283a] to-[#0d5360] p-6 text-white shadow-[0_24px_45px_-24px_rgba(8,47,73,.75)]"><div className="absolute -right-10 -top-12 h-40 w-40 rounded-full bg-cyan-300/20 blur-2xl" /><div className="relative"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">Fulfillment health</p><div className="mt-6 flex items-end justify-between"><div><p className="text-5xl font-black tracking-tight">{fulfillmentRate}%</p><p className="mt-2 text-sm text-cyan-100">orders progressing beyond pending</p></div><div className="flex h-20 w-20 items-center justify-center rounded-3xl border border-white/15 bg-white/10 text-3xl shadow-inner shadow-white/10">↗</div></div><div className="mt-8 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-yellow-300 to-emerald-300" style={{ width: `${Math.max(8, fulfillmentRate)}%` }} /></div><p className="mt-3 text-xs text-cyan-100/75">Based on your product order pipeline</p></div></article>
         </section>
 
         <section id="bookings" className="rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -541,5 +577,6 @@ export default function ClientDashboardPage() {
           </aside>
         </section>
       </div>
+    </div>
   )
 }
