@@ -13,8 +13,8 @@ type ClientShellProps = {
 
 const navItems = [
   { label: "Dashboard", href: "/client/dashboard", icon: "▦" },
-  { label: "My Bookings", href: "/client/dashboard#bookings", icon: "▤" },
-  { label: "My Orders", href: "/client/dashboard#orders", icon: "▣" },
+  { label: "My Bookings", href: "/client/bookings", icon: "▤" },
+  { label: "My Orders", href: "/client/orders", icon: "▣" },
   { label: "View Services", href: "/services", icon: "⌁" },
   { label: "View Products", href: "/products", icon: "▧" },
   { label: "Submit Feedback", href: "/client/feedback", icon: "✉" },
