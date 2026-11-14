@@ -21,12 +21,15 @@ function getGmailCredentials() {
 async function getTransporter() {
   const { user, appPassword } = getGmailCredentials()
   return nodemailer.createTransport({
-    // Use Nodemailer's Gmail preset instead of resolving smtp.gmail.com to an
-    // IP address. The IP/TLS combination is unreliable in serverless deploys.
-    service: 'gmail',
-    connectionTimeout: 20000,
-    greetingTimeout: 20000,
-    socketTimeout: 30000,
+    // STARTTLS on port 587 is more reliable from serverless functions than
+    // Gmail's implicit-TLS port 465, which can hang in some deployments.
+    host: SMTP_HOST,
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 10000,
     auth: {
       user,
       pass: appPassword
@@ -49,13 +52,10 @@ async function sendVerificationWithFallback(message: SendMailOptions) {
   const transports = [
     getTransporter(),
     Promise.resolve(nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: 587,
-      secure: false,
-      requireTLS: true,
-      connectionTimeout: 20000,
-      greetingTimeout: 20000,
-      socketTimeout: 30000,
+      service: 'gmail',
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000,
       auth: {
         user,
         pass: appPassword,
@@ -67,7 +67,7 @@ async function sendVerificationWithFallback(message: SendMailOptions) {
   for (const transporterPromise of transports) {
     try {
       const transporter = await transporterPromise
-      return await withTimeout(transporter.sendMail(message), 25000)
+      return await withTimeout(transporter.sendMail(message), 10000)
     } catch (error) {
       lastError = error
       errors.push(error instanceof Error ? error.message : String(error))
