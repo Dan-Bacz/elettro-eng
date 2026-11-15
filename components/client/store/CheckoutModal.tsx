@@ -5,6 +5,7 @@ import { useCart } from "./CartContext"
 import { CartIcon, CheckIcon, CloseIcon } from "./storeIcons"
 import { formatPeso } from "./storeUtils"
 import ClientSessionGate from "../ClientSessionGate"
+import { BARANGAYS_BY_MUNICIPALITY, COMMON_BARANGAYS, MINDANAO_LOCATIONS } from "@/lib/mindanaoLocations"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const GCASH_CONFIGURED = Boolean(
@@ -79,6 +80,16 @@ export default function CheckoutModal() {
   const [shippingLoading, setShippingLoading] = useState(false)
   const [shippingError, setShippingError] = useState("")
 
+  const selectedProvince = useMemo(
+    () => MINDANAO_LOCATIONS.find((location) => location.province === form.province),
+    [form.province]
+  )
+  const municipalityOptions = selectedProvince?.municipalities || []
+  const barangayOptions = useMemo(
+    () => BARANGAYS_BY_MUNICIPALITY[form.city] || COMMON_BARANGAYS,
+    [form.city]
+  )
+
   useEffect(() => {
     if (!checkoutOpen) return
     let active = true
@@ -144,6 +155,16 @@ export default function CheckoutModal() {
     setErrors((prev) => ({ ...prev, [key]: undefined }))
   }
 
+  function selectProvince(value: string) {
+    setForm((prev) => ({ ...prev, province: value, city: "", barangay: "" }))
+    setErrors((prev) => ({ ...prev, province: undefined, city: undefined, barangay: undefined }))
+  }
+
+  function selectCity(value: string) {
+    setForm((prev) => ({ ...prev, city: value, barangay: "" }))
+    setErrors((prev) => ({ ...prev, city: undefined, barangay: undefined }))
+  }
+
   function validate(): boolean {
     const next: Partial<Record<FormField, string>> = {}
     if (!form.clientName.trim()) next.clientName = "Please enter your full name"
@@ -153,6 +174,7 @@ export default function CheckoutModal() {
     else if (!isValidPhone(form.phone)) next.phone = "Please enter a valid mobile number"
     if (fulfillmentMethod === "DELIVERY") {
       if (!form.address.trim()) next.address = "Complete address is required"
+      if (!form.barangay.trim()) next.barangay = "Select a barangay"
       if (!form.city.trim()) next.city = "Municipality / City is required"
       if (!form.province.trim()) next.province = "Province is required"
       if (form.postalCode.trim() && !/^\d{4}$/.test(form.postalCode.trim())) next.postalCode = "4-digit postal code"
@@ -215,8 +237,8 @@ export default function CheckoutModal() {
 
   return (
     <ClientSessionGate>
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 p-3 sm:p-6" role="dialog" aria-modal="true">
-      <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true">
+      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] border border-white/70 bg-white shadow-[0_30px_100px_-35px_rgba(8,47,73,.8)]">
         {confirmation ? (
           /* ---------- Order confirmation ---------- */
           <div className="p-6 sm:p-10">
@@ -301,16 +323,18 @@ export default function CheckoutModal() {
         ) : (
           /* ---------- Checkout form ---------- */
           <form onSubmit={handleSubmit} noValidate>
-            <header className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-              <div>
-                <h2 className="text-lg font-black text-gray-900">Checkout</h2>
-                <p className="text-xs text-gray-500">{count} item{count === 1 ? "" : "s"} in your order</p>
+            <header className="relative overflow-hidden border-b border-cyan-100 bg-gradient-to-r from-[#071c2c] via-[#0b5360] to-[#f0b429] px-6 py-5 text-white sm:px-8">
+              <div className="absolute -right-10 -top-16 h-40 w-40 rounded-full bg-cyan-300/20 blur-2xl" />
+              <div className="relative">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">Secure order checkout</p>
+                <h2 className="mt-1 text-2xl font-black tracking-tight">Complete your order</h2>
+                <p className="mt-1 text-xs text-cyan-50/80">{count} item{count === 1 ? "" : "s"} ready for fulfillment</p>
               </div>
               <button
                 type="button"
                 onClick={closeCheckout}
                 aria-label="Close checkout"
-                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
               >
                 <CloseIcon className="w-5 h-5" />
               </button>
@@ -318,9 +342,9 @@ export default function CheckoutModal() {
 
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px]">
               {/* Left: forms */}
-              <div className="space-y-7 px-6 py-6">
-                <section>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-gray-900">Customer Information</h3>
+              <div className="space-y-5 bg-gradient-to-br from-white via-white to-cyan-50/40 px-6 py-6 sm:px-8">
+                <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_30px_-28px_rgba(8,47,73,.8)]">
+                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Customer Information</h3>
                   <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <label className="mb-1 block text-xs font-bold text-gray-700">Full Name *</label>
@@ -340,8 +364,8 @@ export default function CheckoutModal() {
                   </div>
                 </section>
 
-                <section>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-gray-900">Fulfillment</h3>
+                <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_30px_-28px_rgba(8,47,73,.8)]">
+                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Fulfillment</h3>
                   <div className="mt-3 grid grid-cols-2 gap-2">
                     {(["DELIVERY", "PICKUP"] as const).map((method) => (
                       <button
@@ -367,16 +391,26 @@ export default function CheckoutModal() {
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Barangay</label>
-                      <input value={form.barangay} onChange={(e) => setField("barangay", e.target.value)} placeholder="Barangay" className={inputClass} />
+                      <select value={form.barangay} onChange={(e) => setField("barangay", e.target.value)} disabled={!form.city} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
+                        <option value="">{form.city ? "Select barangay" : "Select city first"}</option>
+                        {barangayOptions.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
+                      </select>
+                      {errors.barangay && <p className="mt-1 text-xs font-semibold text-red-600">{errors.barangay}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Municipality / City *</label>
-                      <input value={form.city} onChange={(e) => setField("city", e.target.value)} placeholder="e.g. Pagadian City" autoComplete="address-level2" className={inputClass} />
+                      <select value={form.city} onChange={(e) => selectCity(e.target.value)} disabled={!form.province} autoComplete="address-level2" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
+                        <option value="">{form.province ? "Select municipality / city" : "Select province first"}</option>
+                        {municipalityOptions.map((municipality) => <option key={municipality} value={municipality}>{municipality}</option>)}
+                      </select>
                       {errors.city && <p className="mt-1 text-xs font-semibold text-red-600">{errors.city}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Province *</label>
-                      <input value={form.province} onChange={(e) => setField("province", e.target.value)} placeholder="e.g. Zamboanga del Sur" autoComplete="address-level1" className={inputClass} />
+                      <select value={form.province} onChange={(e) => selectProvince(e.target.value)} autoComplete="address-level1" className={inputClass}>
+                        <option value="">Select province in Mindanao</option>
+                        {MINDANAO_LOCATIONS.map((location) => <option key={location.province} value={location.province}>{location.province}</option>)}
+                      </select>
                       {errors.province && <p className="mt-1 text-xs font-semibold text-red-600">{errors.province}</p>}
                     </div>
                     <div>
@@ -394,8 +428,8 @@ export default function CheckoutModal() {
                   )}
                 </section>
 
-                <section>
-                  <h3 className="text-sm font-black uppercase tracking-wide text-gray-900">Payment Method</h3>
+                <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_30px_-28px_rgba(8,47,73,.8)]">
+                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Payment Method</h3>
                   <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                     {PAYMENT_METHODS.map((method) => {
                       if (method.id === "CASH_ON_DELIVERY" && fulfillmentMethod !== "DELIVERY") return null
@@ -445,8 +479,9 @@ export default function CheckoutModal() {
               </div>
 
               {/* Right: order summary */}
-              <aside className="border-t border-gray-200 bg-gray-50 p-6 lg:border-l lg:border-t-0">
-                <h3 className="text-sm font-black uppercase tracking-wide text-gray-900">Order Summary</h3>
+              <aside className="border-t border-cyan-100 bg-gradient-to-br from-[#effbfd] via-white to-[#fff7d6] p-6 lg:border-l lg:border-t-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-700">Your basket</p>
+                <h3 className="mt-1 text-xl font-black tracking-tight text-slate-900">Order Summary</h3>
                 <ul className="mt-3 max-h-56 space-y-2.5 overflow-y-auto pr-1">
                   {items.map((item) => (
                     <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
