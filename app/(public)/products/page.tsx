@@ -100,6 +100,7 @@ function ProductsShop() {
   const counts = useMemo(() => {
     const c: Partial<Record<StoreCategory, number>> = {}
     for (const p of products) c[p.categoryGroup] = (c[p.categoryGroup] || 0) + 1
+    c.All = products.length
     return c
   }, [products])
 
@@ -300,6 +301,7 @@ function ProductsShop() {
           <div>
             <StoreToolbar
               count={filtered.length}
+              total={products.length}
               sort={sort}
               onSort={setSort}
               onOpenFilters={() => setFiltersOpen(true)}

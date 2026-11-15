@@ -12,7 +12,7 @@ type WarehouseShellProps = {
 export default function WarehouseShell({ user, children }: WarehouseShellProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [unread, setUnread] = useState(0)
-
+                                                                        
   const refreshUnread = useCallback(async () => {
     try {
       const res = await fetch('/api/notifications')
