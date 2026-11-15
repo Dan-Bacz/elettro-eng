@@ -1,15 +1,11 @@
 "use client"
 
 import Link from "next/link"
-import { notFound, useParams, useRouter } from "next/navigation"
+import { notFound, useParams } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import CTASection from "@/components/client/CTASection"
-import { CartProvider, useCart } from "@/components/client/store/CartContext"
-import CartDrawer from "@/components/client/store/CartDrawer"
-import CheckoutModal from "@/components/client/store/CheckoutModal"
 import ProductImage from "@/components/client/store/ProductImage"
 import StarRating from "@/components/client/store/StarRating"
-import { CartIcon, CheckIcon, MinusIcon, PlusIcon } from "@/components/client/store/storeIcons"
 import { BADGE_TONE_CLASSES, formatPeso, isDiscounted, productBadges, type StoreProduct } from "@/components/client/store/storeUtils"
 
 function SpecRow({ label, value }: { label: string; value: string }) {
@@ -24,14 +20,9 @@ function SpecRow({ label, value }: { label: string; value: string }) {
 function ProductDetail() {
   const rawParams = useParams<{ id: string }>()
   const id = rawParams?.id
-  const router = useRouter()
-  const { addItem, openCheckout } = useCart()
 
   const [product, setProduct] = useState<StoreProduct | null>(null)
   const [loading, setLoading] = useState(true)
-  const [qty, setQty] = useState(1)
-  const [added, setAdded] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -64,54 +55,6 @@ function ProductDetail() {
   if (!product) {
     notFound()
     return null
-  }
-
-  const addPayload = {
-    id: product.id,
-    name: product.name,
-    image: imageSrc,
-    model: product.model,
-    unit: product.unit,
-    unitPrice: Number(product.sellPrice || 0),
-  }
-
-  function flashAdded() {
-    setAdded(true)
-    window.setTimeout(() => setAdded(false), 1400)
-  }
-
-  async function ensureClientSession() {
-    if (checkingSession) return false
-    setCheckingSession(true)
-    try {
-      const response = await fetch("/api/auth/me", { cache: "no-store" })
-      const data = response.ok ? await response.json() : null
-      const user = data?.user
-      const canShop = user?.role === "CLIENT" && user.status === "ACTIVE" && user.emailVerifiedAt
-      if (!canShop) {
-        router.push("/client/login?reason=cart")
-        return false
-      }
-      return true
-    } catch {
-      router.push("/client/login?reason=cart")
-      return false
-    } finally {
-      setCheckingSession(false)
-    }
-  }
-
-  async function handleAdd() {
-    if (!(await ensureClientSession())) return
-    addItem(addPayload, qty)
-    flashAdded()
-  }
-
-  async function handleBuyNow() {
-    if (outOfStock || !hasPrice) return
-    if (!(await ensureClientSession())) return
-    addItem(addPayload, qty)
-    openCheckout()
   }
 
   return (
@@ -218,54 +161,9 @@ function ProductDetail() {
                 </p>
               </div>
 
-              {/* Quantity + actions */}
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex w-fit items-center rounded-xl border border-gray-300 bg-white">
-                  <button
-                    type="button"
-                    onClick={() => setQty((q) => Math.max(1, q - 1))}
-                    aria-label="Decrease quantity"
-                    className="flex h-12 w-12 items-center justify-center text-gray-600 transition-colors hover:bg-gray-50"
-                  >
-                    <MinusIcon className="w-4 h-4" />
-                  </button>
-                  <span className="w-12 text-center text-base font-black text-gray-900">{qty}</span>
-                  <button
-                    type="button"
-                    onClick={() => setQty((q) => Math.min(Number(product.quantity) || 1, q + 1))}
-                    aria-label="Increase quantity"
-                    className="flex h-12 w-12 items-center justify-center text-gray-600 transition-colors hover:bg-gray-50"
-                  >
-                    <PlusIcon className="w-4 h-4" />
-                  </button>
-                </div>
-                <span className="text-xs text-gray-400">
-                  {product.unit || "pcs"} per unit · {formatPeso(Number(product.sellPrice || 0) * qty, 2)} total
-                </span>
-              </div>
-
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={handleAdd}
-                  disabled={outOfStock || !hasPrice}
-                  className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl px-8 py-4 text-sm font-black transition-all sm:flex-none ${
-                    added
-                      ? "bg-emerald-500 text-white"
-                      : "bg-white text-gray-900 ring-1 ring-gray-300 hover:ring-yellow-400 hover:text-yellow-700"
-                  } disabled:cursor-not-allowed disabled:opacity-50`}
-                >
-                  {added ? <CheckIcon className="w-4 h-4" /> : <CartIcon className="w-4 h-4" />}
-                  {added ? "Added to Cart" : "Add to Cart"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleBuyNow}
-                  disabled={outOfStock || !hasPrice}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-400 px-8 py-4 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {checkingSession ? "Checking account…" : "Buy Now"}
-                </button>
+              <div className="mt-8 rounded-2xl border border-cyan-200/80 bg-gradient-to-r from-cyan-50 via-white to-yellow-50 p-4 shadow-sm">
+                <p className="text-sm font-black text-slate-900">Product information only</p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">Shopping and checkout are available from the authenticated client portal.</p>
               </div>
 
               {/* Specs */}
@@ -289,9 +187,6 @@ function ProductDetail() {
         </div>
       </section>
 
-      <CartDrawer />
-      <CheckoutModal />
-
       <CTASection
         heading="Ready to Order?"
         subheading="Request a product or schedule a service today — it only takes a minute."
@@ -305,9 +200,5 @@ function ProductDetail() {
 }
 
 export default function ProductDetailPage() {
-  return (
-    <CartProvider>
-      <ProductDetail />
-    </CartProvider>
-  )
+  return <ProductDetail />
 }
