@@ -46,6 +46,7 @@ export default function ServicesPage({ clientMode = false }: { clientMode?: bool
             {SERVICES.map((service) => (
               <ServiceCard key={service.slug} service={service}
                 detailsHref={clientMode ? `/client/services/${service.slug}` : undefined}
+                actionLabel={clientMode ? "Book this Service" : "What's Included?"}
                 imageUrl={service.slug === "electrical-installation" ? "/installation.png" : service.slug === "electrical-maintenance" ? "/maintenance.png" : service.slug === "electrical-repair" ? "/repair.png" : service.slug === "lighting-solutions" ? "/light.jpg" : service.slug === "industrial-electrical-works" ? "/industrial.jpg" : service.slug === "renewable-energy-systems" ? "/solar.jpg" : undefined} />
             ))}
           </div>

@@ -52,6 +52,19 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <h2 className="text-2xl sm:text-3xl font-black text-gray-900">Overview</h2>
             <p className="mt-4 text-gray-600 leading-relaxed text-lg">{service.description}</p>
 
+            <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-6">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-700">What&apos;s included</p>
+              <h2 className="mt-2 text-2xl font-black text-slate-900">Services we provide</h2>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {service.offerings.map((offering) => (
+                  <div key={offering} className="flex items-center gap-3 rounded-xl border border-white bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-700">✓</span>
+                    {offering}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-8 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-6">
               <p className="text-sm font-black text-slate-900">Want to book this service?</p>
               <p className="mt-2 text-sm leading-6 text-slate-600">Service booking is available only inside a verified client account.</p>
