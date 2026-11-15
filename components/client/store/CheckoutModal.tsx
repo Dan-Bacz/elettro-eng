@@ -5,7 +5,7 @@ import { useCart } from "./CartContext"
 import { CartIcon, CheckIcon, CloseIcon } from "./storeIcons"
 import { formatPeso } from "./storeUtils"
 import ClientSessionGate from "../ClientSessionGate"
-import { BARANGAYS_BY_MUNICIPALITY, COMMON_BARANGAYS, MINDANAO_LOCATIONS } from "@/lib/mindanaoLocations"
+import { loadMindanaoLocations, type MindanaoLocation } from "@/lib/mindanaoLocations"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const GCASH_CONFIGURED = Boolean(
@@ -79,16 +79,35 @@ export default function CheckoutModal() {
   const [shippingEstimate, setShippingEstimate] = useState<{ distanceKm: number; shippingFee: number } | null>(null)
   const [shippingLoading, setShippingLoading] = useState(false)
   const [shippingError, setShippingError] = useState("")
+  const [locations, setLocations] = useState<MindanaoLocation[]>([])
+  const [locationLoading, setLocationLoading] = useState(true)
+  const [locationError, setLocationError] = useState("")
 
   const selectedProvince = useMemo(
-    () => MINDANAO_LOCATIONS.find((location) => location.province === form.province),
-    [form.province]
+    () => locations.find((location) => location.province === form.province),
+    [locations, form.province]
   )
   const municipalityOptions = selectedProvince?.municipalities || []
+  const selectedMunicipality = selectedProvince?.municipalities.find((municipality) => municipality.name === form.city)
   const barangayOptions = useMemo(
-    () => BARANGAYS_BY_MUNICIPALITY[form.city] || COMMON_BARANGAYS,
-    [form.city]
+    () => selectedMunicipality?.barangays || [],
+    [selectedMunicipality]
   )
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setLocationLoading(true)
+    loadMindanaoLocations(controller.signal)
+      .then((data) => {
+        setLocations(data)
+        setLocationError("")
+      })
+      .catch((error) => {
+        if (error?.name !== "AbortError") setLocationError(error?.message || "Location directory unavailable")
+      })
+      .finally(() => setLocationLoading(false))
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     if (!checkoutOpen) return
@@ -393,23 +412,23 @@ export default function CheckoutModal() {
                       <label className="mb-1 block text-xs font-bold text-gray-700">Barangay</label>
                       <select value={form.barangay} onChange={(e) => setField("barangay", e.target.value)} disabled={!form.city} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
                         <option value="">{form.city ? "Select barangay" : "Select city first"}</option>
-                        {barangayOptions.map((barangay) => <option key={barangay} value={barangay}>{barangay}</option>)}
+                        {barangayOptions.map((barangay) => <option key={barangay.code} value={barangay.name}>{barangay.name}</option>)}
                       </select>
                       {errors.barangay && <p className="mt-1 text-xs font-semibold text-red-600">{errors.barangay}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Municipality / City *</label>
-                      <select value={form.city} onChange={(e) => selectCity(e.target.value)} disabled={!form.province} autoComplete="address-level2" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
-                        <option value="">{form.province ? "Select municipality / city" : "Select province first"}</option>
-                        {municipalityOptions.map((municipality) => <option key={municipality} value={municipality}>{municipality}</option>)}
+                      <select value={form.city} onChange={(e) => selectCity(e.target.value)} disabled={!form.province || locationLoading} autoComplete="address-level2" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
+                        <option value="">{locationLoading ? "Loading municipalities / cities…" : form.province ? "Select municipality / city" : "Select province first"}</option>
+                        {municipalityOptions.map((municipality) => <option key={municipality.code} value={municipality.name}>{municipality.name}</option>)}
                       </select>
                       {errors.city && <p className="mt-1 text-xs font-semibold text-red-600">{errors.city}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Province *</label>
-                      <select value={form.province} onChange={(e) => selectProvince(e.target.value)} autoComplete="address-level1" className={inputClass}>
-                        <option value="">Select province in Mindanao</option>
-                        {MINDANAO_LOCATIONS.map((location) => <option key={location.province} value={location.province}>{location.province}</option>)}
+                      <select value={form.province} onChange={(e) => selectProvince(e.target.value)} disabled={locationLoading} autoComplete="address-level1" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
+                        <option value="">{locationLoading ? "Loading Mindanao provinces…" : "Select province in Mindanao"}</option>
+                        {locations.map((location) => <option key={location.code} value={location.province}>{location.province}</option>)}
                       </select>
                       {errors.province && <p className="mt-1 text-xs font-semibold text-red-600">{errors.province}</p>}
                     </div>
@@ -422,6 +441,7 @@ export default function CheckoutModal() {
                       <label className="mb-1 block text-xs font-bold text-gray-700">Delivery Notes (optional)</label>
                       <textarea value={form.deliveryNotes} onChange={(e) => setField("deliveryNotes", e.target.value)} placeholder="Landmarks, preferred delivery time, special instructions…" rows={2} className={inputClass} />
                     </div>
+                    {locationError && <p className="sm:col-span-2 mt-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-600">{locationError} Please refresh the checkout and try again.</p>}
                   </div>
                   ) : (
                     <p className="mt-3 rounded-lg bg-gray-50 p-3 text-xs leading-5 text-gray-600">We will share pickup instructions when your order is ready. You can pay cash when you collect it, or choose GCash.</p>
