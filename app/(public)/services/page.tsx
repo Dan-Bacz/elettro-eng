@@ -15,13 +15,13 @@ export default function ServicesPage({ clientMode = false }: { clientMode?: bool
           </>
         }
         subtitle="From residential wiring to heavy industrial systems, Elettro delivers safe, reliable, and code-compliant electrical services."
-        primaryLabel={clientMode ? "Book a Service" : "Sign in to book a service"}
-        primaryHref={clientMode ? "/book-service" : "/client/login"}
+        primaryLabel={clientMode ? "Choose a service" : "Sign in to book a service"}
+        primaryHref={clientMode ? "#service-list" : "/client/login"}
         secondaryLabel={clientMode ? "My Bookings" : "Create client account"}
         secondaryHref={clientMode ? "/client/bookings" : "/client/register"}
       />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#eef6f8] via-white to-[#fff9e7]">
+      <section id="service-list" className="relative overflow-hidden bg-gradient-to-br from-[#eef6f8] via-white to-[#fff9e7]">
         <div className="pointer-events-none absolute -right-32 top-24 h-80 w-80 rounded-full bg-cyan-300/20 blur-3xl" />
         <div className="pointer-events-none absolute -left-32 bottom-20 h-80 w-80 rounded-full bg-yellow-300/15 blur-3xl" />
         <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">

@@ -1,6 +1,5 @@
 import Link from "next/link"
 import CTASection from "@/components/client/CTASection"
-import ServiceBookingSection from "@/components/client/ServiceBookingSection"
 import { SERVICES } from "@/components/client/siteData"
 import { notFound } from "next/navigation"
 
@@ -53,7 +52,14 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
             <h2 className="text-2xl sm:text-3xl font-black text-gray-900">Overview</h2>
             <p className="mt-4 text-gray-600 leading-relaxed text-lg">{service.description}</p>
 
-            <ServiceBookingSection service={service} />
+            <div className="mt-8 rounded-2xl border border-cyan-200 bg-cyan-50/70 p-6">
+              <p className="text-sm font-black text-slate-900">Want to book this service?</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Service booking is available only inside a verified client account.</p>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Link href="/client/login" className="inline-flex items-center justify-center rounded-xl bg-yellow-400 px-5 py-3 text-sm font-black text-black hover:bg-yellow-300">Sign in to book</Link>
+                <Link href="/client/register" className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-800 hover:border-yellow-500">Create client account</Link>
+              </div>
+            </div>
           </div>
 
           {/* Sidebar */}
