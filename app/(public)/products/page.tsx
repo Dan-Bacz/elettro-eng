@@ -103,6 +103,9 @@ function ProductsShop() {
     return c
   }, [products])
 
+  const inStockCount = useMemo(() => products.filter((product) => Number(product.quantity || 0) > 0).length, [products])
+  const categoryCount = Math.max(0, Object.keys(counts).filter((category) => category !== "Other").length)
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     const min = minPrice === "" ? null : Number(minPrice)
@@ -161,7 +164,7 @@ function ProductsShop() {
         <div className="absolute inset-0 bg-black/65" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,15,16,0.9),rgba(11,15,16,0.45))]" />
 
-        <div className="relative mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-20 lg:px-8">
+        <div className="relative mx-auto grid max-w-7xl gap-12 px-4 py-14 sm:px-6 sm:py-20 lg:grid-cols-[1.08fr_.92fr] lg:items-center lg:px-8">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-2 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-yellow-400">
               <GridIcon className="w-4 h-4" />
@@ -203,15 +206,32 @@ function ProductsShop() {
               </div>
             </form>
           </div>
+          <div className="relative hidden min-h-[300px] lg:block">
+            <div className="absolute inset-4 rounded-[2rem] border border-white/10 bg-white/[0.06] shadow-2xl shadow-black/30 backdrop-blur-sm" />
+            <div className="absolute right-0 top-0 h-44 w-44 rounded-full bg-yellow-400/20 blur-3xl" />
+            <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-cyan-400/20 blur-3xl" />
+            <div className="absolute left-10 top-12 h-44 w-44 rounded-full border border-yellow-300/30 bg-gradient-to-br from-yellow-300/30 to-orange-500/10 shadow-[inset_-18px_-18px_35px_rgba(0,0,0,.35),0_24px_45px_-20px_rgba(250,204,21,.7)]" />
+            <div className="absolute left-24 top-28 h-16 w-16 rounded-full border border-white/30 bg-[#101a20] shadow-inner shadow-cyan-200/20" />
+            <div className="absolute right-10 top-16 rounded-2xl border border-white/15 bg-[#111b22]/90 p-4 shadow-xl">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-200">Store pulse</p>
+              <p className="mt-2 text-3xl font-black text-white">{inStockCount.toLocaleString()}</p>
+              <p className="text-xs text-slate-400">products ready to ship</p>
+            </div>
+            <div className="absolute bottom-8 right-8 rounded-2xl border border-yellow-300/20 bg-yellow-400 p-4 text-black shadow-xl shadow-yellow-400/20">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em]">Explore freely</p>
+              <p className="mt-1 text-sm font-bold">{categoryCount || "Many"} product categories</p>
+            </div>
+            <div className="absolute bottom-8 left-8 flex items-center gap-2 text-xs font-bold text-slate-300"><span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" /> Quality materials for real projects</div>
+          </div>
         </div>
       </section>
 
       {/* ---------- Trust features ---------- */}
-      <section className="border-b border-gray-200 bg-white">
+      <section className="border-b border-gray-200 bg-white shadow-[0_10px_30px_-26px_rgba(15,23,42,.8)]">
         <div className="mx-auto grid max-w-7xl grid-cols-1 gap-px px-4 py-6 sm:grid-cols-3 sm:px-6 lg:px-8">
           {TRUST_FEATURES.map((feature) => (
-            <div key={feature.title} className="flex items-center gap-3.5 py-2 sm:px-4">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-yellow-400/15 text-yellow-700">
+            <div key={feature.title} className="group flex items-center gap-3.5 rounded-2xl py-3 transition hover:bg-slate-50 sm:px-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-300 to-amber-500 text-black shadow-md shadow-yellow-400/20 transition group-hover:-translate-y-0.5 group-hover:rotate-3">
                 <feature.icon className="w-6 h-6" />
               </span>
               <div className="min-w-0">
@@ -225,8 +245,8 @@ function ProductsShop() {
 
       {/* ---------- Category navigation ---------- */}
       <section className="bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8">
-          <h2 className="sr-only">Shop by category</h2>
+        <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+          <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-yellow-700">Browse the collection</p><h2 className="mt-1 text-2xl font-black tracking-tight text-gray-900">Shop by category</h2></div><span className="hidden text-xs font-semibold text-gray-400 sm:block">Find the right material faster</span></div>
           <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0">
             {STORE_CATEGORIES.map((cat) => {
               const Icon = categoryIcon(cat)

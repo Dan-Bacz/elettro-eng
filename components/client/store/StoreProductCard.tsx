@@ -33,9 +33,10 @@ export default function StoreProductCard({ product }: { product: StoreProduct })
   }
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+    <div className="group relative flex flex-col overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-white shadow-[0_16px_35px_-28px_rgba(15,23,42,.8)] transition-all duration-300 hover:-translate-y-1.5 hover:border-yellow-300 hover:shadow-[0_24px_45px_-24px_rgba(15,23,42,.45)]">
       <Link href={`/products/${product.id}`} aria-label={product.name} className="relative block">
-        <div className="h-[210px] bg-white p-4">
+        <div className="relative h-[220px] overflow-hidden bg-gradient-to-br from-slate-50 via-white to-cyan-50/50 p-4">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-yellow-300/20 blur-2xl transition group-hover:bg-yellow-300/35" />
           <ProductImage
             src={imageSrc}
             alt={product.name}
@@ -58,7 +59,7 @@ export default function StoreProductCard({ product }: { product: StoreProduct })
         )}
       </Link>
 
-      <div className="flex flex-1 flex-col gap-1.5 border-t border-gray-100 p-4">
+      <div className="flex flex-1 flex-col gap-1.5 border-t border-slate-100 p-4">
         {product.categoryGroup && product.categoryGroup !== "Other" ? (
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{product.categoryGroup}</span>
         ) : null}
@@ -104,7 +105,7 @@ export default function StoreProductCard({ product }: { product: StoreProduct })
             type="button"
             onClick={handleAdd}
             disabled={outOfStock || !hasPrice}
-            className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
+            className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
               added
                 ? "bg-emerald-500 text-white"
                 : "bg-yellow-400 text-black hover:bg-yellow-300 active:scale-[0.98]"
