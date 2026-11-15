@@ -1,7 +1,7 @@
 import Link from "next/link"
 import type { Service } from "./siteData"
 
-export default function ServiceCard({ service, imageUrl }: { service: Service; imageUrl?: string }) {
+export default function ServiceCard({ service, imageUrl, detailsHref, actionLabel = "What's Included?" }: { service: Service; imageUrl?: string; detailsHref?: string; actionLabel?: string }) {
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-[1.5rem] border border-white/80 bg-white/90 shadow-[0_18px_40px_-28px_rgba(15,23,42,.75)] backdrop-blur-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-yellow-300 hover:shadow-[0_26px_45px_-25px_rgba(15,23,42,.5)]">
       <div className="relative h-48 w-full overflow-hidden bg-slate-900">
@@ -21,10 +21,10 @@ export default function ServiceCard({ service, imageUrl }: { service: Service; i
         <p className="mt-2 flex-1 text-sm leading-relaxed text-slate-600">{service.short}</p>
         <div className="mt-5 border-t border-slate-100 pt-4">
           <Link
-            href={`/services/${service.slug}`}
+            href={detailsHref || `/services/${service.slug}`}
             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-black text-white transition-all hover:-translate-y-0.5 hover:bg-yellow-400 hover:text-black"
           >
-            View Details
+            {actionLabel}
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
             </svg>

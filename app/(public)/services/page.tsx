@@ -3,7 +3,7 @@ import ServiceCard from "@/components/client/ServiceCard"
 import CTASection from "@/components/client/CTASection"
 import { SERVICES } from "@/components/client/siteData"
 
-export default function ServicesPage() {
+export default function ServicesPage({ clientMode = false }: { clientMode?: boolean }) {
   return (
     <>
       <Hero
@@ -15,10 +15,10 @@ export default function ServicesPage() {
           </>
         }
         subtitle="From residential wiring to heavy industrial systems, Elettro delivers safe, reliable, and code-compliant electrical services."
-        primaryLabel="Book a Service"
-        primaryHref="/book-service"
-        secondaryLabel="Contact Us"
-        secondaryHref="/contact"
+        primaryLabel={clientMode ? "Book a Service" : "Sign in to book a service"}
+        primaryHref={clientMode ? "/book-service" : "/client/login"}
+        secondaryLabel={clientMode ? "My Bookings" : "Create client account"}
+        secondaryHref={clientMode ? "/client/bookings" : "/client/register"}
       />
 
       <section className="relative overflow-hidden bg-gradient-to-br from-[#eef6f8] via-white to-[#fff9e7]">
@@ -45,6 +45,7 @@ export default function ServicesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {SERVICES.map((service) => (
               <ServiceCard key={service.slug} service={service}
+                detailsHref={clientMode ? `/client/services/${service.slug}` : undefined}
                 imageUrl={service.slug === "electrical-installation" ? "/installation.png" : service.slug === "electrical-maintenance" ? "/maintenance.png" : service.slug === "electrical-repair" ? "/repair.png" : service.slug === "lighting-solutions" ? "/light.jpg" : service.slug === "industrial-electrical-works" ? "/industrial.jpg" : service.slug === "renewable-energy-systems" ? "/solar.jpg" : undefined} />
             ))}
           </div>
