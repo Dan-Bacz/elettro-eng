@@ -67,7 +67,7 @@ function searchScore(p: StoreProduct, q: string): number {
 
 function ProductsShop() {
   const pathname = usePathname()
-  const requireLoginBeforeCart = pathname === "/products"
+  const isClientPortal = pathname === "/client/products"
   const { count: cartCount, openCart } = useCart()
   const [products, setProducts] = useState<StoreProduct[]>([])
   const [loading, setLoading] = useState(true)
@@ -310,6 +310,7 @@ function ProductsShop() {
               onSort={setSort}
               onOpenFilters={() => setFiltersOpen(true)}
               hasActiveFilters={hasActiveFilters}
+              showCart={isClientPortal}
             />
 
             <div id="shop-grid" className="mt-5 scroll-mt-24">
@@ -353,7 +354,7 @@ function ProductsShop() {
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:gap-5">
                   {filtered.map((p) => (
-                    <StoreProductCard key={p.id} product={p} requireLoginBeforeCart={requireLoginBeforeCart} />
+                    <StoreProductCard key={p.id} product={p} showCartAction={isClientPortal} />
                   ))}
                 </div>
               )}
@@ -420,7 +421,7 @@ function ProductsShop() {
       )}
 
       {/* ---------- Mobile floating cart ---------- */}
-      <button
+      {isClientPortal && <button
         type="button"
         onClick={openCart}
         aria-label="Open cart"
@@ -432,10 +433,12 @@ function ProductsShop() {
             {cartCount}
           </span>
         )}
-      </button>
+      </button>}
 
-      <CartDrawer />
-      <CheckoutModal />
+      {isClientPortal && <>
+        <CartDrawer />
+        <CheckoutModal />
+      </>}
 
       <CTASection
         heading="Order or Request a Product"

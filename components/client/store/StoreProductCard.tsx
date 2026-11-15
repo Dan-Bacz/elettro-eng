@@ -1,7 +1,6 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useCart } from "./CartContext"
 import ProductImage from "./ProductImage"
@@ -9,36 +8,15 @@ import StarRating from "./StarRating"
 import { CartIcon, CheckIcon } from "./storeIcons"
 import { BADGE_TONE_CLASSES, formatPeso, isDiscounted, productBadges, type StoreProduct } from "./storeUtils"
 
-export default function StoreProductCard({ product, requireLoginBeforeCart = false }: { product: StoreProduct; requireLoginBeforeCart?: boolean }) {
-  const router = useRouter()
+export default function StoreProductCard({ product, showCartAction = true }: { product: StoreProduct; showCartAction?: boolean }) {
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
-  const [checkingSession, setCheckingSession] = useState(false)
   const outOfStock = Number(product.quantity || 0) <= 0
   const hasPrice = product.sellPrice != null && Number(product.sellPrice) > 0
   const badges = productBadges(product)
   const imageSrc = product.imageUrl || product.imageData
 
-  async function handleAdd() {
-    if (requireLoginBeforeCart) {
-      if (checkingSession) return
-      setCheckingSession(true)
-      try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" })
-        const data = response.ok ? await response.json() : null
-        const user = data?.user
-        const canShop = user?.role === "CLIENT" && user.status === "ACTIVE" && user.emailVerifiedAt
-        if (!canShop) {
-          router.push("/client/login?reason=cart")
-          return
-        }
-      } catch {
-        router.push("/client/login?reason=cart")
-        return
-      } finally {
-        setCheckingSession(false)
-      }
-    }
+  function handleAdd() {
     addItem(
       {
         id: product.id,
@@ -123,19 +101,25 @@ export default function StoreProductCard({ product, requireLoginBeforeCart = fal
             )}
           </p>
 
-          <button
-            type="button"
-            onClick={handleAdd}
-            disabled={outOfStock || !hasPrice}
-            className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
-              added
-                ? "bg-emerald-500 text-white"
-                : "bg-yellow-400 text-black hover:bg-yellow-300 active:scale-[0.98]"
-            } disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}
-          >
-            {added ? <CheckIcon className="w-4 h-4" /> : <CartIcon className="w-4 h-4" />}
-            {checkingSession ? "Checking account…" : added ? "Added" : outOfStock ? "Out of Stock" : "Add to Cart"}
-          </button>
+          {showCartAction ? (
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={outOfStock || !hasPrice}
+              className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
+                added
+                  ? "bg-emerald-500 text-white"
+                  : "bg-yellow-400 text-black hover:bg-yellow-300 active:scale-[0.98]"
+              } disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}
+            >
+              {added ? <CheckIcon className="w-4 h-4" /> : <CartIcon className="w-4 h-4" />}
+              {added ? "Added" : outOfStock ? "Out of Stock" : "Add to Cart"}
+            </button>
+          ) : (
+            <Link href={`/products/${product.id}`} className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0b5360]">
+              View Details
+            </Link>
+          )}
         </div>
       </div>
     </div>

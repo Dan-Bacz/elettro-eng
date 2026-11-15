@@ -21,9 +21,10 @@ type Props = {
   onSort: (s: SortKey) => void
   onOpenFilters: () => void
   hasActiveFilters: boolean
+  showCart?: boolean
 }
 
-export default function StoreToolbar({ count, total, catalogLabel, sort, onSort, onOpenFilters, hasActiveFilters }: Props) {
+export default function StoreToolbar({ count, total, catalogLabel, sort, onSort, onOpenFilters, hasActiveFilters, showCart = true }: Props) {
   const { count: cartCount, openCart } = useCart()
 
   return (
@@ -60,7 +61,7 @@ export default function StoreToolbar({ count, total, catalogLabel, sort, onSort,
           ))}
         </select>
 
-        <button
+        {showCart && <button
           type="button"
           onClick={openCart}
           className="relative inline-flex items-center gap-2 rounded-xl bg-[#0b1118] px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition-all hover:-translate-y-0.5 hover:bg-[#0b5360] active:scale-[0.98]"
@@ -70,7 +71,7 @@ export default function StoreToolbar({ count, total, catalogLabel, sort, onSort,
           <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-yellow-400 px-1 text-[11px] font-black text-black">
             {cartCount}
           </span>
-        </button>
+        </button>}
       </div>
     </div>
   )
