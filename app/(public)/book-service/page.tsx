@@ -363,7 +363,7 @@ function BookingForm() {
                   )}
                 </button>
                 <p className="mt-3 text-xs text-gray-400">
-                  No account needed. You&apos;ll receive a booking reference after submitting.
+                  Booking is available to verified client accounts only. Your request will appear in My Bookings after it is submitted.
                 </p>
               </div>
             </form>
