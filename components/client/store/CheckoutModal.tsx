@@ -403,18 +403,13 @@ export default function CheckoutModal() {
                   </div>
                   {fulfillmentMethod === "DELIVERY" ? (
                   <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Complete Address *</label>
-                      <input value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="House no., street, subdivision, barangay" autoComplete="street-address" className={inputClass} />
-                      {errors.address && <p className="mt-1 text-xs font-semibold text-red-600">{errors.address}</p>}
-                    </div>
                     <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Barangay</label>
-                      <select value={form.barangay} onChange={(e) => setField("barangay", e.target.value)} disabled={!form.city} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
-                        <option value="">{form.city ? "Select barangay" : "Select city first"}</option>
-                        {barangayOptions.map((barangay) => <option key={barangay.code} value={barangay.name}>{barangay.name}</option>)}
+                      <label className="mb-1 block text-xs font-bold text-gray-700">Province *</label>
+                      <select value={form.province} onChange={(e) => selectProvince(e.target.value)} disabled={locationLoading} autoComplete="address-level1" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
+                        <option value="">{locationLoading ? "Loading Mindanao provinces…" : "Select province in Mindanao"}</option>
+                        {locations.map((location) => <option key={location.code} value={location.province}>{location.province}</option>)}
                       </select>
-                      {errors.barangay && <p className="mt-1 text-xs font-semibold text-red-600">{errors.barangay}</p>}
+                      {errors.province && <p className="mt-1 text-xs font-semibold text-red-600">{errors.province}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Municipality / City *</label>
@@ -425,12 +420,17 @@ export default function CheckoutModal() {
                       {errors.city && <p className="mt-1 text-xs font-semibold text-red-600">{errors.city}</p>}
                     </div>
                     <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Province *</label>
-                      <select value={form.province} onChange={(e) => selectProvince(e.target.value)} disabled={locationLoading} autoComplete="address-level1" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
-                        <option value="">{locationLoading ? "Loading Mindanao provinces…" : "Select province in Mindanao"}</option>
-                        {locations.map((location) => <option key={location.code} value={location.province}>{location.province}</option>)}
+                      <label className="mb-1 block text-xs font-bold text-gray-700">Barangay *</label>
+                      <select value={form.barangay} onChange={(e) => setField("barangay", e.target.value)} disabled={!form.city} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
+                        <option value="">{form.city ? "Select barangay" : "Select city first"}</option>
+                        {barangayOptions.map((barangay) => <option key={barangay.code} value={barangay.name}>{barangay.name}</option>)}
                       </select>
-                      {errors.province && <p className="mt-1 text-xs font-semibold text-red-600">{errors.province}</p>}
+                      {errors.barangay && <p className="mt-1 text-xs font-semibold text-red-600">{errors.barangay}</p>}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="mb-1 block text-xs font-bold text-gray-700">Complete Address *</label>
+                      <input value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="House no., street, subdivision" autoComplete="street-address" className={inputClass} />
+                      {errors.address && <p className="mt-1 text-xs font-semibold text-red-600">{errors.address}</p>}
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Postal Code</label>
