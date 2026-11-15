@@ -4,11 +4,13 @@ import { COMPANY } from "./siteData"
 
 export default function Footer() {
   return (
-    <footer className="bg-[#0b0f10] text-white">
+    <footer className="relative overflow-hidden bg-[#080c10] text-white">
       {/* Top accent bar */}
-      <div className="h-1 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-400" />
+      <div className="h-1 bg-gradient-to-r from-yellow-400 via-cyan-300 to-yellow-400" />
+      <div className="pointer-events-none absolute -right-32 top-20 h-80 w-80 rounded-full bg-cyan-400/10 blur-3xl" />
+      <div className="pointer-events-none absolute -left-32 bottom-0 h-72 w-72 rounded-full bg-yellow-400/10 blur-3xl" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+      <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
           <div>
@@ -49,7 +51,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-yellow-400">Quick Links</h3>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-yellow-300">Quick Links</h3>
             <ul className="mt-4 space-y-2.5">
               {[
                 { label: "Home", href: "/" },
@@ -61,7 +63,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 hover:text-yellow-400 transition-colors"
+                    className="text-sm text-gray-400 transition-colors hover:translate-x-1 hover:text-yellow-300"
                   >
                     {link.label}
                   </Link>
@@ -72,7 +74,7 @@ export default function Footer() {
 
           {/* Services */}
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-yellow-400">Services</h3>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-yellow-300">Services</h3>
             <ul className="mt-4 space-y-2.5">
               {[
                 "Installation",
@@ -84,7 +86,7 @@ export default function Footer() {
                 <li key={s}>
                   <Link
                     href="/services"
-                    className="text-sm text-gray-400 hover:text-yellow-400 transition-colors"
+                    className="text-sm text-gray-400 transition-colors hover:translate-x-1 hover:text-yellow-300"
                   >
                     {s}
                   </Link>
@@ -95,7 +97,7 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-yellow-400">Contact</h3>
+            <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-yellow-300">Contact</h3>
             <ul className="mt-4 space-y-3 text-sm text-gray-400">
               <li className="flex items-start gap-2.5">
                 <svg className="w-4 h-4 mt-0.5 text-yellow-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -128,10 +130,10 @@ export default function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div className="border-t border-white/10 bg-black/10">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 sm:flex-row sm:px-6 lg:px-8">
           <p className="text-xs text-gray-500">© {new Date().getFullYear()} Elettro Engineering Enterprises. All rights reserved.</p>
-          <Link href="/book-service" className="text-xs text-gray-400 hover:text-yellow-400 transition-colors">
+          <Link href="/book-service" className="rounded-full border border-white/10 px-3 py-1.5 text-xs font-bold text-gray-400 transition-colors hover:border-yellow-400/50 hover:text-yellow-300">
             Book a Service →
           </Link>
         </div>
