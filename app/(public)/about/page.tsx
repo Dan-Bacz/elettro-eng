@@ -128,13 +128,19 @@ export default function AboutPage() {
 
             {/* Image panel */}
             <div className="relative">
-              <div className="rounded-2xl overflow-hidden bg-gradient-to-br from-[#0b0f10] to-[#1a2029] aspect-[4/3] flex items-center justify-center relative">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,196,0,0.15),transparent_65%)]" />
-                <div className="text-center relative px-8">
-                  <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={80} height={80} className="mx-auto h-20 w-20 rounded-2xl object-cover shadow-lg shadow-yellow-400/30" />
-                  <div className="mt-5 font-black text-2xl tracking-wide">ELETTRO</div>
-                  <div className="text-[11px] uppercase tracking-[0.35em] text-gray-400 font-semibold mt-1">
-                    Engineering Enterprises
+              <div className="group relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border border-slate-200 bg-[#0b0f10] shadow-[0_24px_55px_-30px_rgba(15,23,42,.75)]">
+                <Image src="/about.jpg" alt="Elettro electrical engineering work" fill className="object-cover object-center transition duration-700 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-br from-[#071116]/90 via-[#071116]/45 to-yellow-500/20" />
+                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#071116]/90 to-transparent" />
+                <div className="relative flex h-full flex-col justify-between p-7 sm:p-9">
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="rounded-full border border-white/20 bg-black/25 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-yellow-300 backdrop-blur-sm">Built with precision</span>
+                    <span className="rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-lg text-white backdrop-blur-sm">⚡</span>
+                  </div>
+                  <div>
+                    <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={64} height={64} className="h-16 w-16 rounded-2xl object-cover shadow-xl shadow-black/30 ring-2 ring-white/20" />
+                    <div className="mt-4 text-2xl font-black tracking-wide text-white">ELETTRO</div>
+                    <div className="mt-1 text-[10px] font-semibold uppercase tracking-[0.35em] text-slate-300">Engineering Enterprises</div>
                   </div>
                 </div>
               </div>
