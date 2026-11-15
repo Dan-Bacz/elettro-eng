@@ -21,17 +21,25 @@ export default function ServicesPage() {
         secondaryHref="/contact"
       />
 
-      <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
-          <div className="text-center max-w-2xl mx-auto mb-12">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#eef6f8] via-white to-[#fff9e7]">
+        <div className="pointer-events-none absolute -right-32 top-24 h-80 w-80 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-32 bottom-20 h-80 w-80 rounded-full bg-yellow-300/15 blur-3xl" />
+        <div className="relative mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+          <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-2xl">
             <span className="inline-block px-3 py-1 bg-yellow-400/10 text-yellow-600 text-xs font-bold uppercase tracking-wider rounded-full">
               Our Services
             </span>
-            <h2 className="mt-3 text-3xl sm:text-4xl font-black text-gray-900">Complete Electrical Services</h2>
+            <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Complete electrical services</h2>
             <p className="mt-3 text-gray-600">
               Licensed technicians, quality materials, and dependable project delivery — for every
               type of electrical work.
             </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="rounded-2xl border border-white bg-white/80 px-4 py-3 shadow-sm"><p className="text-2xl font-black text-slate-900">{SERVICES.length}</p><p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Specialties</p></div>
+              <div className="rounded-2xl border border-white bg-[#0b5360] px-4 py-3 text-white shadow-lg shadow-cyan-900/15"><p className="text-2xl font-black">100%</p><p className="text-[10px] font-bold uppercase tracking-wide text-cyan-100">Project focus</p></div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
