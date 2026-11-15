@@ -53,7 +53,12 @@ export async function loadMindanaoLocations(signal?: AbortSignal): Promise<Minda
         code: municipality.code,
         name: municipality.name,
         type: municipality.type,
-        barangays: municipality.barangays.map(([code, name]) => ({ code, name })),
+        barangays: municipality.barangays.map(([code, name]) => ({
+          code,
+          // PSA's 3Q 2026 correction is not yet available in the pinned CDN
+          // release: Cabanglasan's Lambangan is officially Lambagan.
+          name: municipality.name === "Cabanglasan" && name === "Lambangan" ? "Lambagan" : name,
+        })),
       })),
     }
   }))
