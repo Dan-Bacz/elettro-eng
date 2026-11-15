@@ -64,10 +64,12 @@ export default function HomePage() {
                   <div className="flex items-center gap-3"><Image src="/logo-elettro.jpg" alt="Elettro logo" width={42} height={42} className="rounded-xl" /><div><p className="text-sm font-black text-white">ELETTRO</p><p className="text-[9px] uppercase tracking-[0.2em] text-slate-400">Engineering Enterprises</p></div></div>
                   <span className="rounded-full bg-emerald-400/15 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-300">Ready to serve</span>
                 </div>
-                <div className="relative mt-5 h-64 overflow-hidden rounded-2xl bg-[#0b5360]">
-                  <Image src="/industrial.jpg" alt="Electrical engineering work" fill className="object-cover opacity-75" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#071116] via-transparent to-transparent" />
-                  <div className="absolute bottom-5 left-5 right-5"><p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">Power. Precision. Progress.</p><p className="mt-2 text-2xl font-black text-white">Engineered for confidence.</p></div>
+                <div className="group relative mt-5 h-64 overflow-hidden rounded-2xl border border-white/10 bg-[#0b5360]">
+                  <Image src="/about.jpg" alt="Elettro engineering workspace" fill className="object-cover object-center transition duration-700 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#071116]/85 via-[#071116]/35 to-[#071116]/10" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#071116]/90 via-transparent to-transparent" />
+                  <Image src="/engineer.png" alt="Elettro engineer" fill className="pointer-events-none object-contain object-right-bottom drop-shadow-[0_18px_18px_rgba(0,0,0,.45)] transition duration-700 group-hover:scale-[1.03]" />
+                  <div className="absolute bottom-5 left-5 z-10 max-w-[58%]"><p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">Power. Precision. Progress.</p><p className="mt-2 text-2xl font-black leading-tight text-white">Engineered for confidence.</p></div>
                 </div>
                 <div className="mt-5 grid grid-cols-3 gap-3">
                   {trustPoints.map((point) => <div key={point.label} className="rounded-xl border border-white/10 bg-black/15 p-3"><p className="text-xl font-black text-yellow-400">{point.number}</p><p className="mt-1 text-[10px] leading-4 text-slate-400">{point.label}</p></div>)}
