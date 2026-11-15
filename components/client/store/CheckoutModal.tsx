@@ -6,6 +6,7 @@ import { CartIcon, CheckIcon, CloseIcon } from "./storeIcons"
 import { formatPeso } from "./storeUtils"
 import ClientSessionGate from "../ClientSessionGate"
 import { loadMindanaoLocations, type MindanaoLocation } from "@/lib/mindanaoLocations"
+import { findPostalCode } from "@/lib/postalCodes"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const GCASH_CONFIGURED = Boolean(
@@ -82,6 +83,7 @@ export default function CheckoutModal() {
   const [locations, setLocations] = useState<MindanaoLocation[]>([])
   const [locationLoading, setLocationLoading] = useState(true)
   const [locationError, setLocationError] = useState("")
+  const [postalLoading, setPostalLoading] = useState(false)
 
   const selectedProvince = useMemo(
     () => locations.find((location) => location.province === form.province),
@@ -108,6 +110,24 @@ export default function CheckoutModal() {
       .finally(() => setLocationLoading(false))
     return () => controller.abort()
   }, [])
+
+  useEffect(() => {
+    if (fulfillmentMethod !== "DELIVERY" || !form.city || !form.barangay) {
+      setPostalLoading(false)
+      return
+    }
+    let active = true
+    setPostalLoading(true)
+    findPostalCode(form.city, form.barangay)
+      .then((postalCode) => {
+        if (active) setForm((current) => ({ ...current, postalCode }))
+      })
+      .catch((error) => console.error("Could not load postal code:", error))
+      .finally(() => {
+        if (active) setPostalLoading(false)
+      })
+    return () => { active = false }
+  }, [fulfillmentMethod, form.city, form.barangay])
 
   useEffect(() => {
     if (!checkoutOpen) return
@@ -175,12 +195,12 @@ export default function CheckoutModal() {
   }
 
   function selectProvince(value: string) {
-    setForm((prev) => ({ ...prev, province: value, city: "", barangay: "" }))
+    setForm((prev) => ({ ...prev, province: value, city: "", barangay: "", postalCode: "" }))
     setErrors((prev) => ({ ...prev, province: undefined, city: undefined, barangay: undefined }))
   }
 
   function selectCity(value: string) {
-    setForm((prev) => ({ ...prev, city: value, barangay: "" }))
+    setForm((prev) => ({ ...prev, city: value, barangay: "", postalCode: "" }))
     setErrors((prev) => ({ ...prev, city: undefined, barangay: undefined }))
   }
 
@@ -421,7 +441,10 @@ export default function CheckoutModal() {
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Barangay *</label>
-                      <select value={form.barangay} onChange={(e) => setField("barangay", e.target.value)} disabled={!form.city} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
+                      <select value={form.barangay} onChange={(e) => {
+                        setForm((current) => ({ ...current, barangay: e.target.value, postalCode: "" }))
+                        setErrors((current) => ({ ...current, barangay: undefined }))
+                      }} disabled={!form.city} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
                         <option value="">{form.city ? "Select barangay" : "Select city first"}</option>
                         {barangayOptions.map((barangay) => <option key={barangay.code} value={barangay.name}>{barangay.name}</option>)}
                       </select>
@@ -434,7 +457,7 @@ export default function CheckoutModal() {
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-bold text-gray-700">Postal Code</label>
-                      <input value={form.postalCode} onChange={(e) => setField("postalCode", e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} placeholder="e.g. 7016" inputMode="numeric" autoComplete="postal-code" className={inputClass} />
+                      <input value={form.postalCode} readOnly placeholder={postalLoading ? "Finding postal code…" : "Auto-filled from address"} inputMode="numeric" autoComplete="postal-code" className={`${inputClass} bg-slate-50 text-slate-600`} />
                       {errors.postalCode && <p className="mt-1 text-xs font-semibold text-red-600">{errors.postalCode}</p>}
                     </div>
                     <div className="sm:col-span-2">
