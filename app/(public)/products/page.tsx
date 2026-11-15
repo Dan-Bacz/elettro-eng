@@ -181,6 +181,20 @@ function ProductsShop() {
               Quality electrical materials and equipment for residential, commercial and industrial needs.
             </p>
 
+            <div className="mt-6 max-w-xl rounded-2xl border border-cyan-200/25 bg-white/[0.08] p-4 shadow-lg shadow-black/10 backdrop-blur-sm">
+              <p className="text-sm font-bold leading-6 text-white">
+                Log in or sign up for a client account to order and check out products.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2.5">
+                <Link href="/client/login" className="rounded-xl bg-yellow-400 px-4 py-2.5 text-xs font-black text-black transition hover:bg-yellow-300">
+                  Log In
+                </Link>
+                <Link href="/client/register" className="rounded-xl border border-white/25 bg-white/10 px-4 py-2.5 text-xs font-black text-white transition hover:border-yellow-300/70 hover:bg-white/15">
+                  Sign Up
+                </Link>
+              </div>
+            </div>
+
             {/* Search */}
             <form
               onSubmit={(e) => {
