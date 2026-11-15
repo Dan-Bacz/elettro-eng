@@ -16,13 +16,14 @@ const SORT_OPTIONS: { value: SortKey; label: string }[] = [
 type Props = {
   count: number
   total: number
+  catalogLabel: string
   sort: SortKey
   onSort: (s: SortKey) => void
   onOpenFilters: () => void
   hasActiveFilters: boolean
 }
 
-export default function StoreToolbar({ count, total, sort, onSort, onOpenFilters, hasActiveFilters }: Props) {
+export default function StoreToolbar({ count, total, catalogLabel, sort, onSort, onOpenFilters, hasActiveFilters }: Props) {
   const { count: cartCount, openCart } = useCart()
 
   return (
@@ -39,7 +40,7 @@ export default function StoreToolbar({ count, total, sort, onSort, onOpenFilters
 
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0b5360] text-sm font-black text-white shadow-md shadow-cyan-900/15">▦</div>
-        <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">All products</p><p className="text-sm font-black text-slate-900">{total.toLocaleString()} product{total === 1 ? "" : "s"}<span className="ml-2 text-xs font-medium text-slate-500">{count !== total ? `· ${count} shown` : "· complete catalog"}</span></p></div>
+        <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">{catalogLabel}</p><p className="text-sm font-black text-slate-900">{total.toLocaleString()} product{total === 1 ? "" : "s"}<span className="ml-2 text-xs font-medium text-slate-500">{count !== total ? `· ${count} shown` : "· complete category"}</span></p></div>
       </div>
 
       <div className="ml-auto flex items-center gap-2.5">

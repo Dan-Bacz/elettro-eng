@@ -301,7 +301,8 @@ function ProductsShop() {
           <div>
             <StoreToolbar
               count={filtered.length}
-              total={products.length}
+              total={counts[activeCategory] || 0}
+              catalogLabel={activeCategory === "All" ? "All products" : activeCategory}
               sort={sort}
               onSort={setSort}
               onOpenFilters={() => setFiltersOpen(true)}
