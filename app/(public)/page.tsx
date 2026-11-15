@@ -68,8 +68,8 @@ export default function HomePage() {
                   <Image src="/about.jpg" alt="Elettro engineering workspace" fill className="object-cover object-center transition duration-700 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-r from-[#071116]/85 via-[#071116]/35 to-[#071116]/10" />
                   <div className="absolute inset-0 bg-gradient-to-t from-[#071116]/90 via-transparent to-transparent" />
-                  <Image src="/engineer.png" alt="Elettro engineer" fill className="pointer-events-none object-contain object-right-bottom drop-shadow-[0_18px_18px_rgba(0,0,0,.45)] transition duration-700 group-hover:scale-[1.03]" />
-                  <div className="absolute bottom-5 left-5 z-10 max-w-[58%]"><p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">Power. Precision. Progress.</p><p className="mt-2 text-2xl font-black leading-tight text-white">Engineered for confidence.</p></div>
+                  <Image src="/engineer.png" alt="Elettro engineer" fill className="pointer-events-none origin-bottom-left object-contain object-left-bottom scale-[.8] drop-shadow-[0_18px_18px_rgba(0,0,0,.45)] transition duration-700 group-hover:scale-[.84]" />
+                  <div className="absolute bottom-5 right-5 z-10 max-w-[52%] text-right"><p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-200">Power. Precision. Progress.</p><p className="mt-2 text-2xl font-black leading-tight text-white">Engineered for confidence.</p></div>
                 </div>
                 <div className="mt-5 grid grid-cols-3 gap-3">
                   {trustPoints.map((point) => <div key={point.label} className="rounded-xl border border-white/10 bg-black/15 p-3"><p className="text-xl font-black text-yellow-400">{point.number}</p><p className="mt-1 text-[10px] leading-4 text-slate-400">{point.label}</p></div>)}
