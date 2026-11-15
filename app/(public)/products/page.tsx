@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
 import CTASection from "@/components/client/CTASection"
 import { CartProvider, useCart } from "@/components/client/store/CartContext"
