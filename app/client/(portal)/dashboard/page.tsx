@@ -352,7 +352,7 @@ export default function ClientDashboardPage() {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link href="/book-service" className="rounded-xl bg-yellow-400 px-4 py-2.5 text-sm font-black text-black shadow-[0_8px_20px_-8px_rgba(250,204,21,.9)] transition hover:-translate-y-0.5 hover:bg-yellow-300">Book a service</Link>
-                <Link href="/products" className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/15">Shop products</Link>
+                  <Link href="/client/products" className="rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-white/15">Shop products</Link>
               </div>
             </div>
           </div>

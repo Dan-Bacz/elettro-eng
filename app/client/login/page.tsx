@@ -16,6 +16,7 @@ function ClientLoginForm() {
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
   const checkoutPrompt = searchParams?.get("reason") === "checkout"
+  const cartPrompt = searchParams?.get("reason") === "cart"
 
   useEffect(() => {
     setEmail(searchParams?.get("email") || "")
@@ -92,7 +93,7 @@ function ClientLoginForm() {
             <p className="mt-1 text-sm leading-5 text-gray-400">Sign in to manage your orders, bookings, and account.</p>
           </div>
 
-          {checkoutPrompt && <div role="status" className="mb-5 rounded-xl border border-yellow-400/25 bg-yellow-400/10 px-4 py-3 text-sm font-bold leading-5 text-yellow-200">Please log in or sign up to continue checkout.</div>}
+          {(checkoutPrompt || cartPrompt) && <div role="status" className="mb-5 rounded-xl border border-yellow-400/25 bg-yellow-400/10 px-4 py-3 text-sm font-bold leading-5 text-yellow-200">Please log in or sign up to {checkoutPrompt ? "continue checkout" : "add products to your cart"}.</div>}
 
           <form onSubmit={submit} className="space-y-4">
             <label className="block text-sm font-semibold text-gray-300">

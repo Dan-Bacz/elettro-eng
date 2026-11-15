@@ -19,6 +19,7 @@ import {
   TruckIcon,
 } from "@/components/client/store/storeIcons"
 import { STORE_CATEGORIES, type StoreCategory, type StoreProduct } from "@/components/client/store/storeUtils"
+import { usePathname } from "next/navigation"
 
 const TRUST_FEATURES = [
   {
@@ -65,6 +66,8 @@ function searchScore(p: StoreProduct, q: string): number {
 }
 
 function ProductsShop() {
+  const pathname = usePathname()
+  const requireLoginBeforeCart = pathname === "/products"
   const { count: cartCount, openCart } = useCart()
   const [products, setProducts] = useState<StoreProduct[]>([])
   const [loading, setLoading] = useState(true)
@@ -350,7 +353,7 @@ function ProductsShop() {
               ) : (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 sm:gap-5">
                   {filtered.map((p) => (
-                    <StoreProductCard key={p.id} product={p} />
+                    <StoreProductCard key={p.id} product={p} requireLoginBeforeCart={requireLoginBeforeCart} />
                   ))}
                 </div>
               )}

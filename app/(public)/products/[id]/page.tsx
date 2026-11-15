@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { notFound, useParams } from "next/navigation"
+import { notFound, useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
 import CTASection from "@/components/client/CTASection"
 import { CartProvider, useCart } from "@/components/client/store/CartContext"
@@ -24,12 +24,14 @@ function SpecRow({ label, value }: { label: string; value: string }) {
 function ProductDetail() {
   const rawParams = useParams<{ id: string }>()
   const id = rawParams?.id
+  const router = useRouter()
   const { addItem, openCheckout } = useCart()
 
   const [product, setProduct] = useState<StoreProduct | null>(null)
   const [loading, setLoading] = useState(true)
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -78,13 +80,36 @@ function ProductDetail() {
     window.setTimeout(() => setAdded(false), 1400)
   }
 
-  function handleAdd() {
+  async function ensureClientSession() {
+    if (checkingSession) return false
+    setCheckingSession(true)
+    try {
+      const response = await fetch("/api/auth/me", { cache: "no-store" })
+      const data = response.ok ? await response.json() : null
+      const user = data?.user
+      const canShop = user?.role === "CLIENT" && user.status === "ACTIVE" && user.emailVerifiedAt
+      if (!canShop) {
+        router.push("/client/login?reason=cart")
+        return false
+      }
+      return true
+    } catch {
+      router.push("/client/login?reason=cart")
+      return false
+    } finally {
+      setCheckingSession(false)
+    }
+  }
+
+  async function handleAdd() {
+    if (!(await ensureClientSession())) return
     addItem(addPayload, qty)
     flashAdded()
   }
 
-  function handleBuyNow() {
+  async function handleBuyNow() {
     if (outOfStock || !hasPrice) return
+    if (!(await ensureClientSession())) return
     addItem(addPayload, qty)
     openCheckout()
   }
@@ -239,7 +264,7 @@ function ProductDetail() {
                   disabled={outOfStock || !hasPrice}
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-400 px-8 py-4 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Buy Now
+                  {checkingSession ? "Checking account…" : "Buy Now"}
                 </button>
               </div>
 

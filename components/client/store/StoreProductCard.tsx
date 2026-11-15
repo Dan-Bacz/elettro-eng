@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useCart } from "./CartContext"
 import ProductImage from "./ProductImage"
@@ -8,15 +9,36 @@ import StarRating from "./StarRating"
 import { CartIcon, CheckIcon } from "./storeIcons"
 import { BADGE_TONE_CLASSES, formatPeso, isDiscounted, productBadges, type StoreProduct } from "./storeUtils"
 
-export default function StoreProductCard({ product }: { product: StoreProduct }) {
+export default function StoreProductCard({ product, requireLoginBeforeCart = false }: { product: StoreProduct; requireLoginBeforeCart?: boolean }) {
+  const router = useRouter()
   const { addItem } = useCart()
   const [added, setAdded] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(false)
   const outOfStock = Number(product.quantity || 0) <= 0
   const hasPrice = product.sellPrice != null && Number(product.sellPrice) > 0
   const badges = productBadges(product)
   const imageSrc = product.imageUrl || product.imageData
 
-  function handleAdd() {
+  async function handleAdd() {
+    if (requireLoginBeforeCart) {
+      if (checkingSession) return
+      setCheckingSession(true)
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" })
+        const data = response.ok ? await response.json() : null
+        const user = data?.user
+        const canShop = user?.role === "CLIENT" && user.status === "ACTIVE" && user.emailVerifiedAt
+        if (!canShop) {
+          router.push("/client/login?reason=cart")
+          return
+        }
+      } catch {
+        router.push("/client/login?reason=cart")
+        return
+      } finally {
+        setCheckingSession(false)
+      }
+    }
     addItem(
       {
         id: product.id,
@@ -112,7 +134,7 @@ export default function StoreProductCard({ product }: { product: StoreProduct })
             } disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}
           >
             {added ? <CheckIcon className="w-4 h-4" /> : <CartIcon className="w-4 h-4" />}
-            {added ? "Added" : outOfStock ? "Out of Stock" : "Add to Cart"}
+            {checkingSession ? "Checking account…" : added ? "Added" : outOfStock ? "Out of Stock" : "Add to Cart"}
           </button>
         </div>
       </div>
