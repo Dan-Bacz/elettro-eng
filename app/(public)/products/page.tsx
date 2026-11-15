@@ -244,9 +244,12 @@ function ProductsShop() {
       </section>
 
       {/* ---------- Category navigation ---------- */}
-      <section className="bg-gray-50">
-        <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-          <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-yellow-700">Browse the collection</p><h2 className="mt-1 text-2xl font-black tracking-tight text-gray-900">Shop by category</h2></div><span className="hidden text-xs font-semibold text-gray-400 sm:block">Find the right material faster</span></div>
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0b1722] via-[#123044] to-[#0b5360] py-10 shadow-[inset_0_1px_0_rgba(255,255,255,.08),inset_0_-1px_0_rgba(15,23,42,.25)]">
+        <div className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-36 left-1/4 h-80 w-80 rounded-full bg-yellow-300/10 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.12)_1px,transparent_1px)] [background-size:36px_36px]" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-5 flex items-end justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-300">Browse the collection</p><h2 className="mt-1 text-2xl font-black tracking-tight text-white sm:text-3xl">Shop by category</h2><p className="mt-2 max-w-lg text-sm text-cyan-100/70">Explore dependable electrical materials, organized around the way you build.</p></div><span className="hidden rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-bold text-cyan-100 sm:block">Find the right material faster</span></div>
           <div className="-mx-4 flex snap-x gap-2.5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0">
             {STORE_CATEGORIES.map((cat) => {
               const Icon = categoryIcon(cat)
@@ -259,11 +262,11 @@ function ProductsShop() {
                   aria-pressed={isActive}
                   className={`inline-flex shrink-0 snap-start items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
                     isActive
-                      ? "translate-y-[-2px] bg-yellow-400 text-black shadow-md shadow-yellow-400/30"
-                      : "border border-gray-200 bg-white text-gray-700 hover:border-yellow-400 hover:text-yellow-700"
+                      ? "translate-y-[-2px] bg-yellow-400 text-black shadow-[0_10px_24px_-10px_rgba(250,204,21,.95)]"
+                      : "border border-white/15 bg-white/[0.08] text-cyan-50 shadow-inner shadow-white/5 backdrop-blur-sm hover:-translate-y-0.5 hover:border-yellow-300/60 hover:bg-white/[0.16] hover:text-white"
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? "text-black" : "text-gray-400"}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? "text-black" : "text-cyan-200"}`} />
                   {cat === "All" ? "All" : cat}
                 </button>
               )
