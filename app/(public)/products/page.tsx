@@ -280,7 +280,8 @@ function ProductsShop() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[260px_minmax(0,1fr)]">
           {/* Desktop sidebar */}
           <aside className="hidden lg:block">
-            <div className="sticky top-24 rounded-2xl border border-gray-200 bg-white p-5">
+            <div className="relative sticky top-24 overflow-hidden rounded-[1.5rem] border border-cyan-200/70 bg-gradient-to-br from-[#eef9fb] via-white to-[#fff8dc] p-5 shadow-[0_18px_40px_-28px_rgba(8,47,73,.55)] ring-1 ring-white/80">
+              <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-cyan-300/25 blur-2xl" />
               <CategorySidebar
                 active={activeCategory}
                 onSelect={setActiveCategory}
