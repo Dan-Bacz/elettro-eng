@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { key: 'clients', label: 'Clients', icon: UsersIcon, href: '/admin/clients' },
   { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
   { key: 'leave', label: 'Leave Requests', icon: CalendarIcon, href: '/admin/leave' },
-    { key: 'inventory', label: 'Inventory', icon: PackageIcon, href: '/admin/inventory' },
+    { key: 'inventory', label: 'Warehouse', icon: PackageIcon, href: '/admin/inventory' },
   { key: 'staff', label: 'Workers', icon: UsersIcon, href: '/admin/staff' },
   { key: 'reports', label: 'Reports', icon: BarChartIcon, href: '/admin/reports' },
   { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/admin/notifications' },
