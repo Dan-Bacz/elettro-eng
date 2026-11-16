@@ -72,7 +72,7 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'POST') {
     try {
-      const { bookingId, content, progress, workDone, issues, nextWork, photoUrls } = req.body
+      const { bookingId, content, progress, workDone, issues, nextWork, photoUrls, checklist } = req.body
       if (!bookingId || !content) {
         return res.status(400).json({ error: 'Booking and content are required' })
       }
@@ -93,13 +93,27 @@ export default async function handler(req: any, res: any) {
         }
       }
 
+      const normalizedChecklist = Array.isArray(checklist)
+        ? checklist
+            .map((item: any) => ({
+              id: String(item?.id || '').slice(0, 80),
+              text: String(item?.text || '').trim().slice(0, 300),
+              checked: item?.checked === true,
+            }))
+            .filter((item: { text: string }) => item.text)
+            .slice(0, 50)
+        : []
+      const workDetails = normalizedChecklist.length > 0
+        ? JSON.stringify({ summary: String(workDone || '').trim().slice(0, 2000), checklist: normalizedChecklist })
+        : (workDone || null)
+
       const newReport = await prisma.report.create({
         data: {
           authorId: user.id,
           bookingId: booking.id,
           content: String(content),
           progress: progress != null ? Math.max(0, Math.min(100, Math.round(Number(progress)))) : null,
-          workDone: workDone || null,
+          workDone: workDetails,
           issues: issues || null,
           nextWork: nextWork || null,
           photoUrls: photoUrls || null

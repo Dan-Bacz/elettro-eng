@@ -9,6 +9,17 @@ import type { BookingObj, UserObj } from '../../../../../components/admin/types'
 
 const STEPS = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED']
 
+function parseWorkDetails(value?: string | null) {
+  if (!value) return { summary: '', checklist: [] as { text: string; checked: boolean }[] }
+  try {
+    const parsed = JSON.parse(value)
+    if (parsed && Array.isArray(parsed.checklist)) {
+      return { summary: String(parsed.summary || ''), checklist: parsed.checklist.map((item: any) => ({ text: String(item?.text || ''), checked: item?.checked === true })).filter((item: { text: string }) => item.text) }
+    }
+  } catch { /* legacy plain text */ }
+  return { summary: value, checklist: [] as { text: string; checked: boolean }[] }
+}
+
 export default function AdminProjectDetailPage() {
   const params = useParams<{ id: string }>()
   const bookingId = params?.id ?? ''
@@ -92,7 +103,8 @@ export default function AdminProjectDetailPage() {
 
   const teamMembers = booking.project?.assignments || []
   const teamLocked = teamMembers.length > 0
-  const progress = statusProgress(booking.status)
+  const latestReport = booking.reports?.[0]
+  const progress = latestReport?.progress != null ? Math.max(0, Math.min(100, Number(latestReport.progress))) : statusProgress(booking.status)
   const currentStepIndex = STEPS.indexOf(booking.status as any)
 
   return (
@@ -190,6 +202,17 @@ export default function AdminProjectDetailPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center justify-between gap-3"><h2 className="text-sm font-black text-slate-900">Technician Progress Reports</h2><span className="rounded-full bg-yellow-50 px-2.5 py-1 text-[10px] font-black text-yellow-700">{(booking.reports || []).length}</span></div>
+            <div className="mt-4 space-y-3">
+              {(booking.reports || []).length === 0 && <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-400">No progress reports submitted yet.</div>}
+              {(booking.reports || []).map((report) => {
+                const details = parseWorkDetails(report.workDone)
+                return <div key={report.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><div className="flex items-center justify-between gap-3"><span className="text-xs font-black text-slate-800">{report.author?.name || 'Technician'}</span><span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700">{report.progress ?? 0}%</span></div><div className="mt-2 text-xs leading-5 text-slate-600">{report.content}</div>{details.summary && <div className="mt-2 text-[11px] text-slate-500"><span className="font-black text-slate-700">Work details:</span> {details.summary}</div>}{details.checklist.length > 0 && <div className="mt-3 space-y-1.5">{details.checklist.map((item, index) => <div key={`${report.id}-${index}`} className={`flex items-center gap-2 text-[11px] ${item.checked ? 'text-emerald-700' : 'text-slate-500'}`}><span className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] font-black ${item.checked ? 'border-emerald-400 bg-emerald-100' : 'border-slate-300 bg-white'}`}>{item.checked ? '✓' : ''}</span><span className={item.checked ? 'line-through opacity-75' : ''}>{item.text}</span></div>)}</div>}<div className="mt-2 text-[10px] text-slate-400">{formatDateTime(report.createdAt)}{report.issues ? ` · Issues: ${report.issues}` : ''}{report.nextWork ? ` · Next: ${report.nextWork}` : ''}</div></div>
+              })}
             </div>
           </div>
         </div>

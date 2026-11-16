@@ -53,7 +53,7 @@ export default async function handler(req, res) {
         include: {
           client: { select: { id: true, name: true, email: true, phone: true } },
           assignedTo: { select: { id: true, name: true, email: true } },
-          reports: { select: { progress: true, content: true, createdAt: true } },
+          reports: { orderBy: { createdAt: 'desc' }, select: { progress: true, content: true, createdAt: true } },
           project: {
             include: { assignments: { include: { tech: { select: { id: true, name: true, email: true } } } } }
           }
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
               startDate: true,
               endDate: true,
               budget: true,
-              reports: { select: { progress: true } },
+              reports: { orderBy: { createdAt: 'desc' }, select: { progress: true } },
               client: { select: { id: true, name: true, email: true, phone: true } }
             }
           },
@@ -203,7 +203,7 @@ export default async function handler(req, res) {
 
     // Recent projects with real progress (max report progress, else status-based).
     const recentProjects = projects.slice(0, 6).map((p) => {
-      const reportProgress = Math.max(0, ...(p.booking?.reports || []).map((r) => Number(r.progress || 0)))
+      const reportProgress = Number(p.booking?.reports?.[0]?.progress || 0)
       const statusProgressMap: Record<string, number> = { APPROVED: 15, ASSIGNED: 30, IN_PROGRESS: 65, COMPLETED: 100, CANCELLED: 100, PENDING: 5 }
       const progress = reportProgress > 0 ? reportProgress : statusProgressMap[p.status || ''] || 5
       return {

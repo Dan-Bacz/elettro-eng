@@ -80,7 +80,7 @@ const PAGE_SIZE = 8
 // Real progress: the latest progress reported by the technician (Report.progress).
 // Falls back to the same status-derived value the rest of the admin UI uses.
 function projectProgress(p: ProjectRow): number {
-  const reported = Math.max(0, ...(p.booking?.reports || []).map((r) => Number(r.progress || 0)))
+  const reported = Number(p.booking?.reports?.[0]?.progress || 0)
   if (reported > 0) return Math.min(100, reported)
   return statusProgress(p.status)
 }

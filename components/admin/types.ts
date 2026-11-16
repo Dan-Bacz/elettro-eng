@@ -71,6 +71,10 @@ export type ReportObj = {
   bookingId: string
   booking?: Pick<BookingObj, 'id' | 'title' | 'status'>
   content: string
+  progress?: number | null
+  workDone?: string | null
+  issues?: string | null
+  nextWork?: string | null
   createdAt: string
 }
 

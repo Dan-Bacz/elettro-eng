@@ -1008,6 +1008,39 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         etContent.setMinLines(2);
         layout.addView(etContent);
 
+        TextView checklistLabel = new TextView(this);
+        checklistLabel.setText("Work checklist");
+        checklistLabel.setTextColor(Color.parseColor("#101416"));
+        checklistLabel.setTextSize(12);
+        checklistLabel.setTypeface(null, Typeface.BOLD);
+        checklistLabel.setPadding(0, 14, 0, 4);
+        layout.addView(checklistLabel);
+
+        LinearLayout checklistContainer = new LinearLayout(this);
+        checklistContainer.setOrientation(LinearLayout.VERTICAL);
+        layout.addView(checklistContainer);
+
+        LinearLayout addTaskRow = new LinearLayout(this);
+        addTaskRow.setOrientation(LinearLayout.HORIZONTAL);
+        final EditText etChecklistTask = new EditText(this);
+        etChecklistTask.setHint("Task or deliverable");
+        etChecklistTask.setSingleLine(true);
+        addTaskRow.addView(etChecklistTask, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        Button addTask = createButton("Add task", R.drawable.bg_action_dark);
+        addTask.setTextColor(Color.parseColor("#F5C400"));
+        addTask.setOnClickListener(v -> {
+            String task = etChecklistTask.getText().toString().trim();
+            if (task.isEmpty()) return;
+            CheckBox checkBox = new CheckBox(this);
+            checkBox.setText(task);
+            checkBox.setTextSize(12);
+            checkBox.setTextColor(Color.parseColor("#4B575C"));
+            checklistContainer.addView(checkBox);
+            etChecklistTask.setText("");
+        });
+        addTaskRow.addView(addTask);
+        layout.addView(addTaskRow);
+
         final EditText etWorkDone = new EditText(this);
         etWorkDone.setHint(getString(R.string.tech_work_done));
         layout.addView(etWorkDone);
@@ -1032,10 +1065,24 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                         Toast.makeText(this, "Enter report content", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    submitReport(selectedJobId, progress, content,
+                     JSONArray checklist = new JSONArray();
+                     for (int taskIndex = 0; taskIndex < checklistContainer.getChildCount(); taskIndex++) {
+                         View child = checklistContainer.getChildAt(taskIndex);
+                         if (child instanceof CheckBox) {
+                             CheckBox checkBox = (CheckBox) child;
+                             try {
+                                 JSONObject task = new JSONObject();
+                                 task.put("id", String.valueOf(taskIndex));
+                                 task.put("text", checkBox.getText().toString());
+                                 task.put("checked", checkBox.isChecked());
+                                 checklist.put(task);
+                             } catch (JSONException ignored) { }
+                         }
+                     }
+                     submitReport(selectedJobId, progress, content,
                             etWorkDone.getText().toString().trim(),
                             etIssues.getText().toString().trim(),
-                            etNext.getText().toString().trim());
+                             etNext.getText().toString().trim(), checklist);
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
@@ -1047,7 +1094,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         return 0;
     }
 
-    private void submitReport(String bookingId, int progress, String content, String workDone, String issues, String nextWork) {
+    private void submitReport(String bookingId, int progress, String content, String workDone, String issues, String nextWork, JSONArray checklist) {
         new Thread(() -> {
             try {
                 JSONObject json = new JSONObject();
@@ -1057,6 +1104,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 if (!workDone.isEmpty()) json.put("workDone", workDone);
                 if (!issues.isEmpty()) json.put("issues", issues);
                 if (!nextWork.isEmpty()) json.put("nextWork", nextWork);
+                if (checklist != null && checklist.length() > 0) json.put("checklist", checklist);
                 ApiClient.post("/reports", json.toString());
                 runOnUiThread(() -> {
                     Toast.makeText(this, "Report Submitted", Toast.LENGTH_SHORT).show();
