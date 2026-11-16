@@ -6,6 +6,15 @@ import type { InventoryItemObj } from '../../../../components/admin/types'
 
 type StockStatus = 'IN' | 'LOW' | 'OUT'
 type SortKey = 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'stock-asc' | 'stock-desc'
+type ReleaseRecord = {
+  id: string
+  receiptNumber: string
+  createdAt: string
+  releasedBy?: { name: string } | null
+  salesRecipient?: { name: string } | null
+  request: { reference: string; source: string; requester?: { name: string; role: string } | null; order?: { clientName: string } | null }
+  items: { quantity: number; requestItem: { inventoryItem: { name: string; unit: string | null } } }[]
+}
 
 const BASE_CATEGORIES = [
   'Lighting',
@@ -35,6 +44,7 @@ function money(value: number | null | undefined, decimals = 2) {
 export default function AdminInventoryPage() {
   const router = useRouter()
   const [items, setItems] = useState<InventoryItemObj[]>([])
+  const [releases, setReleases] = useState<ReleaseRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [query, setQuery] = useState('')
@@ -44,15 +54,17 @@ export default function AdminInventoryPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/inventory')
-      if (!res.ok) {
-        if (res.status === 401) {
+      const [inventoryRes, releasesRes] = await Promise.all([fetch('/api/inventory'), fetch('/api/warehouse-releases')])
+      if (!inventoryRes.ok || !releasesRes.ok) {
+        if (inventoryRes.status === 401 || releasesRes.status === 401) {
           router.push('/admin/login')
           return
         }
-        throw new Error('Failed to load inventory')
+        throw new Error('Failed to load warehouse records')
       }
-      setItems(await res.json())
+      const [inventoryData, releasesData] = await Promise.all([inventoryRes.json(), releasesRes.json()])
+      setItems(inventoryData)
+      setReleases((releasesData.releases || []).filter((release: ReleaseRecord) => ['TECHNICIAN', 'INTERNAL_SALES'].includes(release.request?.source)))
       setLoadError('')
     } catch (e: any) {
       setLoadError(e.message || 'Failed to load inventory')
@@ -241,6 +253,14 @@ export default function AdminInventoryPage() {
           <p className="mt-2 text-xs leading-5 text-slate-300">{summary.lowStock} low-stock and {summary.outOfStock} out-of-stock items need attention.</p>
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300" style={{ width: `${analytics.healthRate}%` }} /></div>
         </div>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4">
+          <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Warehouse handovers</p><h2 className="mt-1 text-lg font-black text-slate-900">Released materials</h2><p className="mt-1 text-xs text-slate-500">Materials released for Technician and Sales requests.</p></div>
+          <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-emerald-700">{releases.length} releases</span>
+        </div>
+        {releases.length === 0 ? <div className="px-5 py-10 text-center text-xs text-slate-400">No technician or sales material releases recorded yet.</div> : <div className="divide-y divide-slate-100">{releases.slice(0, 12).map((release) => { const quantity = release.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0); const source = release.request.source === 'TECHNICIAN' ? 'Technician request' : 'Sales request'; const recipient = release.request.source === 'TECHNICIAN' ? release.request.requester?.name || 'Technician' : release.salesRecipient?.name || release.request.order?.clientName || 'Sales department'; return <article key={release.id} className="flex flex-col gap-3 px-5 py-4 transition hover:bg-cyan-50/30 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-black text-slate-900">{release.receiptNumber}</span><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${release.request.source === 'TECHNICIAN' ? 'bg-violet-100 text-violet-700' : 'bg-cyan-100 text-cyan-700'}`}>{source}</span><span className="text-[10px] text-slate-400">{new Date(release.createdAt).toLocaleString()}</span></div><p className="mt-1 text-xs font-bold text-slate-700">{recipient} <span className="font-normal text-slate-400">· Request {release.request.reference}</span></p><p className="mt-1 truncate text-[10px] text-slate-500">{release.items.map((item) => `${item.quantity} ${item.requestItem.inventoryItem.unit || 'pcs'} ${item.requestItem.inventoryItem.name}`).join(' · ')}</p></div><div className="text-left sm:text-right"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Released quantity</div><div className="text-xl font-black text-slate-900">{quantity}</div><div className="text-[10px] text-slate-400">By {release.releasedBy?.name || 'Warehouse staff'}</div></div></article> })}</div>}
       </section>
 
       {/* Toolbar */}
