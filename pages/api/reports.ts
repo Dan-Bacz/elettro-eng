@@ -99,6 +99,7 @@ export default async function handler(req: any, res: any) {
               id: String(item?.id || '').slice(0, 80),
               text: String(item?.text || '').trim().slice(0, 300),
               checked: item?.checked === true,
+              status: item?.status === 'COMPLETED' || item?.checked === true ? 'COMPLETED' : 'IN_PROGRESS',
             }))
             .filter((item: { text: string }) => item.text)
             .slice(0, 50)

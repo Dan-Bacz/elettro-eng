@@ -10,14 +10,14 @@ import type { BookingObj, UserObj } from '../../../../../components/admin/types'
 const STEPS = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED']
 
 function parseWorkDetails(value?: string | null) {
-  if (!value) return { summary: '', checklist: [] as { text: string; checked: boolean }[] }
+  if (!value) return { summary: '', checklist: [] as { text: string; status: 'COMPLETED' | 'IN_PROGRESS' }[] }
   try {
     const parsed = JSON.parse(value)
     if (parsed && Array.isArray(parsed.checklist)) {
-      return { summary: String(parsed.summary || ''), checklist: parsed.checklist.map((item: any) => ({ text: String(item?.text || ''), checked: item?.checked === true })).filter((item: { text: string }) => item.text) }
+      return { summary: String(parsed.summary || ''), checklist: parsed.checklist.map((item: any) => ({ text: String(item?.text || ''), status: item?.status === 'COMPLETED' || item?.checked === true ? 'COMPLETED' : 'IN_PROGRESS' })).filter((item: { text: string }) => item.text) }
     }
   } catch { /* legacy plain text */ }
-  return { summary: value, checklist: [] as { text: string; checked: boolean }[] }
+  return { summary: value, checklist: [] as { text: string; status: 'COMPLETED' | 'IN_PROGRESS' }[] }
 }
 
 export default function AdminProjectDetailPage() {
@@ -211,7 +211,7 @@ export default function AdminProjectDetailPage() {
               {(booking.reports || []).length === 0 && <div className="rounded-xl bg-slate-50 p-4 text-xs text-slate-400">No progress reports submitted yet.</div>}
               {(booking.reports || []).map((report) => {
                 const details = parseWorkDetails(report.workDone)
-                return <div key={report.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><div className="flex items-center justify-between gap-3"><span className="text-xs font-black text-slate-800">{report.author?.name || 'Technician'}</span><span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700">{report.progress ?? 0}%</span></div><div className="mt-2 text-xs leading-5 text-slate-600">{report.content}</div>{details.summary && <div className="mt-2 text-[11px] text-slate-500"><span className="font-black text-slate-700">Work details:</span> {details.summary}</div>}{details.checklist.length > 0 && <div className="mt-3 space-y-1.5">{details.checklist.map((item, index) => <div key={`${report.id}-${index}`} className={`flex items-center gap-2 text-[11px] ${item.checked ? 'text-emerald-700' : 'text-slate-500'}`}><span className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] font-black ${item.checked ? 'border-emerald-400 bg-emerald-100' : 'border-slate-300 bg-white'}`}>{item.checked ? '✓' : ''}</span><span className={item.checked ? 'line-through opacity-75' : ''}>{item.text}</span></div>)}</div>}<div className="mt-2 text-[10px] text-slate-400">{formatDateTime(report.createdAt)}{report.issues ? ` · Issues: ${report.issues}` : ''}{report.nextWork ? ` · Next: ${report.nextWork}` : ''}</div></div>
+                return <div key={report.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><div className="flex items-center justify-between gap-3"><span className="text-xs font-black text-slate-800">{report.author?.name || 'Technician'}</span><span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-black text-emerald-700">{report.progress ?? 0}%</span></div><div className="mt-2 text-xs leading-5 text-slate-600">{report.content}</div>{details.summary && <div className="mt-2 text-[11px] text-slate-500"><span className="font-black text-slate-700">Work details:</span> {details.summary}</div>}{details.checklist.length > 0 && <div className="mt-3 space-y-1.5">{details.checklist.map((item, index) => { const completed = item.status === 'COMPLETED'; return <div key={`${report.id}-${index}`} className={`flex items-center justify-between gap-2 text-[11px] ${completed ? 'text-emerald-700' : 'text-amber-700'}`}><div className="flex min-w-0 items-center gap-2"><span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border text-[10px] font-black ${completed ? 'border-emerald-400 bg-emerald-100' : 'border-amber-300 bg-amber-50'}`}>{completed ? '✓' : '·'}</span><span className={completed ? 'line-through opacity-75' : ''}>{item.text}</span></div><span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[9px] font-black uppercase">{completed ? 'Completed' : 'In progress'}</span></div> })}</div>}<div className="mt-2 text-[10px] text-slate-400">{formatDateTime(report.createdAt)}{report.issues ? ` · Issues: ${report.issues}` : ''}{report.nextWork ? ` · Next: ${report.nextWork}` : ''}</div></div>
               })}
             </div>
           </div>

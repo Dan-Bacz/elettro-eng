@@ -23,6 +23,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.Spinner;
+import android.widget.ArrayAdapter;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -761,17 +763,12 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     }
 
     private double getJobProgress(JSONObject booking) {
-        double max = 0;
         JSONArray reports = booking.optJSONArray("reports");
-        if (reports != null) {
-            for (int i = 0; i < reports.length(); i++) {
-                JSONObject r = reports.optJSONObject(i);
-                if (r != null && r.has("progress")) {
-                    max = Math.max(max, r.optDouble("progress", 0));
-                }
-            }
+        if (reports != null && reports.length() > 0) {
+            JSONObject latest = reports.optJSONObject(0);
+            if (latest != null && latest.has("progress")) return latest.optDouble("progress", 0);
         }
-        return max;
+        return 0;
     }
 
     private void showJobDetails(String jobId, String jobTitle) {
@@ -1031,11 +1028,19 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         addTask.setOnClickListener(v -> {
             String task = etChecklistTask.getText().toString().trim();
             if (task.isEmpty()) return;
-            CheckBox checkBox = new CheckBox(this);
-            checkBox.setText(task);
-            checkBox.setTextSize(12);
-            checkBox.setTextColor(Color.parseColor("#4B575C"));
-            checklistContainer.addView(checkBox);
+            LinearLayout taskRow = new LinearLayout(this);
+            taskRow.setOrientation(LinearLayout.HORIZONTAL);
+            taskRow.setGravity(Gravity.CENTER_VERTICAL);
+            TextView taskText = new TextView(this);
+            taskText.setText(task);
+            taskText.setTextSize(12);
+            taskText.setTextColor(Color.parseColor("#4B575C"));
+            taskRow.addView(taskText, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            Spinner statusSpinner = new Spinner(this);
+            ArrayAdapter<String> statusAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, new String[]{"In progress", "Completed"});
+            statusSpinner.setAdapter(statusAdapter);
+            taskRow.addView(statusSpinner, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            checklistContainer.addView(taskRow);
             etChecklistTask.setText("");
         });
         addTaskRow.addView(addTask);
@@ -1068,13 +1073,17 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                      JSONArray checklist = new JSONArray();
                      for (int taskIndex = 0; taskIndex < checklistContainer.getChildCount(); taskIndex++) {
                          View child = checklistContainer.getChildAt(taskIndex);
-                         if (child instanceof CheckBox) {
-                             CheckBox checkBox = (CheckBox) child;
+                         if (child instanceof LinearLayout && ((LinearLayout) child).getChildCount() >= 2) {
+                             LinearLayout taskRow = (LinearLayout) child;
                              try {
                                  JSONObject task = new JSONObject();
                                  task.put("id", String.valueOf(taskIndex));
-                                 task.put("text", checkBox.getText().toString());
-                                 task.put("checked", checkBox.isChecked());
+                                 TextView taskText = (TextView) taskRow.getChildAt(0);
+                                 Spinner statusSpinner = (Spinner) taskRow.getChildAt(1);
+                                 String status = "Completed".equals(statusSpinner.getSelectedItem()) ? "COMPLETED" : "IN_PROGRESS";
+                                 task.put("text", taskText.getText().toString());
+                                 task.put("checked", "COMPLETED".equals(status));
+                                 task.put("status", status);
                                  checklist.put(task);
                              } catch (JSONException ignored) { }
                          }
