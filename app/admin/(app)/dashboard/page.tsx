@@ -126,10 +126,26 @@ export default function AdminDashboardPage() {
   const notifications = data.notifications || []
 
   const sectionTitle = 'text-sm font-black text-slate-900'
-  const cardCls = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'
+  const cardCls = 'dashboard-depth relative overflow-hidden rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]'
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-7">
+      <style jsx global>{`@keyframes dashboard-float { 0%,100% { transform: translateY(0) rotateX(0deg); } 50% { transform: translateY(-5px) rotateX(1deg); } } .dashboard-perspective { perspective: 1400px; } .dashboard-depth { transform: translateZ(0); transition: transform .35s ease, box-shadow .35s ease; } .dashboard-depth:hover { transform: translateY(-4px) rotateX(1deg); box-shadow: 0 30px 55px -28px rgba(15,23,42,.42); }`}</style>
+      <section className="dashboard-perspective relative isolate overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#122b35] to-[#08727f] p-6 text-white shadow-[0_32px_70px_-32px_rgba(8,114,127,.8)] sm:p-8">
+        <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" />
+        <div className="relative grid gap-8 lg:grid-cols-[1.1fr_.9fr] lg:items-end">
+          <div>
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.22em] text-cyan-100"><span className="h-2 w-2 rounded-full bg-emerald-300 shadow-[0_0_16px_rgba(110,231,183,.9)]" /> Live admin overview</div>
+            <h1 className="max-w-2xl text-3xl font-black tracking-tight sm:text-5xl">Your whole operation, in one clear view.</h1>
+            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">Monitor bookings, projects, teams, inventory, and customer activity with a live command center built for fast decisions.</p>
+            <div className="mt-6 flex flex-wrap gap-3"><Link href="/admin/reports" className="rounded-xl bg-yellow-400 px-4 py-3 text-xs font-black text-slate-950 shadow-lg shadow-yellow-500/20 transition hover:-translate-y-0.5 hover:bg-yellow-300">Open reports <span className="ml-2">→</span></Link><Link href="/admin/operations" className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-black text-white transition hover:bg-white/20">View operations</Link></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2">
+            {[['Bookings', data.stats.totalBookings, 'total requests'], ['In progress', data.stats.inProgress, 'active projects'], ['Completed', data.stats.completed, 'closed projects'], ['Stock alerts', topLow.length, 'items to review']].map(([label, value, caption], index) => <div key={label} className="dashboard-depth rounded-2xl border border-white/10 bg-white/10 p-4 shadow-[0_18px_35px_-18px_rgba(0,0,0,.35)] backdrop-blur" style={{ animation: `dashboard-float 5s ease-in-out ${index * .25}s infinite` }}><p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</p><p className="mt-2 text-3xl font-black text-white">{value}</p><p className="mt-1 text-[10px] text-slate-400">{caption}</p></div>)}
+          </div>
+        </div>
+      </section>
       {/* A. Welcome + Current Activity Flow */}
       <div className="card-enter grid grid-cols-1 gap-5 xl:grid-cols-5">
         <div className={`${cardCls} flex flex-col justify-between xl:col-span-2`}>

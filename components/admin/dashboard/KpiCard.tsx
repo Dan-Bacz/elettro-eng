@@ -32,7 +32,9 @@ export default function KpiCard({ label, value, icon, accent, description, spark
   const animated = useCountUp(value)
   const trendingUp = change === null || change >= 0
   const inner = (
-    <div className={`group relative overflow-hidden rounded-2xl border ${a.bg} bg-white p-4 sm:p-5 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300`}>
+    <div className={`dashboard-depth group relative overflow-hidden rounded-[1.5rem] border ${a.bg} bg-white p-4 sm:p-5 shadow-[0_18px_36px_-24px_rgba(15,23,42,.55)]`}>
+      <div className="pointer-events-none absolute -right-10 -top-12 h-28 w-28 rounded-full bg-white/70 blur-2xl transition-transform duration-500 group-hover:scale-125" />
+      <div className="pointer-events-none absolute inset-x-5 bottom-0 h-px bg-gradient-to-r from-transparent via-white to-transparent opacity-80" />
       <div className="flex items-start justify-between">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-lg shadow-lg ${a.icon}`}>{icon}</div>
         <div className="flex items-center gap-1.5">
