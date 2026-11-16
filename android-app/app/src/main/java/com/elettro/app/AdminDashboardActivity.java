@@ -129,7 +129,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private JSONArray leaveReqsArray;
     private JSONArray leaveCreditsArray;
     private JSONArray ordersArray;
+    private JSONArray salesArray;
     private JSONArray workersArray, stockMovementsArray;
+    private JSONObject operationsSummary;
     private String currentSection = "home";
 
     @Override
@@ -292,11 +294,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_orders) { showSection("orders"); return true; }
             if (id == R.id.nav_clients) { showSection("clients"); return true; }
             if (id == R.id.nav_projects) { showSection("projects"); return true; }
-            if (id == R.id.nav_leave) { showSection("leave"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_inventory) { showSection("inventory"); return true; }
             if (id == R.id.nav_workers) { showSection("workers"); return true; }
-            if (id == R.id.nav_stock_movements) { showSection("stock_movements"); return true; }
+            if (id == R.id.nav_stock_movements) { showSection("operations"); return true; }
             if (id == R.id.nav_reports) { showSection("reports"); return true; }
             if (id == R.id.nav_settings) { showSection("settings"); hideKeyboard(); return true; }
             if (id == R.id.nav_logout) { logout(); return true; }
@@ -319,7 +320,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         viewMore.setVisibility("more".equals(key) ? View.VISIBLE : View.GONE);
         viewLeave.setVisibility("leave".equals(key) ? View.VISIBLE : View.GONE);
         viewWorkers.setVisibility("workers".equals(key) ? View.VISIBLE : View.GONE);
-        viewStockMovements.setVisibility("stock_movements".equals(key) ? View.VISIBLE : View.GONE);
+        viewStockMovements.setVisibility(("stock_movements".equals(key) || "operations".equals(key)) ? View.VISIBLE : View.GONE);
 
         int titleRes = R.string.drawer_dashboard;
         int subRes = R.string.welcome_admin_3;
@@ -332,8 +333,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 menuRes = R.id.nav_bookings;
                 break;
             case "orders":
-                titleRes = R.string.orders_title;
-                subRes = R.string.orders_subtitle;
+                titleRes = R.string.sales_title;
+                subRes = R.string.sales_subtitle;
                 menuRes = R.id.nav_orders;
                 renderOrdersList();
                 break;
@@ -341,12 +342,6 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 titleRes = R.string.projects_title;
                 subRes = R.string.projects_subtitle;
                 menuRes = R.id.nav_projects;
-                break;
-            case "leave":
-                titleRes = R.string.leave_title;
-                subRes = R.string.leave_subtitle;
-                menuRes = R.id.nav_leave;
-                loadLeaveData();
                 break;
             case "notifications":
                 titleRes = R.string.notifications_title;
@@ -360,8 +355,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 menuRes = R.id.nav_clients;
                 break;
             case "inventory":
-                titleRes = R.string.inventory_title;
-                subRes = R.string.inventory_subtitle;
+                titleRes = R.string.warehouse_title;
+                subRes = R.string.warehouse_subtitle;
                 menuRes = R.id.nav_inventory;
                 break;
             case "workers":
@@ -373,6 +368,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
             case "stock_movements":
                 titleRes = R.string.drawer_stock_movements;
                 subRes = R.string.stock_movements_subtitle;
+                menuRes = R.id.nav_stock_movements;
+                loadStockMovements();
+                break;
+            case "operations":
+                titleRes = R.string.drawer_operations;
+                subRes = R.string.operations_subtitle;
                 menuRes = R.id.nav_stock_movements;
                 loadStockMovements();
                 break;
@@ -504,7 +505,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
     private void renderOrdersList() {
         ordersListContainer.removeAllViews();
-        if (ordersArray == null || ordersArray.length() == 0) {
+        if ((ordersArray == null || ordersArray.length() == 0) && (salesArray == null || salesArray.length() == 0)) {
             showEmpty(ordersListContainer, R.string.empty);
             return;
         }
@@ -579,6 +580,47 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
             ordersListContainer.addView(card);
         }
+
+        if (salesArray != null) {
+            for (int i = 0; i < salesArray.length(); i++) {
+                JSONObject sale = salesArray.optJSONObject(i);
+                if (sale == null) continue;
+
+                LinearLayout card = new LinearLayout(this);
+                card.setOrientation(LinearLayout.VERTICAL);
+                card.setPadding(14, 14, 14, 14);
+                card.setBackgroundResource(R.drawable.bg_card);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                lp.setMargins(0, 0, 0, 6);
+                card.setLayoutParams(lp);
+
+                TextView title = new TextView(this);
+                title.setText("POS Sale  •  " + sale.optString("reference", "SALE") + "  •  COMPLETED");
+                title.setTextColor(Color.parseColor("#101416"));
+                title.setTypeface(null, Typeface.BOLD);
+                title.setTextSize(13);
+                card.addView(title);
+
+                JSONObject cashier = sale.optJSONObject("createdBy");
+                TextView details = new TextView(this);
+                details.setText((sale.optString("customerName", "Walk-in customer") + "\nRecorded by: "
+                        + (cashier == null ? "Sales officer" : cashier.optString("name", "Sales officer"))
+                        + "\n" + formatShortDate(sale.optString("createdAt", ""))));
+                details.setTextColor(Color.parseColor("#68747A"));
+                details.setTextSize(11);
+                details.setPadding(0, 4, 0, 0);
+                card.addView(details);
+
+                TextView total = new TextView(this);
+                total.setText("Total: ₱" + String.format(Locale.US, "%,.2f", sale.optDouble("total")));
+                total.setTextColor(Color.parseColor("#B88A00"));
+                total.setTypeface(null, Typeface.BOLD);
+                total.setTextSize(12);
+                card.addView(total);
+                ordersListContainer.addView(card);
+            }
+        }
     }
 
     private void updateFilterChips() {
@@ -616,6 +658,12 @@ public class AdminDashboardActivity extends AppCompatActivity {
                     pendingUsersArray = dashboardData.optJSONArray("pendingUsers");
                     projectsArray = dashboardData.optJSONArray("projects");
                     ordersArray = dashboardData.optJSONArray("orders");
+                }
+
+                String salesResp = ApiClient.get("/sales-sales");
+                if (salesResp != null) {
+                    JSONObject salesObj = new JSONObject(salesResp);
+                    salesArray = salesObj.optJSONArray("sales");
                 }
 
                 String reportsResp = ApiClient.get("/reports");
@@ -1582,10 +1630,11 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
     private void loadStockMovements() {
         new Thread(() -> {
             try {
-                String response = ApiClient.get("/warehouse-stock");
+                String response = ApiClient.get("operations".equals(currentSection) ? "/admin/operations" : "/warehouse-stock");
                 if (response == null) throw new Exception("Could not load stock movement history.");
                 JSONObject payload = new JSONObject(response);
                 stockMovementsArray = payload.optJSONArray("movements");
+                operationsSummary = "operations".equals(currentSection) ? payload.optJSONObject("summary") : null;
                 runOnUiThread(this::renderStockMovements);
             } catch (Exception error) {
                 runOnUiThread(() -> Toast.makeText(this,
@@ -1598,6 +1647,29 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
     private void renderStockMovements() {
         if (stockMovementsListContainer == null) return;
         stockMovementsListContainer.removeAllViews();
+
+        if ("operations".equals(currentSection) && operationsSummary != null) {
+            TextView overview = new TextView(this);
+            overview.setText("Sales transactions: " + operationsSummary.optInt("salesTransactions")
+                    + "   •   Sales revenue: ₱" + String.format(Locale.US, "%,.2f", operationsSummary.optDouble("salesRevenue"))
+                    + "\nWarehouse items: " + operationsSummary.optInt("warehouseItems")
+                    + "   •   Units in stock: " + operationsSummary.optInt("warehouseUnits")
+                    + "\nClient orders: " + operationsSummary.optInt("clientOrders")
+                    + "   •   Pending orders: " + operationsSummary.optInt("pendingOrders")
+                    + "\nWarehouse releases: " + operationsSummary.optInt("warehouseReleases")
+                    + "   •   Low stock items: " + operationsSummary.optInt("lowStock"));
+            overview.setTextColor(Color.parseColor("#E6EEF2"));
+            overview.setTextSize(12);
+            overview.setTypeface(null, Typeface.BOLD);
+            overview.setPadding(dpToPx(14), dpToPx(14), dpToPx(14), dpToPx(14));
+            overview.setBackgroundResource(R.drawable.bg_detail_panel);
+            LinearLayout.LayoutParams overviewParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+            overviewParams.setMargins(0, 0, 0, dpToPx(10));
+            overview.setLayoutParams(overviewParams);
+            stockMovementsListContainer.addView(overview);
+        }
+
         if (stockMovementsArray == null || stockMovementsArray.length() == 0) {
             showEmpty(stockMovementsListContainer, R.string.empty);
             return;

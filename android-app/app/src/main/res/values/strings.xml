@@ -67,9 +67,11 @@
     <string name="drawer_clients">Clients</string>
     <string name="drawer_bookings">Bookings</string>
     <string name="drawer_orders">Orders</string>
+    <string name="drawer_sales">Sales</string>
     <string name="drawer_projects">Projects</string>
     <string name="drawer_technicians">Technicians</string>
     <string name="drawer_inventory">Inventory</string>
+    <string name="drawer_warehouse">Warehouse</string>
     <string name="drawer_reports">Reports</string>
     <string name="drawer_settings">Settings</string>
     <string name="drawer_logout">Logout</string>
@@ -198,6 +200,11 @@
     <string name="inventory_subtitle">Stock levels &amp; warehouse items</string>
     <string name="reports_title">Reports</string>
     <string name="reports_subtitle">Technician progress reports</string>
+    <string name="sales_title">Sales</string>
+    <string name="sales_subtitle">Client orders and sales transactions</string>
+    <string name="warehouse_title">Warehouse</string>
+    <string name="warehouse_subtitle">Inventory materials and stock availability</string>
+    <string name="operations_subtitle">Cross-department activity and stock movements</string>
     <string name="settings_title">Settings</string>
     <string name="settings_subtitle">System preferences for your organization</string>
     <string name="add_item_label">+ Add Item</string>
@@ -209,6 +216,7 @@
     <string name="drawer_my_projects">My Jobs</string>
     <string name="drawer_notifications">Notifications</string>
     <string name="drawer_stock_movements">Stock Movements</string>
+    <string name="drawer_operations">Operations</string>
     <string name="drawer_workers">Workers</string>
     <string name="workers_subtitle">Create worker accounts and manage their access status</string>
     <string name="stock_movements_subtitle">Review the audited history of warehouse stock changes</string>
