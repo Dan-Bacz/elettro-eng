@@ -209,46 +209,111 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ error: 'Forbidden' })
       }
 
-      const [inventoryCount, lowStockCount, orderCount, requestCount, deliveryCount, movementCount] = await Promise.all([
-        prisma.inventoryItem.count(),
-        prisma.inventoryItem.count({ where: { quantity: { lte: 10 } } }),
-        prisma.order.count(),
-        prisma.warehouseRequest.count(),
-        prisma.order.count({ where: { deliveryStatus: 'DELIVERED' } }),
-        prisma.inventoryMovement.count(),
+      const [users, bookings, projects, technicianReports, activities, inventory, orders, sales, requests, releases, movements] = await Promise.all([
+        prisma.user.findMany({
+          where: { role: { in: ['ADMIN', 'TECH', 'SALES', 'WAREHOUSE', 'RIDER'] }, ...(hasDateFilter ? { createdAt: dateFilter } : {}) },
+          orderBy: { createdAt: 'desc' },
+          select: { id: true, name: true, email: true, role: true, status: true, approved: true, createdAt: true },
+        }),
+        prisma.booking.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: {
+            client: { select: { name: true, email: true } },
+            assignedTo: { select: { name: true } },
+            project: { select: { id: true, status: true, createdAt: true, updatedAt: true } },
+          },
+        }),
+        prisma.project.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { updatedAt: 'desc' },
+          include: { booking: { select: { title: true, status: true } }, assignments: { include: { tech: { select: { name: true } } } } },
+        }),
+        prisma.report.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { author: { select: { name: true, role: true } }, booking: { select: { title: true, status: true } } },
+        }),
+        prisma.technicianActivity.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { tech: { select: { name: true } }, booking: { select: { title: true } } },
+        }),
+        prisma.inventoryItem.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true, sku: true, category: true, quantity: true, reorderLevel: true, unit: true, buyPrice: true, sellPrice: true, updatedAt: true },
+        }),
+        prisma.order.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { client: { select: { name: true, email: true } }, assignedRider: { select: { name: true } }, items: true },
+        }),
+        prisma.salesSale.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { createdBy: { select: { name: true } }, items: true },
+        }),
+        prisma.warehouseRequest.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { requester: { select: { name: true, role: true } }, items: { include: { inventoryItem: { select: { name: true, sku: true, unit: true } } } }, releases: { select: { id: true, receiptNumber: true, createdAt: true } } },
+        }),
+        prisma.warehouseRelease.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { releasedBy: { select: { name: true } }, salesRecipient: { select: { name: true } }, request: { select: { reference: true, source: true } }, items: { include: { requestItem: { include: { inventoryItem: { select: { name: true, sku: true, unit: true } } } } } } },
+        }),
+        prisma.inventoryMovement.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { inventoryItem: { select: { name: true, sku: true, unit: true } }, worker: { select: { name: true, role: true } } },
+        }),
       ])
 
-      const recentMovements = await prisma.inventoryMovement.findMany({
-        orderBy: { createdAt: 'desc' },
-        take: 30,
-        include: {
-          inventoryItem: { select: { name: true, sku: true } },
-          worker: { select: { name: true, role: true } },
-        },
-      })
-
-      const recentDeliveries = await prisma.order.findMany({
-        where: { deliveryStatus: { in: ['IN_TRANSIT', 'DELIVERED', 'DELIVERY_FAILED'] } },
-        orderBy: { updatedAt: 'desc' },
-        take: 30,
-        include: {
-          assignedRider: { select: { name: true } },
-          proofOfDelivery: true,
-        },
-      })
+      const activeUsers = users.filter((item) => item.status === 'ACTIVE' && item.approved)
+      const lowStockItems = inventory.filter((item) => item.quantity <= item.reorderLevel)
+      const completedProjects = projects.filter((item) => item.status === 'COMPLETED')
+      const deliveredOrders = orders.filter((item) => item.deliveryStatus === 'DELIVERED')
+      const completedBookings = bookings.filter((item) => item.status === 'COMPLETED')
+      const totalSalesRevenue = sales.reduce((total, sale) => total + Number(sale.total || 0), 0)
+      const inventoryValue = inventory.reduce((total, item) => total + item.quantity * Number(item.buyPrice || 0), 0)
 
       return res.status(200).json({
         department: 'ADMIN',
+        dateRange: { start: startDateStr || null, end: endDateStr || null },
         summary: {
-          inventoryCount,
-          lowStockCount,
-          orderCount,
-          requestCount,
-          deliveryCount,
-          movementCount,
+          totalWorkers: users.length,
+          activeWorkers: activeUsers.length,
+          totalBookings: bookings.length,
+          completedBookings: completedBookings.length,
+          totalProjects: projects.length,
+          completedProjects: completedProjects.length,
+          totalOrders: orders.length,
+          deliveredOrders: deliveredOrders.length,
+          totalSales: sales.length,
+          totalSalesRevenue,
+          inventoryCount: inventory.length,
+          lowStockCount: lowStockItems.length,
+          inventoryValue,
+          requestCount: requests.length,
+          releaseCount: releases.length,
+          movementCount: movements.length,
+          technicianReportCount: technicianReports.length,
+          activityCount: activities.length,
         },
-        recentMovements,
-        recentDeliveries,
+        users,
+        bookings,
+        projects,
+        technicianReports,
+        activities,
+        inventory,
+        lowStockItems,
+        orders,
+        sales,
+        requests,
+        releases,
+        movements,
       })
     }
 
