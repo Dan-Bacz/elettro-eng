@@ -208,16 +208,16 @@ export default function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Link href="/admin/staff" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-yellow-400">
-          <div className="text-xs font-bold uppercase text-slate-400">Active Sales Staff</div>
-          <div className="mt-1 text-2xl font-black text-slate-900">{data.stats.sales}</div>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Link href="/admin/staff" className="dashboard-depth group relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-white to-amber-50 p-5 shadow-[0_18px_35px_-24px_rgba(245,158,11,.5)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">Sales team</div>
+          <div className="mt-2 text-3xl font-black text-slate-950">{data.stats.sales}</div>
         </Link>
-        <Link href="/admin/staff" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-yellow-400">
-          <div className="text-xs font-bold uppercase text-slate-400">Active Warehouse Staff</div>
-          <div className="mt-1 text-2xl font-black text-slate-900">{data.stats.warehouse}</div>
+        <Link href="/admin/staff" className="dashboard-depth group relative overflow-hidden rounded-2xl border border-cyan-200 bg-gradient-to-br from-white to-cyan-50 p-5 shadow-[0_18px_35px_-24px_rgba(6,182,212,.45)]">
+          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Warehouse team</div>
+          <div className="mt-2 text-3xl font-black text-slate-950">{data.stats.warehouse}</div>
         </Link>
-        <Link href="/admin/staff" className="flex items-center justify-between rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm font-black text-slate-900 hover:bg-yellow-100">
+        <Link href="/admin/staff" className="dashboard-depth group relative flex items-center justify-between overflow-hidden rounded-2xl border border-slate-800 bg-gradient-to-br from-slate-950 via-slate-900 to-[#173b44] p-5 text-sm font-black text-white shadow-[0_18px_35px_-22px_rgba(15,23,42,.8)] hover:from-slate-900">
           Manage department accounts <span aria-hidden="true">→</span>
         </Link>
       </div>
