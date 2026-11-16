@@ -108,7 +108,7 @@ export default function AdminBookingsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="hidden flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-yellow-300 bg-yellow-100 text-slate-900">
             <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -124,9 +124,19 @@ export default function AdminBookingsPage() {
         <div className="text-sm font-semibold text-slate-500"><span className="text-lg font-black text-slate-900">{totalBookings}</span> bookings</div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#172c3c] to-[#08727f] p-6 text-white shadow-[0_28px_60px_-30px_rgba(15,23,42,0.85)] sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-yellow-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-cyan-300/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl"><span className="inline-flex rounded-full border border-yellow-300/25 bg-yellow-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-yellow-200">Client request inbox</span><h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Booking command center</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">Review new service requests, understand the client need, and move approved work into Projects.</p></div>
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Approved bookings leave this inbox and become projects for technician assignment and progress tracking.</div>
+        </div>
+        <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:grid-cols-4">{[['Open requests', totalBookings], ['Under review', statusCounts.PENDING ?? 0], ['Assigned', statusCounts.ASSIGNED ?? 0], ['In progress', statusCounts.IN_PROGRESS ?? 0]].map(([label, value]) => <div key={String(label)}><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>)}</div>
+      </section>
+
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <section aria-label="Client booking requests" className="min-w-0 space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
             <label className="relative block min-w-0 flex-1">
               <span className="sr-only">Search bookings by client or service</span>
               <svg aria-hidden="true" viewBox="0 0 24 24" className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2">
@@ -150,7 +160,7 @@ export default function AdminBookingsPage() {
             </div>
           </div>
 
-          <div className="flex items-end justify-between border-b border-slate-200 pb-2">
+          <div className="flex items-end justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
             <div>
               <h2 className="text-sm font-black text-slate-900">Incoming Requests</h2>
               <p className="mt-0.5 text-xs text-slate-500">Client-submitted bookings awaiting review</p>
@@ -175,8 +185,8 @@ export default function AdminBookingsPage() {
               {visible.map((booking) => {
                 const details = readRequestDetails(booking.description)
                 return (
-                  <article key={booking.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md">
-                    <div className="border-l-4 border-yellow-400 px-4 py-4 sm:px-5">
+                  <article key={booking.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_32px_-24px_rgba(15,23,42,0.65)] transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-[0_22px_40px_-20px_rgba(15,23,42,0.35)]">
+                    <div className="border-l-4 border-yellow-400 px-4 py-5 sm:px-6">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Service</p>
@@ -217,7 +227,7 @@ export default function AdminBookingsPage() {
           )}
         </section>
 
-        <aside aria-label="Booking status summary" className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm xl:sticky xl:top-4">
+        <aside aria-label="Booking status summary" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-24px_rgba(15,23,42,0.7)] xl:sticky xl:top-4">
           <h2 className="text-sm font-black text-slate-900">Booking Status</h2>
           <p className="mt-1 text-xs text-slate-500">Current request counts</p>
           <dl className="mt-4 divide-y divide-slate-100">
