@@ -167,6 +167,7 @@ export default function AdminSalesPage() {
         ].map(([label, value, note, accent, href]) => <Link href={String(href)} key={String(label)} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_40px_-20px_rgba(15,23,42,0.45)]"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" /><div className="relative"><div className="flex items-start justify-between gap-2"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p><span className="text-[10px] font-black text-slate-400 transition group-hover:text-slate-900">View →</span></div><p className="mt-3 text-3xl font-black text-slate-900">{value}</p><p className="mt-1 text-[11px] font-medium text-slate-500">{note}</p></div></Link>)}
       </div>
 
+      <div className="hidden">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <SearchBar value={query} onChange={setQuery} placeholder="Search by client, email, phone, item…" />
         <FilterBar options={FILTERS} value={filter} onChange={(v) => setFilter(v)} />
@@ -292,7 +293,8 @@ export default function AdminSalesPage() {
           <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-emerald-700">Read-only archive</span>
         </div>
         {counterSales.length === 0 ? <div className="px-6 py-12 text-center text-xs text-slate-400">Completed counter sales will appear here.</div> : <div className="divide-y divide-slate-100">{counterSales.slice(0, 20).map((sale) => <article key={sale.id} className="flex flex-col gap-3 px-5 py-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-black text-slate-900">{sale.reference}</span><span className="rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-700">Paid</span><span className="text-[10px] text-slate-400">{formatDate(sale.createdAt)}</span></div><p className="mt-1 truncate text-xs text-slate-600">{sale.items.map((item) => `${item.quantity} × ${item.name}`).join(' · ')}</p><p className="mt-1 text-[10px] font-semibold text-slate-500">{sale.customerName || 'Walk-in customer'} · Cash ₱{Number(sale.paymentAmount).toLocaleString()} · Change ₱{Number(sale.changeAmount).toLocaleString()}</p></div><div className="text-left sm:text-right"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Receipt total</div><div className="text-lg font-black text-slate-900">₱{Number(sale.total).toLocaleString()}</div><div className="text-[10px] text-slate-400">By {sale.createdBy?.name || 'Sales staff'}</div></div></article>)}</div>}
-      </section>
+       </section>
+      </div>
     </div>
   )
 }
