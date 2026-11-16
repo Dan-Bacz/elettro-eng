@@ -198,16 +198,23 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="@drawable/bg_dashboard_hero"
                             android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:orientation="horizontal"
+                            android:paddingStart="18dp"
+                            android:paddingTop="18dp"
+                            android:paddingEnd="18dp"
+                            android:paddingBottom="18dp"
+                            android:elevation="8dp">
 
                             <TextView
                                 android:id="@+id/admin_greeting"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:text="@string/welcome_admin_1"
-                                android:textColor="@color/text_primary"
-                                android:textSize="18sp"
+                                android:textColor="@color/white"
+                                android:textSize="20sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -237,6 +244,137 @@
                             android:textColor="@color/yellow_text"
                             android:textSize="14sp"
                             android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="4dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_dashboard_glass"
+                                android:orientation="vertical"
+                                android:padding="10dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="BOOKINGS"
+                                    android:textColor="#B7D7DC"
+                                    android:textSize="9sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/hero_bookings_metric"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="3dp"
+                                    android:text="0"
+                                    android:textColor="@color/white"
+                                    android:textSize="22sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="4dp"
+                                android:layout_weight="1"
+                                android:background="@drawable/bg_dashboard_glass"
+                                android:orientation="vertical"
+                                android:padding="10dp">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="STOCK ALERTS"
+                                    android:textColor="#B7D7DC"
+                                    android:textSize="9sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/hero_stock_metric"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="3dp"
+                                    android:text="0"
+                                    android:textColor="@color/brand_500"
+                                    android:textSize="22sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:background="@drawable/bg_dashboard_card"
+                            android:elevation="5dp"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:text="BOOKING MOMENTUM"
+                                        android:textColor="@color/text_muted"
+                                        android:textSize="9sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="3dp"
+                                        android:text="Requests received over the latest activity window"
+                                        android:textColor="@color/text_primary"
+                                        android:textSize="13sp"
+                                        android:textStyle="bold" />
+                                </LinearLayout>
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:background="@drawable/bg_tile_yellow"
+                                    android:paddingStart="8dp"
+                                    android:paddingTop="5dp"
+                                    android:paddingEnd="8dp"
+                                    android:paddingBottom="5dp"
+                                    android:text="LIVE"
+                                    android:textColor="@color/el_ink"
+                                    android:textSize="9sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <com.elettro.app.AdminTrendChartView
+                                android:id="@+id/admin_booking_chart"
+                                android:layout_width="match_parent"
+                                android:layout_height="150dp"
+                                android:layout_marginTop="8dp" />
+                        </LinearLayout>
+
+                        <!-- Mirrors the web dashboard's activity, staff, stock and notification analytics. -->
+                        <LinearLayout
+                            android:id="@+id/admin_web_analytics_container"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:orientation="vertical" />
 
                         <!-- Stats -->
                         <GridLayout

@@ -69,6 +69,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
     // Stat views
     private TextView statTotalBookings, statActiveProjects, statLowStock;
     private TextView tileApproved, tileAssigned, tileStockUnits, tileSuspended;
+    private TextView heroBookingsMetric, heroStockMetric;
+    private AdminTrendChartView adminBookingChart;
+    private LinearLayout adminWebAnalyticsContainer;
 
     // Section containers
     private View viewDashboard, viewBookings, viewProjects, viewNotifications;
@@ -184,6 +187,10 @@ public class AdminDashboardActivity extends AppCompatActivity {
         statTotalBookings = findViewById(R.id.stat_total_bookings);
         statActiveProjects = findViewById(R.id.stat_active_projects);
         statLowStock = findViewById(R.id.stat_low_stock);
+        heroBookingsMetric = findViewById(R.id.hero_bookings_metric);
+        heroStockMetric = findViewById(R.id.hero_stock_metric);
+        adminBookingChart = findViewById(R.id.admin_booking_chart);
+        adminWebAnalyticsContainer = findViewById(R.id.admin_web_analytics_container);
 
         tileApproved = findViewById(R.id.tile_approved);
         tileAssigned = findViewById(R.id.tile_assigned);
@@ -695,7 +702,20 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
             tileAssigned.setText(String.valueOf(stats.optInt("assigned")));
             tileStockUnits.setText(String.valueOf(stats.optInt("totalInventory")));
             tileSuspended.setText(String.valueOf(stats.optInt("suspendedTechnicians")));
+            heroBookingsMetric.setText(String.valueOf(stats.optInt("totalBookings")));
+            heroStockMetric.setText(String.valueOf(stats.optInt("lowStock")));
         }
+
+        JSONArray trend = dashboardData.optJSONArray("bookingTrend");
+        ArrayList<Integer> trendValues = new ArrayList<>();
+        if (trend != null) {
+            for (int i = 0; i < trend.length(); i++) {
+                JSONObject point = trend.optJSONObject(i);
+                if (point != null) trendValues.add(point.optInt("count", 0));
+            }
+        }
+        adminBookingChart.setValues(trendValues);
+        renderWebDashboardAnalytics(stats);
 
         renderRecentBookings();
         renderBookingsList();
@@ -712,6 +732,193 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
         } else {
             regBadge.setVisibility(View.GONE);
         }
+    }
+
+    /** Keeps the Android dashboard content aligned with the web dashboard's analytics blocks. */
+    private void renderWebDashboardAnalytics(JSONObject stats) {
+        if (adminWebAnalyticsContainer == null) return;
+        adminWebAnalyticsContainer.removeAllViews();
+
+        addWebSectionTitle("Current Activity Flow", "Live booking lifecycle across the operation");
+        LinearLayout flowCard = createWebCard();
+        JSONArray flow = dashboardData.optJSONArray("flow");
+        if (flow != null && flow.length() > 0) {
+            for (int i = 0; i < flow.length(); i++) {
+                JSONObject step = flow.optJSONObject(i);
+                if (step == null) continue;
+                addWebMetricRow(flowCard,
+                        step.optString("label", step.optString("status", "Activity")),
+                        String.valueOf(step.optInt("count", 0)),
+                        step.optString("latestAt", "").isEmpty() ? "No recent activity" : formatShortDate(step.optString("latestAt")));
+            }
+        } else {
+            addWebEmpty(flowCard, "No activity flow data yet");
+        }
+        adminWebAnalyticsContainer.addView(flowCard);
+
+        addWebSectionTitle("Performance Snapshot", "The same live KPI groups shown on the web dashboard");
+        LinearLayout snapshot = createWebCard();
+        addWebMetricRow(snapshot, "Pending bookings", String.valueOf(stats == null ? 0 : stats.optInt("pending")), "Awaiting approval");
+        addWebMetricRow(snapshot, "In progress", String.valueOf(stats == null ? 0 : stats.optInt("inProgress")), "Active projects");
+        addWebMetricRow(snapshot, "Completed", String.valueOf(stats == null ? 0 : stats.optInt("completed")), "Delivered and closed");
+        addWebMetricRow(snapshot, "Sales team", String.valueOf(stats == null ? 0 : stats.optInt("sales")), "Active sales staff");
+        addWebMetricRow(snapshot, "Warehouse team", String.valueOf(stats == null ? 0 : stats.optInt("warehouse")), "Active warehouse staff");
+        adminWebAnalyticsContainer.addView(snapshot);
+
+        addWebSectionTitle("Bookings by Service Type", "Distribution of requests");
+        LinearLayout serviceCard = createWebCard();
+        JSONArray services = dashboardData.optJSONArray("serviceBreakdown");
+        if (services != null && services.length() > 0) {
+            for (int i = 0; i < services.length(); i++) {
+                JSONObject service = services.optJSONObject(i);
+                if (service != null) addWebMetricRow(serviceCard, service.optString("service", "Other"), String.valueOf(service.optInt("count", 0)), "bookings");
+            }
+        } else {
+            addWebEmpty(serviceCard, "No service breakdown yet");
+        }
+        adminWebAnalyticsContainer.addView(serviceCard);
+
+        addWebSectionTitle("Stock Overview", "Inventory health by status");
+        LinearLayout stockCard = createWebCard();
+        JSONArray stock = dashboardData.optJSONArray("stockBreakdown");
+        if (stock != null) {
+            for (int i = 0; i < stock.length(); i++) {
+                JSONObject item = stock.optJSONObject(i);
+                if (item != null) addWebMetricRow(stockCard, item.optString("status", "Stock"), String.valueOf(item.optInt("value", 0)), "inventory items");
+            }
+        }
+        JSONObject stockSummary = dashboardData.optJSONObject("stockSummary");
+        if (stockSummary != null) {
+            addWebMetricRow(stockCard, "Total units in stock", String.valueOf(stockSummary.optInt("totalUnits", 0)), "warehouse units");
+        }
+        adminWebAnalyticsContainer.addView(stockCard);
+
+        addWebSectionTitle("Recent Projects", "Latest projects and completion progress");
+        LinearLayout projectCard = createWebCard();
+        JSONArray recentProjects = dashboardData.optJSONArray("recentProjects");
+        if (recentProjects != null && recentProjects.length() > 0) {
+            for (int i = 0; i < Math.min(recentProjects.length(), 6); i++) {
+                JSONObject project = recentProjects.optJSONObject(i);
+                if (project != null) {
+                    String title = project.optString("title", "Untitled project");
+                    String client = project.optString("clientName", "Unknown client");
+                    int progress = project.optInt("progress", 0);
+                    addWebMetricRow(projectCard, title, progress + "%", client + " • " + project.optString("status", "PENDING"));
+                }
+            }
+        } else {
+            addWebEmpty(projectCard, "No projects yet");
+        }
+        adminWebAnalyticsContainer.addView(projectCard);
+
+        addWebSectionTitle("Technician Performance", "Team availability overview");
+        LinearLayout techCard = createWebCard();
+        JSONObject techStatus = dashboardData.optJSONObject("technicianStatus");
+        if (techStatus != null) {
+            addWebMetricRow(techCard, "Active", String.valueOf(techStatus.optInt("active")), "Available technicians");
+            addWebMetricRow(techCard, "On leave", String.valueOf(techStatus.optInt("onLeave")), "Currently away");
+            addWebMetricRow(techCard, "Suspended", String.valueOf(techStatus.optInt("suspended")), "Needs review");
+            addWebMetricRow(techCard, "Inactive", String.valueOf(techStatus.optInt("inactive")), "Pending or rejected");
+        } else {
+            addWebEmpty(techCard, "No technician status data yet");
+        }
+        adminWebAnalyticsContainer.addView(techCard);
+
+        addWebSectionTitle("Top Stock Items", "Items needing attention");
+        LinearLayout lowStockCard = createWebCard();
+        JSONArray topLow = stockSummary == null ? null : stockSummary.optJSONArray("topLow");
+        if (topLow != null && topLow.length() > 0) {
+            for (int i = 0; i < topLow.length(); i++) {
+                JSONObject item = topLow.optJSONObject(i);
+                if (item != null) addWebMetricRow(lowStockCard, item.optString("name", "Inventory item"), String.valueOf(item.optInt("quantity", 0)), item.optString("status", "Needs review"));
+            }
+        } else {
+            addWebEmpty(lowStockCard, "All stock levels are healthy");
+        }
+        adminWebAnalyticsContainer.addView(lowStockCard);
+
+        addWebSectionTitle("Alerts & Notifications", "Recent activity across the platform");
+        LinearLayout alertCard = createWebCard();
+        JSONArray alerts = dashboardData.optJSONArray("notifications");
+        if (alerts != null && alerts.length() > 0) {
+            for (int i = 0; i < Math.min(alerts.length(), 4); i++) {
+                JSONObject alert = alerts.optJSONObject(i);
+                if (alert != null) addWebMetricRow(alertCard, alert.optString("title", "Notification"), alert.optString("type", "ALERT"), alert.optString("message", "Recent system activity"));
+            }
+        } else {
+            addWebEmpty(alertCard, "No notifications yet");
+        }
+        adminWebAnalyticsContainer.addView(alertCard);
+    }
+
+    private void addWebSectionTitle(String title, String subtitle) {
+        TextView heading = new TextView(this);
+        heading.setText(title);
+        heading.setTextColor(Color.parseColor("#0F172A"));
+        heading.setTextSize(14);
+        heading.setTypeface(null, Typeface.BOLD);
+        heading.setPadding(2, dpToPx(14), 2, 0);
+        adminWebAnalyticsContainer.addView(heading);
+
+        TextView caption = new TextView(this);
+        caption.setText(subtitle);
+        caption.setTextColor(Color.parseColor("#829196"));
+        caption.setTextSize(11);
+        caption.setPadding(2, dpToPx(3), 2, dpToPx(8));
+        adminWebAnalyticsContainer.addView(caption);
+    }
+
+    private LinearLayout createWebCard() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dpToPx(14), dpToPx(4), dpToPx(14), dpToPx(8));
+        card.setBackgroundResource(R.drawable.bg_dashboard_card);
+        card.setElevation(dpToPx(4));
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.setMargins(0, 0, 0, dpToPx(4));
+        card.setLayoutParams(params);
+        return card;
+    }
+
+    private void addWebMetricRow(LinearLayout parent, String label, String value, String caption) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, dpToPx(8), 0, dpToPx(8));
+
+        LinearLayout copy = new LinearLayout(this);
+        copy.setOrientation(LinearLayout.VERTICAL);
+        copy.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
+        TextView title = new TextView(this);
+        title.setText(label);
+        title.setTextColor(Color.parseColor("#334155"));
+        title.setTextSize(12);
+        title.setTypeface(null, Typeface.BOLD);
+        copy.addView(title);
+        TextView hint = new TextView(this);
+        hint.setText(caption);
+        hint.setTextColor(Color.parseColor("#9AA6AA"));
+        hint.setTextSize(10);
+        hint.setSingleLine(false);
+        copy.addView(hint);
+        row.addView(copy);
+
+        TextView number = new TextView(this);
+        number.setText(value);
+        number.setTextColor(Color.parseColor("#0F172A"));
+        number.setTextSize(15);
+        number.setTypeface(null, Typeface.BOLD);
+        number.setGravity(Gravity.END);
+        row.addView(number, new LinearLayout.LayoutParams(-2, -2));
+        parent.addView(row);
+    }
+
+    private void addWebEmpty(LinearLayout parent, String message) {
+        TextView empty = new TextView(this);
+        empty.setText(message);
+        empty.setTextColor(Color.parseColor("#9AA6AA"));
+        empty.setTextSize(12);
+        empty.setPadding(0, dpToPx(12), 0, dpToPx(12));
+        parent.addView(empty);
     }
 
     // === NOTIFICATIONS ===
