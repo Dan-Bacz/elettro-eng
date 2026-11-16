@@ -39,7 +39,7 @@ type ProjectRow = {
     startDate?: string | null
     endDate?: string | null
     budget?: number | null
-    reports?: { progress?: number | null }[]
+    reports?: { progress?: number | null; createdAt?: string }[]
     client?: { id: string; name: string; email: string } | null
   } | null
   assignments?: { id: string; techId: string; tech?: { id: string; name: string } | null }[]
@@ -80,8 +80,10 @@ const PAGE_SIZE = 8
 // Real progress: the latest progress reported by the technician (Report.progress).
 // Falls back to the same status-derived value the rest of the admin UI uses.
 function projectProgress(p: ProjectRow): number {
-  const reported = Number(p.booking?.reports?.[0]?.progress || 0)
-  if (reported > 0) return Math.min(100, reported)
+  const latestReport = p.booking?.reports?.[0]
+  if (latestReport?.progress != null) {
+    return Math.min(100, Math.max(0, Number(latestReport.progress) || 0))
+  }
   return statusProgress(p.status)
 }
 
@@ -203,12 +205,23 @@ export default function AdminProjectsPage() {
     }
   }
 
-  const summaryCards = [
-    { label: 'Total Projects', value: counts.total, icon: <HammerIcon className="h-4 w-4" />, accent: 'text-slate-900 bg-slate-100' },
-    { label: 'Approved', value: counts.APPROVED, icon: <FlagIcon className="h-4 w-4" />, accent: 'text-blue-600 bg-blue-500/10' },
-    { label: 'In Progress', value: counts.IN_PROGRESS, icon: <ClockIcon className="h-4 w-4" />, accent: 'text-yellow-600 bg-yellow-500/10' },
-    { label: 'Completed', value: counts.COMPLETED, icon: <CheckCircleIcon className="h-4 w-4" />, accent: 'text-emerald-600 bg-emerald-500/10' },
-  ]
+  const analytics = useMemo(() => {
+    const total = projects.length
+    const progressValues = projects.map(projectProgress)
+    const average = total
+      ? Math.round(progressValues.reduce((sum, value) => sum + value, 0) / total)
+      : 0
+    const reported = projects.filter((project) => project.booking?.reports?.[0]?.progress != null).length
+    const active = counts.ASSIGNED + counts.IN_PROGRESS
+    const completionRate = total ? Math.round((counts.COMPLETED / total) * 100) : 0
+    const bands = [
+      { label: '0–25%', count: progressValues.filter((value) => value <= 25).length, color: 'from-slate-400 to-slate-500' },
+      { label: '26–50%', count: progressValues.filter((value) => value > 25 && value <= 50).length, color: 'from-cyan-400 to-cyan-600' },
+      { label: '51–75%', count: progressValues.filter((value) => value > 50 && value <= 75).length, color: 'from-amber-400 to-orange-500' },
+      { label: '76–100%', count: progressValues.filter((value) => value > 75).length, color: 'from-emerald-400 to-teal-600' },
+    ]
+    return { average, reported, active, completionRate, bands }
+  }, [projects, counts])
 
   return (
     <div className="space-y-6">
@@ -225,18 +238,84 @@ export default function AdminProjectsPage() {
         </div>
       )}
 
-      {/* Management counters — real database counts, no trend data. */}
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#122a34] to-[#08717d] p-6 text-white shadow-[0_28px_60px_-30px_rgba(15,23,42,0.8)] sm:p-8">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-yellow-300/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <span className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">
+              Technician-reported progress
+            </span>
+            <h2 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Project command center</h2>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">
+              Track delivery health at a glance. Progress is sourced from the latest report submitted by the assigned technician, keeping project analytics grounded in field updates.
+            </p>
+          </div>
+          <Link href="/admin/reports" className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-black text-white transition hover:bg-white/20">
+            View technician reports <span aria-hidden>→</span>
+          </Link>
+        </div>
+        <div className="relative mt-8 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/15 pt-4 text-xs text-slate-300">
+          <span><strong className="text-white">{analytics.reported}</strong> of {projects.length} projects reporting</span>
+          <span><strong className="text-white">{analytics.average}%</strong> average progress</span>
+          <span><strong className="text-white">{counts.COMPLETED}</strong> completed</span>
+        </div>
+      </section>
+
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {summaryCards.map((card) => (
-          <div key={card.label} className="rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">{card.label}</span>
-              <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${card.accent}`}>{card.icon}</span>
+        {[
+          { label: 'Average Progress', value: `${analytics.average}%`, note: 'Latest field updates', icon: <ClockIcon className="h-5 w-5" />, accent: 'from-cyan-400 to-blue-600' },
+          { label: 'Technician Reports', value: analytics.reported, note: `of ${projects.length} projects`, icon: <FlagIcon className="h-5 w-5" />, accent: 'from-violet-400 to-indigo-600' },
+          { label: 'Active Projects', value: analytics.active, note: 'Assigned + in progress', icon: <HammerIcon className="h-5 w-5" />, accent: 'from-amber-300 to-orange-600' },
+          { label: 'Completion Rate', value: `${analytics.completionRate}%`, note: 'Projects completed', icon: <CheckCircleIcon className="h-5 w-5" />, accent: 'from-emerald-400 to-teal-600' },
+        ].map((card) => (
+          <div key={card.label} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_40px_-20px_rgba(15,23,42,0.45)]">
+            <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${card.accent}`} />
+            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" />
+            <div className="relative flex items-start justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{card.label}</p>
+                <p className="mt-3 text-3xl font-black tracking-tight text-slate-900">{card.value}</p>
+                <p className="mt-1 text-[11px] font-medium text-slate-500">{card.note}</p>
+              </div>
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white shadow-lg">{card.icon}</span>
             </div>
-            <div className="mt-2 text-2xl font-black text-slate-900">{card.value}</div>
           </div>
         ))}
       </div>
+
+      <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_260px]">
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Delivery pulse</p>
+              <h3 className="mt-1 text-lg font-black text-slate-900">Progress distribution</h3>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-500">{projects.length} total</span>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {analytics.bands.map((band) => {
+              const width = analytics.reported || projects.length ? Math.round((band.count / Math.max(projects.length, 1)) * 100) : 0
+              return (
+                <div key={band.label} className="rounded-xl bg-slate-50 p-3">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-600">
+                    <span>{band.label}</span><span>{band.count}</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div className={`h-full rounded-full bg-gradient-to-r ${band.color}`} style={{ width: `${width}%` }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 text-white shadow-inner">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Signal quality</p>
+          <div className="mt-5 flex items-end gap-2"><span className="text-4xl font-black">{projects.length ? Math.round((analytics.reported / projects.length) * 100) : 0}%</span><span className="pb-1 text-xs text-slate-300">coverage</span></div>
+          <p className="mt-2 text-xs leading-5 text-slate-300">Projects with a technician-submitted progress percentage.</p>
+          <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300" style={{ width: `${projects.length ? Math.round((analytics.reported / projects.length) * 100) : 0}%` }} /></div>
+        </div>
+      </section>
 
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
         <div className="min-w-0 flex-1">
@@ -319,7 +398,7 @@ export default function AdminProjectsPage() {
                     <col className="w-[8%] md:w-[14%] lg:w-[6%]" />
                   </colgroup>
                   <thead>
-                    <tr className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-400">
+                    <tr className="bg-gradient-to-r from-slate-950 via-slate-900 to-[#173b44] text-[10px] uppercase tracking-wider text-white/60">
                       <th className="px-2 py-3 font-bold sm:px-3">Project</th>
                       <th className="px-2 py-3 font-bold sm:px-3">Client</th>
                       <th className="hidden px-3 py-3 font-bold md:table-cell">Type</th>
@@ -342,6 +421,9 @@ export default function AdminProjectsPage() {
                             <Link href={detailHref} className="block break-words text-xs font-bold text-slate-800 hover:text-yellow-600">
                               {p.title}
                             </Link>
+                            <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${p.booking?.reports?.[0]?.progress != null ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                              {p.booking?.reports?.[0]?.progress != null ? 'Technician reported' : 'Status estimate'}
+                            </span>
                             {(p.description || p.booking?.title) && (
                               <div className="mt-0.5 line-clamp-1 text-[10px] text-slate-400">
                                 {(p.description || p.booking?.title || '').slice(0, 80)}
@@ -367,6 +449,9 @@ export default function AdminProjectsPage() {
                                 />
                               </div>
                               <span className="w-8 shrink-0 text-right text-[11px] font-bold text-slate-600">{progress}%</span>
+                            </div>
+                            <div className="mt-1 text-[9px] font-bold uppercase tracking-wide text-slate-400">
+                              {p.booking?.reports?.[0]?.progress != null ? 'Latest technician report' : 'Based on project status'}
                             </div>
                           </td>
                           <td className="hidden whitespace-nowrap px-3 py-3.5 text-xs text-slate-500 lg:table-cell">{formatDate(p.startDate || p.booking?.startDate)}</td>

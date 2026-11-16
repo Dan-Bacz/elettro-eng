@@ -76,7 +76,7 @@ export default async function handler(req, res) {
               startDate: true,
               endDate: true,
               budget: true,
-              reports: { orderBy: { createdAt: 'desc' }, select: { progress: true } },
+              reports: { orderBy: { createdAt: 'desc' }, select: { progress: true, createdAt: true } },
               client: { select: { id: true, name: true, email: true, phone: true } }
             }
           },
