@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -23,6 +24,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
@@ -72,7 +74,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private SwipeRefreshLayout swipeRefresh;
 
     // Sections
-    private View viewHome, viewJobs, viewReports, viewNotifications, viewMaterials, viewInventorySection, viewProfile;
+    private View viewHome, viewJobs, viewNotifications, viewMaterials, viewInventorySection, viewProfile;
     private View viewLeave;
 
     // Home
@@ -84,10 +86,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private Button tabActive, tabCompleted;
     private LinearLayout jobsListContainer;
     private String currentJobsTab = "ACTIVE";
-
-    // Reports
-    private TextView btnNewReport;
-    private LinearLayout reportsListContainer;
 
     // Notifications
     private TextView btnMarkAllRead;
@@ -168,7 +166,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
         viewHome = findViewById(R.id.view_home_section);
         viewJobs = findViewById(R.id.view_jobs_section);
-        viewReports = findViewById(R.id.view_reports_section);
         viewNotifications = findViewById(R.id.view_notifications_section);
         viewMaterials = findViewById(R.id.view_materials_section);
         viewInventorySection = findViewById(R.id.view_inventory_section);
@@ -190,9 +187,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         tabActive = findViewById(R.id.tab_active);
         tabCompleted = findViewById(R.id.tab_completed);
         jobsListContainer = findViewById(R.id.jobs_list_container);
-
-        btnNewReport = findViewById(R.id.btn_new_report);
-        reportsListContainer = findViewById(R.id.reports_list_container);
 
         btnMarkAllRead = findViewById(R.id.btn_mark_all_read);
         notificationsListContainer = findViewById(R.id.notifications_list_container);
@@ -248,7 +242,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_home) { showSection("home"); return true; }
             if (id == R.id.nav_my_jobs) { showSection("jobs"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
-            if (id == R.id.nav_reports) { showSection("reports"); return true; }
             if (id == R.id.nav_materials) { showSection("materials"); return true; }
             if (id == R.id.nav_inventory_tech) { showSection("inventory"); return true; }
             if (id == R.id.nav_leave) { showSection("leave"); return true; }
@@ -261,7 +254,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private void showSection(String key) {
         viewHome.setVisibility("home".equals(key) ? View.VISIBLE : View.GONE);
         viewJobs.setVisibility("jobs".equals(key) ? View.VISIBLE : View.GONE);
-        viewReports.setVisibility("reports".equals(key) ? View.VISIBLE : View.GONE);
         viewNotifications.setVisibility("notifications".equals(key) ? View.VISIBLE : View.GONE);
         viewMaterials.setVisibility("materials".equals(key) ? View.VISIBLE : View.GONE);
         viewInventorySection.setVisibility("inventory".equals(key) ? View.VISIBLE : View.GONE);
@@ -277,11 +269,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 titleRes = R.string.tech_jobs_title;
                 subRes = R.string.tech_jobs_subtitle;
                 menuRes = R.id.nav_my_jobs;
-                break;
-            case "reports":
-                titleRes = R.string.tech_reports_title;
-                subRes = R.string.tech_reports_subtitle;
-                menuRes = R.id.nav_reports;
                 break;
             case "notifications":
                 titleRes = R.string.notifications_title;
@@ -347,8 +334,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             renderJobs();
         });
 
-        btnNewReport.setOnClickListener(v -> showReportDialog(null));
-
         btnMarkAllRead.setOnClickListener(v -> markAllNotificationsRead());
 
         btnRequestMaterial.setOnClickListener(v -> showMaterialDialog(null, null));
@@ -360,7 +345,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         btnGotoJobs.setOnClickListener(v -> showSection("jobs"));
 
         btnQaUpdateProgress.setOnClickListener(v -> showSection("jobs"));
-        btnQaSubmitReport.setOnClickListener(v -> showReportDialog(null));
+        btnQaSubmitReport.setOnClickListener(v -> showSection("jobs"));
         btnQaMaterialRequest.setOnClickListener(v -> showMaterialDialog(null, null));
         btnQaMyJobs.setOnClickListener(v -> showSection("jobs"));
 
@@ -399,7 +384,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     renderHome();
                     renderJobs();
-                    renderReports();
                     renderMaterials();
                     renderProfile();
                     refreshDrawerHeader();
@@ -677,11 +661,11 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
             LinearLayout card = new LinearLayout(this);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(14, 14, 14, 14);
+            card.setPadding(dp(16), dp(16), dp(16), dp(14));
             card.setBackgroundResource(R.drawable.bg_card);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.setMargins(0, 0, 0, 8);
+            lp.setMargins(0, 0, 0, dp(12));
             card.setLayoutParams(lp);
             card.setOnClickListener(v -> showJobDetails(jobId, title));
 
@@ -699,6 +683,8 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             tvInfo.setTypeface(null, Typeface.BOLD);
             tvInfo.setPadding(0, 4, 0, 8);
             card.addView(tvInfo);
+            tvInfo.setBackground(roundColor(getStatusBackgroundColor(status), 12));
+            tvInfo.setPadding(dp(10), dp(7), dp(10), dp(7));
 
             double progressPct = getJobProgress(b);
             TextView tvProgress = new TextView(this);
@@ -708,13 +694,31 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             tvProgress.setPadding(0, 0, 0, 8);
             card.addView(tvProgress);
 
+            ProgressBar progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+            progressBar.setMax(100);
+            progressBar.setProgress((int) Math.max(0, Math.min(100, progressPct)));
+            progressBar.setProgressTintList(android.content.res.ColorStateList.valueOf(progressPct >= 100 ? Color.parseColor("#10B981") : Color.parseColor("#F5C400")));
+            progressBar.setProgressBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.parseColor("#E2E8F0")));
+            LinearLayout.LayoutParams progressParams = new LinearLayout.LayoutParams(-1, dp(7));
+            progressParams.setMargins(0, 0, 0, dp(10));
+            card.addView(progressBar, progressParams);
+
+            TextView latestReport = new TextView(this);
+            latestReport.setText(getLatestReportSummary(b) + "  •  " + getChecklistSummary(b));
+            latestReport.setTextColor(Color.parseColor("#64748B"));
+            latestReport.setTextSize(10);
+            latestReport.setMaxLines(2);
+            latestReport.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            latestReport.setPadding(0, 0, 0, dp(6));
+            card.addView(latestReport);
+
             LinearLayout actionRow = new LinearLayout(this);
-            actionRow.setOrientation(LinearLayout.HORIZONTAL);
+            actionRow.setOrientation(LinearLayout.VERTICAL);
 
             if ("ASSIGNED".equals(status)) {
                 Button start = createButton("Start Job", R.drawable.bg_action_yellow);
                 start.setOnClickListener(v -> updateJobStatus(jobId, "IN_PROGRESS"));
-                actionRow.addView(start);
+                addActionButton(actionRow, start);
             }
 
             Button details = createButton("Details", R.drawable.bg_action_dark);
@@ -724,16 +728,36 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             dp.setMarginStart(8);
             details.setLayoutParams(dp);
             details.setOnClickListener(v -> showJobDetails(jobId, title));
-            actionRow.addView(details);
+            addActionButton(actionRow, details);
 
             if ("IN_PROGRESS".equals(status)) {
+                Button report = createButton("Progress report", R.drawable.bg_action_dark);
+                report.setTextColor(Color.parseColor("#F5C400"));
+                LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                rp.setMarginStart(8);
+                report.setLayoutParams(rp);
+                report.setOnClickListener(v -> showReportDialog(jobId));
+                addActionButton(actionRow, report);
+
                 Button complete = createButton("Complete", R.drawable.bg_action_green);
                 LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(
                         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                 cp.setMarginStart(8);
                 complete.setLayoutParams(cp);
                 complete.setOnClickListener(v -> confirmCompleteJob(jobId));
-                actionRow.addView(complete);
+                addActionButton(actionRow, complete);
+            }
+
+            if ("ASSIGNED".equals(status)) {
+                Button report = createButton("Progress report", R.drawable.bg_action_dark);
+                report.setTextColor(Color.parseColor("#F5C400"));
+                LinearLayout.LayoutParams rp = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                rp.setMarginStart(8);
+                report.setLayoutParams(rp);
+                report.setOnClickListener(v -> showReportDialog(jobId));
+                addActionButton(actionRow, report);
             }
 
             if ("ASSIGNED".equals(status) || "IN_PROGRESS".equals(status)) {
@@ -744,13 +768,13 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 cc.setMarginStart(8);
                 cancel.setLayoutParams(cc);
                 cancel.setOnClickListener(v -> confirmCancelJob(jobId));
-                actionRow.addView(cancel);
+                addActionButton(actionRow, cancel);
             }
 
             if ("COMPLETED".equals(status)) {
                 Button material = createButton("Request Material", R.drawable.bg_action_yellow);
                 material.setOnClickListener(v -> showMaterialDialog(jobId, title));
-                actionRow.addView(material);
+                addActionButton(actionRow, material);
             }
 
             card.addView(actionRow);
@@ -769,6 +793,58 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             if (latest != null && latest.has("progress")) return latest.optDouble("progress", 0);
         }
         return 0;
+    }
+
+    private GradientDrawable roundColor(int color, int radiusDp) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
+        drawable.setCornerRadius(dp(radiusDp));
+        return drawable;
+    }
+
+    private int getStatusBackgroundColor(String status) {
+        if ("COMPLETED".equals(status)) return Color.parseColor("#E7F6EF");
+        if ("IN_PROGRESS".equals(status)) return Color.parseColor("#E8F0FD");
+        if ("ASSIGNED".equals(status)) return Color.parseColor("#FFF6E0");
+        return Color.parseColor("#F1F5F9");
+    }
+
+    private void addActionButton(LinearLayout row, Button button) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(42));
+        params.setMargins(0, dp(3), 0, dp(3));
+        row.addView(button, params);
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
+    private String getLatestReportSummary(JSONObject booking) {
+        JSONArray reports = booking.optJSONArray("reports");
+        if (reports == null || reports.length() == 0) return "No progress report yet";
+        JSONObject latest = reports.optJSONObject(0);
+        String content = latest == null ? "" : latest.optString("content", "").trim();
+        return content.isEmpty() ? "Latest report submitted" : "Latest: " + content;
+    }
+
+    private String getChecklistSummary(JSONObject booking) {
+        JSONArray reports = booking.optJSONArray("reports");
+        if (reports == null || reports.length() == 0) return "No tasks";
+        JSONObject latest = reports.optJSONObject(0);
+        if (latest == null) return "No tasks";
+        try {
+            JSONObject work = new JSONObject(latest.optString("workDone", ""));
+            JSONArray checklist = work.optJSONArray("checklist");
+            if (checklist == null || checklist.length() == 0) return "No tasks";
+            int completed = 0;
+            for (int i = 0; i < checklist.length(); i++) {
+                JSONObject task = checklist.optJSONObject(i);
+                if (task != null && ("COMPLETED".equals(task.optString("status")) || task.optBoolean("checked", false))) completed++;
+            }
+            return completed + "/" + checklist.length() + " tasks";
+        } catch (Exception ignored) {
+            return "Report saved";
+        }
     }
 
     private void showJobDetails(String jobId, String jobTitle) {
@@ -880,83 +956,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     }
 
     // === REPORTS ===
-
-    private void renderReports() {
-        reportsListContainer.removeAllViews();
-        if (bookingsArray == null) {
-            showEmpty(reportsListContainer, R.string.empty);
-            return;
-        }
-
-        int total = 0;
-        for (int i = 0; i < bookingsArray.length(); i++) {
-            JSONObject b = bookingsArray.optJSONObject(i);
-            if (b == null) continue;
-            JSONArray reports = b.optJSONArray("reports");
-            if (reports == null) continue;
-
-            for (int j = 0; j < reports.length(); j++) {
-                JSONObject r = reports.optJSONObject(j);
-                if (r == null) continue;
-                total++;
-
-                LinearLayout card = new LinearLayout(this);
-                card.setOrientation(LinearLayout.VERTICAL);
-                card.setPadding(14, 14, 14, 14);
-                card.setBackgroundResource(R.drawable.bg_card);
-                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                lp.setMargins(0, 0, 0, 8);
-                card.setLayoutParams(lp);
-
-                TextView tvJob = new TextView(this);
-                tvJob.setText(b.optString("title", "Job"));
-                tvJob.setTextColor(Color.parseColor("#101416"));
-                tvJob.setTextSize(13);
-                tvJob.setTypeface(null, Typeface.BOLD);
-                card.addView(tvJob);
-
-                if (r.has("progress")) {
-                    TextView tvProgress = new TextView(this);
-                    tvProgress.setText("Progress: " + Math.round(r.optDouble("progress", 0)) + "%");
-                    tvProgress.setTextColor(Color.parseColor("#22A66F"));
-                    tvProgress.setTextSize(11);
-                    tvProgress.setTypeface(null, Typeface.BOLD);
-                    card.addView(tvProgress);
-                }
-
-                TextView tvContent = new TextView(this);
-                tvContent.setText(r.optString("content", ""));
-                tvContent.setTextColor(Color.parseColor("#4B575C"));
-                tvContent.setTextSize(12);
-                tvContent.setPadding(0, 4, 0, 0);
-                card.addView(tvContent);
-
-                String workDone = r.optString("workDone", "");
-                String nextWork = r.optString("nextWork", "");
-                if (!workDone.isEmpty()) {
-                    TextView tvWork = new TextView(this);
-                    tvWork.setText("Completed: " + workDone);
-                    tvWork.setTextColor(Color.parseColor("#68747A"));
-                    tvWork.setTextSize(11);
-                    card.addView(tvWork);
-                }
-                if (!nextWork.isEmpty()) {
-                    TextView tvNext = new TextView(this);
-                    tvNext.setText("Next: " + nextWork);
-                    tvNext.setTextColor(Color.parseColor("#68747A"));
-                    tvNext.setTextSize(11);
-                    card.addView(tvNext);
-                }
-
-                reportsListContainer.addView(card);
-            }
-        }
-
-        if (total == 0) {
-            showEmpty(reportsListContainer, R.string.empty);
-        }
-    }
 
     private void showReportDialog(String preSelectedBookingId) {
         if (bookingsArray == null || bookingsArray.length() == 0) {

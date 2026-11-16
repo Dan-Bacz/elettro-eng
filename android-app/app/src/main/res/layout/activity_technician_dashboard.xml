@@ -786,40 +786,6 @@
                             android:orientation="vertical" />
                     </LinearLayout>
 
-                    <!-- ===== REPORTS ===== -->
-                    <LinearLayout
-                        android:id="@+id/view_reports_section"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical"
-                        android:visibility="gone">
-
-                        <TextView
-                            android:id="@+id/btn_new_report"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="end"
-                            android:layout_marginTop="6dp"
-                            android:background="@drawable/bg_action_yellow"
-                            android:clickable="true"
-                            android:focusable="true"
-                            android:paddingStart="14dp"
-                            android:paddingEnd="14dp"
-                            android:paddingTop="7dp"
-                            android:paddingBottom="7dp"
-                            android:text="+ New Report"
-                            android:textColor="@color/el_ink"
-                            android:textSize="10sp"
-                            android:textStyle="bold" />
-
-                        <LinearLayout
-                            android:id="@+id/reports_list_container"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:orientation="vertical" />
-                    </LinearLayout>
-
                     <!-- ===== NOTIFICATIONS ===== -->
                     <LinearLayout
                         android:id="@+id/view_notifications_section"
