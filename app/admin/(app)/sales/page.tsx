@@ -2,14 +2,27 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
-import PageHeader from '../../../../components/admin/PageHeader'
 import SearchBar from '../../../../components/admin/SearchBar'
 import FilterBar from '../../../../components/admin/FilterBar'
 import EmptyState from '../../../../components/admin/EmptyState'
+import PageHeader from '../../../../components/admin/PageHeader'
 import { CartIcon } from '../../../../components/admin/icons'
 import type { OrderObj } from '../../../../components/admin/types'
 
 type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
+
+type CounterSale = {
+  id: string
+  reference: string
+  customerName: string | null
+  customerContact: string | null
+  total: number
+  paymentAmount: number
+  changeAmount: number
+  createdAt: string
+  createdBy?: { name: string } | null
+  items: { id: string; name: string; quantity: number; unit: string | null; unitPrice: number }[]
+}
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
@@ -59,6 +72,7 @@ function formatDate(iso?: string) {
 export default function AdminSalesPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<OrderObj[]>([])
+  const [counterSales, setCounterSales] = useState<CounterSale[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -66,13 +80,14 @@ export default function AdminSalesPage() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/orders')
-      if (!res.ok) {
-        if (res.status === 401) { router.push('/admin/login'); return }
-        throw new Error('Failed to load sales')
+      const [ordersRes, salesRes] = await Promise.all([fetch('/api/orders'), fetch('/api/sales-sales')])
+      if (!ordersRes.ok || !salesRes.ok) {
+        if (ordersRes.status === 401 || salesRes.status === 401) { router.push('/admin/login'); return }
+        throw new Error('Failed to load sales records')
       }
-      const data = await res.json()
-      setOrders(data.orders || [])
+      const [ordersData, salesData] = await Promise.all([ordersRes.json(), salesRes.json()])
+      setOrders(ordersData.orders || [])
+      setCounterSales(salesData.sales || [])
     } catch (e: any) {
       setError(e.message || 'Failed to load sales')
     } finally {
@@ -95,6 +110,11 @@ export default function AdminSalesPage() {
   })
 
   const pendingCount = orders.filter((o) => o.status === 'PENDING').length
+  const orderRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0) + Number(order.shipping || 0), 0)
+  const counterRevenue = counterSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0)
+  const combinedRevenue = orderRevenue + counterRevenue
+  const completedOrders = orders.filter((order) => order.status === 'COMPLETED').length
+  const averageCounterSale = counterSales.length ? counterRevenue / counterSales.length : 0
 
   return (
     <div className="space-y-6">
@@ -108,6 +128,29 @@ export default function AdminSalesPage() {
           </span>
         }
       />
+
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#152b3d] to-[#08727f] p-6 text-white shadow-[0_28px_60px_-30px_rgba(15,23,42,0.85)] sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-yellow-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-cyan-300/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl"><span className="inline-flex items-center gap-2 rounded-full border border-yellow-300/25 bg-yellow-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-yellow-200"><span className="h-1.5 w-1.5 rounded-full bg-yellow-300" /> Live sales intelligence</span><h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Sales command center</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">A read-only view of sales department activity: client orders, counter sales, payment records, and completed receipts.</p></div>
+          <div className="max-w-xs rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Sales creates and manages transactions. Admin monitors the live records here and cannot create sales.</div>
+        </div>
+        <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:grid-cols-4">
+          {[
+            ['All records', orders.length + counterSales.length],
+            ['Order revenue', `₱${orderRevenue.toLocaleString()}`],
+            ['Counter sales', counterSales.length],
+            ['Recorded revenue', `₱${combinedRevenue.toLocaleString()}`],
+          ].map(([label, value]) => (
+            <div key={String(label)}><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>
+          ))}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        {[['Client Orders', orders.length, `${pendingCount} pending`, 'from-cyan-400 to-blue-600'], ['Completed Orders', completedOrders, 'customer orders received', 'from-emerald-400 to-teal-600'], ['Counter Receipts', counterSales.length, `₱${averageCounterSale.toLocaleString(undefined, { maximumFractionDigits: 0 })} average`, 'from-violet-400 to-indigo-600'], ['Payment Records', counterSales.filter((sale) => Number(sale.paymentAmount) >= Number(sale.total)).length, 'counter sales paid', 'from-amber-300 to-orange-600']].map(([label, value, note, accent]) => <div key={String(label)} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" /><div className="relative"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p><p className="mt-3 text-3xl font-black text-slate-900">{value}</p><p className="mt-1 text-[11px] font-medium text-slate-500">{note}</p></div></div>)}
+      </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <SearchBar value={query} onChange={setQuery} placeholder="Search by client, email, phone, item…" />
@@ -227,6 +270,14 @@ export default function AdminSalesPage() {
           })}
         </div>
       )}
+
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4">
+          <div><h2 className="text-sm font-black text-slate-900">Counter sales and receipts</h2><p className="mt-1 text-[11px] text-slate-500">Live POS records submitted by the Sales department.</p></div>
+          <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-emerald-700">Read-only archive</span>
+        </div>
+        {counterSales.length === 0 ? <div className="px-6 py-12 text-center text-xs text-slate-400">Completed counter sales will appear here.</div> : <div className="divide-y divide-slate-100">{counterSales.slice(0, 20).map((sale) => <article key={sale.id} className="flex flex-col gap-3 px-5 py-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-black text-slate-900">{sale.reference}</span><span className="rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-700">Paid</span><span className="text-[10px] text-slate-400">{formatDate(sale.createdAt)}</span></div><p className="mt-1 truncate text-xs text-slate-600">{sale.items.map((item) => `${item.quantity} × ${item.name}`).join(' · ')}</p><p className="mt-1 text-[10px] font-semibold text-slate-500">{sale.customerName || 'Walk-in customer'} · Cash ₱{Number(sale.paymentAmount).toLocaleString()} · Change ₱{Number(sale.changeAmount).toLocaleString()}</p></div><div className="text-left sm:text-right"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Receipt total</div><div className="text-lg font-black text-slate-900">₱{Number(sale.total).toLocaleString()}</div><div className="text-[10px] text-slate-400">By {sale.createdBy?.name || 'Sales staff'}</div></div></article>)}</div>}
+      </section>
     </div>
   )
 }
