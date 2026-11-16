@@ -3,18 +3,17 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { GridIcon, InboxIcon, HammerIcon, CalendarIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon, CartIcon, ActivityIcon } from './icons'
+import { GridIcon, InboxIcon, HammerIcon, PackageIcon, UsersIcon, BarChartIcon, BellIcon, GearIcon, LogoutIcon, CartIcon, ActivityIcon } from './icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/admin/dashboard' },
+  { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
   { key: 'bookings', label: 'Bookings', icon: InboxIcon, href: '/admin/bookings' },
   { key: 'sales', label: 'Sales', icon: CartIcon, href: '/admin/sales' },
-  { key: 'operations', label: 'Operations', icon: ActivityIcon, href: '/admin/operations' },
+  { key: 'inventory', label: 'Warehouse', icon: PackageIcon, href: '/admin/inventory' },
   { key: 'clients', label: 'Clients', icon: UsersIcon, href: '/admin/clients' },
-  { key: 'projects', label: 'Projects', icon: HammerIcon, href: '/admin/projects' },
-  { key: 'leave', label: 'Leave Requests', icon: CalendarIcon, href: '/admin/leave' },
-    { key: 'inventory', label: 'Warehouse', icon: PackageIcon, href: '/admin/inventory' },
   { key: 'staff', label: 'Workers', icon: UsersIcon, href: '/admin/staff' },
+  { key: 'operations', label: 'Operations', icon: ActivityIcon, href: '/admin/operations' },
   { key: 'reports', label: 'Reports', icon: BarChartIcon, href: '/admin/reports' },
   { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/admin/notifications' },
   { key: 'settings', label: 'Settings', icon: GearIcon, href: '/admin/settings' },
