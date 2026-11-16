@@ -1,6 +1,6 @@
 'use client'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import EmptyState from '../../../../components/admin/EmptyState'
 import type { InventoryItemObj } from '../../../../components/admin/types'
 
@@ -43,6 +43,8 @@ function money(value: number | null | undefined, decimals = 2) {
 
 export default function AdminInventoryPage() {
   const router = useRouter()
+  const pathname = usePathname()
+  const isInventoryListPage = pathname?.endsWith('/inventory/list') ?? false
   const [items, setItems] = useState<InventoryItemObj[]>([])
   const [releases, setReleases] = useState<ReleaseRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -185,6 +187,7 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="space-y-5">
+      {!isInventoryListPage && <>
       <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#122b35] to-[#08727f] p-6 text-white shadow-[0_28px_60px_-30px_rgba(15,23,42,0.8)] sm:p-8">
         <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-yellow-300/10 blur-3xl" />
@@ -195,11 +198,8 @@ export default function AdminInventoryPage() {
             <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">Monitor electrical products, materials, equipment, and stock health from one organized warehouse view.</p>
           </div>
           <div className="flex max-w-xs flex-col gap-3">
-            <p className="rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Create new warehouse items or jump straight to the live inventory list. Stock receipts, adjustments, releases, and warehouse movements remain controlled by Warehouse.</p>
-            <div className="flex flex-wrap gap-2">
-              <a href="/admin/inventory/new" className="inline-flex items-center justify-center rounded-xl bg-yellow-400 px-4 py-2.5 text-xs font-black text-slate-950 shadow-lg shadow-yellow-400/10 transition hover:bg-yellow-300">+ Add inventory</a>
-              <a href="#inventory-list" className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-black text-white transition hover:bg-white/20">View inventory</a>
-            </div>
+            <p className="rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Review the live warehouse product list on its own page. Stock receipts, adjustments, releases, and warehouse movements remain controlled by Warehouse.</p>
+            <a href="/admin/inventory/list" className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-black text-white transition hover:bg-white/20">View inventory</a>
           </div>
         </div>
         <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:grid-cols-4">
@@ -268,7 +268,10 @@ export default function AdminInventoryPage() {
         </div>
         {releases.length === 0 ? <div className="px-5 py-10 text-center text-xs text-slate-400">No technician or sales material releases recorded yet.</div> : <div className="divide-y divide-slate-100">{releases.slice(0, 12).map((release) => { const quantity = release.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0); const source = release.request.source === 'TECHNICIAN' ? 'Technician request' : 'Sales request'; const recipient = release.request.source === 'TECHNICIAN' ? release.request.requester?.name || 'Technician' : release.salesRecipient?.name || release.request.order?.clientName || 'Sales department'; return <article key={release.id} className="flex flex-col gap-3 px-5 py-4 transition hover:bg-cyan-50/30 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="font-mono text-xs font-black text-slate-900">{release.receiptNumber}</span><span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase ${release.request.source === 'TECHNICIAN' ? 'bg-violet-100 text-violet-700' : 'bg-cyan-100 text-cyan-700'}`}>{source}</span><span className="text-[10px] text-slate-400">{new Date(release.createdAt).toLocaleString()}</span></div><p className="mt-1 text-xs font-bold text-slate-700">{recipient} <span className="font-normal text-slate-400">· Request {release.request.reference}</span></p><p className="mt-1 truncate text-[10px] text-slate-500">{release.items.map((item) => `${item.quantity} ${item.requestItem.inventoryItem.unit || 'pcs'} ${item.requestItem.inventoryItem.name}`).join(' · ')}</p></div><div className="text-left sm:text-right"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Released quantity</div><div className="text-xl font-black text-slate-900">{quantity}</div><div className="text-[10px] text-slate-400">By {release.releasedBy?.name || 'Warehouse staff'}</div></div></article> })}</div>}
       </section>
+      </>}
 
+      {isInventoryListPage && <>
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#122b35] to-[#08727f] p-6 text-white shadow-[0_24px_55px_-30px_rgba(15,23,42,0.8)] sm:p-8"><div className="pointer-events-none absolute -right-16 -top-20 h-60 w-60 rounded-full bg-cyan-300/20 blur-3xl" /><div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><a href="/admin/inventory" className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100 hover:text-white">← Warehouse overview</a><h1 className="mt-4 text-3xl font-black tracking-tight">Warehouse inventory</h1><p className="mt-2 text-sm leading-6 text-slate-200">Live list of products and materials currently recorded in the warehouse.</p></div><span className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-xs font-bold text-slate-200">{items.length} products</span></div></section>
       {/* Toolbar */}
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="relative flex-1 lg:max-w-md">
@@ -459,6 +462,7 @@ export default function AdminInventoryPage() {
           })
         )}
       </div>
+      </>}
 
     </div>
   )
