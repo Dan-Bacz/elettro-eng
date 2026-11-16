@@ -24,6 +24,9 @@ type CounterSale = {
   items: { id: string; name: string; quantity: number; unit: string | null; unitPrice: number }[]
 }
 
+type WarehouseRequest = { id: string; reference: string; status: string; createdAt: string; items?: { requestedQuantity: number }[] }
+type SalesStock = { id: string; availableQuantity: number }
+
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All' },
   { value: 'PENDING', label: 'New' },
@@ -73,6 +76,8 @@ export default function AdminSalesPage() {
   const router = useRouter()
   const [orders, setOrders] = useState<OrderObj[]>([])
   const [counterSales, setCounterSales] = useState<CounterSale[]>([])
+  const [warehouseRequests, setWarehouseRequests] = useState<WarehouseRequest[]>([])
+  const [salesStock, setSalesStock] = useState<SalesStock[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -80,14 +85,16 @@ export default function AdminSalesPage() {
 
   const load = useCallback(async () => {
     try {
-      const [ordersRes, salesRes] = await Promise.all([fetch('/api/orders'), fetch('/api/sales-sales')])
-      if (!ordersRes.ok || !salesRes.ok) {
-        if (ordersRes.status === 401 || salesRes.status === 401) { router.push('/admin/login'); return }
+      const [ordersRes, salesRes, requestsRes] = await Promise.all([fetch('/api/orders'), fetch('/api/sales-sales'), fetch('/api/warehouse-requests?source=SALES')])
+      if (!ordersRes.ok || !salesRes.ok || !requestsRes.ok) {
+        if (ordersRes.status === 401 || salesRes.status === 401 || requestsRes.status === 401) { router.push('/admin/login'); return }
         throw new Error('Failed to load sales records')
       }
-      const [ordersData, salesData] = await Promise.all([ordersRes.json(), salesRes.json()])
+      const [ordersData, salesData, requestsData] = await Promise.all([ordersRes.json(), salesRes.json(), requestsRes.json()])
       setOrders(ordersData.orders || [])
       setCounterSales(salesData.sales || [])
+      setSalesStock(salesData.stock || [])
+      setWarehouseRequests(requestsData.requests || [])
     } catch (e: any) {
       setError(e.message || 'Failed to load sales')
     } finally {
@@ -115,6 +122,7 @@ export default function AdminSalesPage() {
   const combinedRevenue = orderRevenue + counterRevenue
   const completedOrders = orders.filter((order) => order.status === 'COMPLETED').length
   const averageCounterSale = counterSales.length ? counterRevenue / counterSales.length : 0
+  const salesStockUnits = salesStock.reduce((sum, item) => sum + Number(item.availableQuantity || 0), 0)
 
   return (
     <div className="space-y-6">
@@ -148,8 +156,15 @@ export default function AdminSalesPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {[['Client Orders', orders.length, `${pendingCount} pending`, 'from-cyan-400 to-blue-600'], ['Completed Orders', completedOrders, 'customer orders received', 'from-emerald-400 to-teal-600'], ['Counter Receipts', counterSales.length, `₱${averageCounterSale.toLocaleString(undefined, { maximumFractionDigits: 0 })} average`, 'from-violet-400 to-indigo-600'], ['Payment Records', counterSales.filter((sale) => Number(sale.paymentAmount) >= Number(sale.total)).length, 'counter sales paid', 'from-amber-300 to-orange-600']].map(([label, value, note, accent]) => <div key={String(label)} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" /><div className="relative"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p><p className="mt-3 text-3xl font-black text-slate-900">{value}</p><p className="mt-1 text-[11px] font-medium text-slate-500">{note}</p></div></div>)}
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+        {[
+          ['Client Orders', orders.length, `${pendingCount} pending`, 'from-cyan-400 to-blue-600', '/admin/sales/orders'],
+          ['Completed Orders', completedOrders, 'customer orders received', 'from-emerald-400 to-teal-600', '/admin/sales/completed'],
+          ['Counter Receipts', counterSales.length, `₱${averageCounterSale.toLocaleString(undefined, { maximumFractionDigits: 0 })} average`, 'from-violet-400 to-indigo-600', '/admin/sales/receipts'],
+          ['Payment Records', counterSales.filter((sale) => Number(sale.paymentAmount) >= Number(sale.total)).length, 'counter sales paid', 'from-amber-300 to-orange-600', '/admin/sales/payments'],
+          ['Warehouse Requests', warehouseRequests.length, 'sales requests to warehouse', 'from-orange-400 to-red-600', '/admin/sales/warehouse-requests'],
+          ['Sales Stock', salesStock.length, `${salesStockUnits.toLocaleString()} units available`, 'from-teal-400 to-cyan-600', '/admin/sales/stock'],
+        ].map(([label, value, note, accent, href]) => <Link href={String(href)} key={String(label)} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_40px_-20px_rgba(15,23,42,0.45)]"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" /><div className="relative"><div className="flex items-start justify-between gap-2"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p><span className="text-[10px] font-black text-slate-400 transition group-hover:text-slate-900">View →</span></div><p className="mt-3 text-3xl font-black text-slate-900">{value}</p><p className="mt-1 text-[11px] font-medium text-slate-500">{note}</p></div></Link>)}
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
