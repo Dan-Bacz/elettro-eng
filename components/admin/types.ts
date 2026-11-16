@@ -100,6 +100,8 @@ export type OrderItemObj = {
   unit?: string | null
   unitPrice: number
   inventoryItemId?: string | null
+  salesStockAvailable?: number
+  stockSource?: 'SALES_STOCK' | 'WAREHOUSE_REQUIRED'
   createdAt?: string
 }
 

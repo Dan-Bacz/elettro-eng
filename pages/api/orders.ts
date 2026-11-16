@@ -45,6 +45,42 @@ function withReference(order: any): any {
   }
 }
 
+async function getSalesStockAvailability(db: any) {
+  const [released, sold] = await Promise.all([
+    db.warehouseRelease.findMany({
+      where: { receivedBySalesId: { not: null }, request: { source: 'INTERNAL_SALES' } },
+      select: { items: { select: { quantity: true, requestItem: { select: { inventoryItemId: true } } } } },
+    }),
+    db.salesSaleItem.groupBy({ by: ['inventoryItemId'], _sum: { quantity: true } }),
+  ])
+  const soldByItem = new Map(sold.map((row: any) => [row.inventoryItemId, row._sum.quantity || 0]))
+  const releasedByItem = new Map<string, number>()
+  for (const release of released) {
+    for (const line of release.items) {
+      const id = line.requestItem.inventoryItemId
+      releasedByItem.set(id, (releasedByItem.get(id) || 0) + line.quantity)
+    }
+  }
+  return new Map([...releasedByItem.entries()].map(([id, releasedQuantity]) => [
+    id,
+    Math.max(0, Number(releasedQuantity) - Number(soldByItem.get(id) || 0)),
+  ]))
+}
+
+function addStockAvailability(order: any, salesStock: Map<string, number>) {
+  return {
+    ...order,
+    items: (order.items || []).map((item: any) => {
+      const available = item.inventoryItemId ? salesStock.get(item.inventoryItemId) || 0 : 0
+      return {
+        ...item,
+        salesStockAvailable: available,
+        stockSource: available >= item.quantity ? 'SALES_STOCK' : 'WAREHOUSE_REQUIRED',
+      }
+    }),
+  }
+}
+
 export default async function handler(req: any, res: any) {
   try {
     const user = await requireAdminOrSales(req, res)
@@ -69,7 +105,8 @@ export default async function handler(req: any, res: any) {
           },
         },
       })
-      return res.json({ orders: orders.map(withReference) })
+      const salesStock = await getSalesStockAvailability(prisma)
+      return res.json({ orders: orders.map((order) => withReference(addStockAvailability(order, salesStock))) })
     }
 
     if (req.method === 'PATCH') {
