@@ -104,6 +104,20 @@ export default function AdminInventoryPage() {
     return { totalItems, lowStock, outOfStock, inventoryValue }
   }, [items])
 
+  const analytics = useMemo(() => {
+    const totalUnits = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
+    const healthy = Math.max(0, summary.totalItems - summary.lowStock - summary.outOfStock)
+    const healthRate = summary.totalItems ? Math.round((healthy / summary.totalItems) * 100) : 0
+    const categoryBreakdown = Array.from(
+      items.reduce((map, item) => {
+        const key = item.category || 'Uncategorized'
+        map.set(key, (map.get(key) || 0) + 1)
+        return map
+      }, new Map<string, number>())
+    ).sort((a, b) => b[1] - a[1]).slice(0, 5)
+    return { totalUnits, healthy, healthRate, categoryBreakdown }
+  }, [items, summary])
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
     const filtered = items.filter((i) => {
@@ -159,21 +173,27 @@ export default function AdminInventoryPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Inventory</h1>
-          <p className="mt-0.5 text-xs font-medium text-slate-400">Review electrical products, materials, equipment, and current stock levels.</p>
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#122b35] to-[#08727f] p-6 text-white shadow-[0_28px_60px_-30px_rgba(15,23,42,0.8)] sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-yellow-300/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">Warehouse visibility</span>
+            <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Inventory command center</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">Monitor electrical products, materials, equipment, and stock health from one organized warehouse view.</p>
+          </div>
+          <p className="max-w-xs rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Read-only overview for Admin. Stock receipts, adjustments, releases, and warehouse movements remain controlled by Warehouse.</p>
         </div>
-        <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
-          Inventory is read-only here. Stock receipts, adjustments, and releases are recorded by Warehouse.
-        </p>
-      </div>
+        <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:grid-cols-4">
+          {[['Items', summary.totalItems], ['Units', analytics.totalUnits], ['Healthy', `${analytics.healthRate}%`], ['Value', money(summary.inventoryValue, 0)]].map(([label, value]) => <div key={label}><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>)}
+        </div>
+      </section>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {statCards.map((card) => (
-          <div key={card.label} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5">
+          <div key={card.label} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_40px_-20px_rgba(15,23,42,0.45)]">
+            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" />
+            <div className="relative flex items-center gap-3">
             <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.className}`}>
               {card.icon === 'box' && (
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -200,12 +220,31 @@ export default function AdminInventoryPage() {
               <div className="truncate text-lg font-black leading-none text-slate-900">{card.value}</div>
               <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">{card.label}</div>
             </div>
+            </div>
           </div>
         ))}
       </div>
 
+      <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_280px]">
+        <div>
+          <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Stock intelligence</p><h2 className="mt-1 text-lg font-black text-slate-900">Category distribution</h2></div><span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold text-slate-500">{items.length} SKUs</span></div>
+          <div className="mt-5 space-y-3">
+            {analytics.categoryBreakdown.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-xs text-slate-400">No category data available yet.</p> : analytics.categoryBreakdown.map(([name, count]) => {
+              const width = Math.round((count / Math.max(summary.totalItems, 1)) * 100)
+              return <div key={name}><div className="mb-1 flex justify-between text-xs font-bold text-slate-600"><span>{name}</span><span>{count}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-600" style={{ width: `${width}%` }} /></div></div>
+            })}
+          </div>
+        </div>
+        <div className="rounded-2xl bg-gradient-to-br from-slate-900 to-slate-700 p-5 text-white shadow-inner">
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Stock health</p>
+          <div className="mt-5 flex items-end gap-2"><span className="text-4xl font-black">{analytics.healthRate}%</span><span className="pb-1 text-xs text-slate-300">healthy items</span></div>
+          <p className="mt-2 text-xs leading-5 text-slate-300">{summary.lowStock} low-stock and {summary.outOfStock} out-of-stock items need attention.</p>
+          <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/15"><div className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300" style={{ width: `${analytics.healthRate}%` }} /></div>
+        </div>
+      </section>
+
       {/* Toolbar */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="relative flex-1 lg:max-w-md">
           <svg
             className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
@@ -252,7 +291,7 @@ export default function AdminInventoryPage() {
       {loadError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{loadError}</div>}
 
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white md:block">
+      <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
         {loading ? (
           <div className="space-y-2 p-4">
             {[...Array(5)].map((_, i) => (
@@ -268,7 +307,7 @@ export default function AdminInventoryPage() {
         ) : (
           <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] uppercase tracking-wider text-slate-400">
+              <tr className="border-b border-slate-100 bg-gradient-to-r from-slate-950 via-slate-900 to-[#173b44] text-[10px] uppercase tracking-wider text-white/60">
                 <th className="px-4 py-3 font-black">#</th>
                 <th className="px-3 py-3 font-black">Product</th>
                 <th className="px-3 py-3 font-black">Manufacturer / Brand</th>
@@ -348,7 +387,7 @@ export default function AdminInventoryPage() {
             const status = statusBadge[stockOf(item)]
             const q = Number(item.quantity) || 0
             return (
-              <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
+              <div key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_14px_28px_-22px_rgba(15,23,42,0.65)]">
                 <div className="flex items-start gap-3">
                   {item.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
