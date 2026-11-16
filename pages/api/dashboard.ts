@@ -111,13 +111,16 @@ export default async function handler(req, res) {
         .map((l) => l.techId)
     )
 
+    // Approved requests are now represented in Projects. Keep booking metrics
+    // focused on requests that have not yet entered the project lifecycle.
+    const bookingRequests = bookings.filter((booking) => !booking.project)
     const stats = {
-      totalBookings: bookings.length,
-      pending: bookings.filter((b) => b.status === 'PENDING').length,
-      approved: bookings.filter((b) => b.status === 'APPROVED').length,
-      assigned: bookings.filter((b) => b.status === 'ASSIGNED').length,
-      inProgress: bookings.filter((b) => b.status === 'IN_PROGRESS').length,
-      completed: bookings.filter((b) => b.status === 'COMPLETED').length,
+      totalBookings: bookingRequests.length,
+      pending: bookingRequests.filter((b) => b.status === 'PENDING').length,
+      approved: bookingRequests.filter((b) => b.status === 'APPROVED').length,
+      assigned: bookingRequests.filter((b) => b.status === 'ASSIGNED').length,
+      inProgress: bookingRequests.filter((b) => b.status === 'IN_PROGRESS').length,
+      completed: bookingRequests.filter((b) => b.status === 'COMPLETED').length,
       totalInventory: inventory.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
       lowStock: inventory.filter((item) => Number(item.quantity || 0) <= 10).length,
       technicians: activeTechs.length,
@@ -141,7 +144,7 @@ export default async function handler(req, res) {
       'CANCELLED'
     ].map((status) => ({
       status,
-      value: bookings.filter((b) => b.status === status).length
+      value: bookingRequests.filter((b) => b.status === status).length
     }))
 
     // Booking trend: bookings created per day for the last 30 days.

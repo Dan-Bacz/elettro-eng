@@ -84,7 +84,7 @@ export default function AdminBookingsPage() {
         const payload = await res.json()
         if (!cancelled) {
           setBookings((payload.bookings || []).filter((b: BookingObj) => BOOKINGS_LIST_STATUSES.includes(b.status)))
-          setTotalBookings(Number(payload.stats?.totalBookings ?? payload.bookings?.length ?? 0))
+          setTotalBookings((payload.bookings || []).filter((b: BookingObj) => !b.project && BOOKINGS_LIST_STATUSES.includes(b.status)).length)
           setStatusCounts(Object.fromEntries(
             (payload.statusBreakdown || []).map((row: { status: string; value: number }) => [row.status, Number(row.value || 0)])
           ))

@@ -106,13 +106,32 @@ export default function AdminProjectDetailPage() {
   const latestReport = booking.reports?.[0]
   const progress = latestReport?.progress != null ? Math.max(0, Math.min(100, Number(latestReport.progress))) : statusProgress(booking.status)
   const currentStepIndex = STEPS.indexOf(booking.status as any)
+  const reportCount = (booking.reports || []).length
+  const activityCount = (booking.technicianActivities || []).length
 
   return (
     <div className="space-y-6">
       {error && (
         <div className="rounded-xl bg-red-50 px-4 py-3 text-xs font-bold text-red-600">⚠️ {error}</div>
       )}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#12313b] to-[#08717d] p-6 text-white shadow-[0_28px_60px_-30px_rgba(15,23,42,0.8)] sm:p-8">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-yellow-300/10 blur-3xl" />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-4 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-cyan-100"><Link href="/admin/projects" className="transition hover:text-white">Projects</Link><span className="text-white/40">/</span><span>Project workspace</span></div>
+            <div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-black tracking-tight sm:text-4xl">{booking.title}</h1><StatusBadge status={booking.status} /></div>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">This accepted booking is now managed as a project. Field progress below is driven by the latest technician-submitted report.</p>
+            <div className="mt-4 text-xs text-slate-300">Project #{booking.project?.id?.slice(0, 8) || booking.id.slice(0, 8)} · Created {formatDate(booking.createdAt)}</div>
+          </div>
+          {booking.status === 'APPROVED' && <button onClick={() => setShowDecline(true)} disabled={busy} className="w-fit rounded-xl border border-red-200/30 bg-red-500/15 px-4 py-2.5 text-xs font-bold text-red-100 transition hover:bg-red-500/25 disabled:opacity-50">Decline project</button>}
+        </div>
+        <div className="relative mt-8 grid grid-cols-2 gap-3 border-t border-white/15 pt-5 sm:grid-cols-4">
+          {[['Progress', `${progress}%`], ['Reports', String(reportCount)], ['Team', String(teamMembers.length)], ['Activities', String(activityCount)]].map(([label, value]) => <div key={label}><div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>)}
+        </div>
+      </section>
+
+      <div className="hidden flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-center gap-3">
           <Link href="/admin/projects" className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-yellow-600">←</Link>
           <div>
@@ -133,20 +152,21 @@ export default function AdminProjectDetailPage() {
               Decline
             </button>
           )}
-          <Link href={`/admin/bookings/${booking.id}`} className="rounded-xl bg-black px-4 py-2 text-xs font-bold text-yellow-400 hover:bg-slate-800 transition-colors">
+          <span className="hidden">
             Manage Booking →
-          </Link>
+          </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {/* Progress stepper */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-24px_rgba(15,23,42,0.7)] sm:p-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-black text-slate-900">Project Progress</h2>
-              <span className="text-xs font-black text-yellow-600">{progress}%</span>
+              <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Live field signal</p><h2 className="mt-1 text-lg font-black text-slate-900">Project Progress</h2></div>
+              <span className="text-3xl font-black text-slate-900">{progress}%</span>
             </div>
+            <div className="mt-5 h-4 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-emerald-400 shadow-[0_0_20px_rgba(34,211,238,0.45)]" style={{ width: `${progress}%` }} /></div>
             <div className="mt-5 flex items-center">
               {STEPS.map((step, i) => {
                 const done = i <= currentStepIndex
