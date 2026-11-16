@@ -194,7 +194,13 @@ export default function AdminInventoryPage() {
             <h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Inventory command center</h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">Monitor electrical products, materials, equipment, and stock health from one organized warehouse view.</p>
           </div>
-          <p className="max-w-xs rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Read-only overview for Admin. Stock receipts, adjustments, releases, and warehouse movements remain controlled by Warehouse.</p>
+          <div className="flex max-w-xs flex-col gap-3">
+            <p className="rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Create new warehouse items or jump straight to the live inventory list. Stock receipts, adjustments, releases, and warehouse movements remain controlled by Warehouse.</p>
+            <div className="flex flex-wrap gap-2">
+              <a href="/admin/inventory/new" className="inline-flex items-center justify-center rounded-xl bg-yellow-400 px-4 py-2.5 text-xs font-black text-slate-950 shadow-lg shadow-yellow-400/10 transition hover:bg-yellow-300">+ Add inventory</a>
+              <a href="#inventory-list" className="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-black text-white transition hover:bg-white/20">View inventory</a>
+            </div>
+          </div>
         </div>
         <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:grid-cols-4">
           {[['Items', summary.totalItems], ['Units', analytics.totalUnits], ['Healthy', `${analytics.healthRate}%`], ['Value', money(summary.inventoryValue, 0)]].map(([label, value]) => <div key={label}><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>)}
@@ -311,7 +317,7 @@ export default function AdminInventoryPage() {
       {loadError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{loadError}</div>}
 
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+      <div id="inventory-list" className="hidden scroll-mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
         {loading ? (
           <div className="space-y-2 p-4">
             {[...Array(5)].map((_, i) => (
