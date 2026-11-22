@@ -765,12 +765,14 @@
 
                         <!-- Quick Actions -->
                         <LinearLayout
+                            android:id="@+id/dashboard_quick_actions"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="12dp"
                             android:background="@drawable/bg_card"
                             android:orientation="vertical"
-                            android:padding="14dp">
+                            android:padding="14dp"
+                            android:visibility="gone">
 
                             <TextView
                                 android:layout_width="wrap_content"
@@ -930,6 +932,57 @@
                         android:layout_height="wrap_content"
                         android:orientation="vertical"
                         android:visibility="gone">
+
+                        <!-- Web admin Projects command-center hero -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:background="@drawable/bg_header_gradient"
+                            android:orientation="vertical"
+                            android:padding="20dp">
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="@drawable/bg_pill"
+                                android:paddingStart="10dp"
+                                android:paddingTop="5dp"
+                                android:paddingEnd="10dp"
+                                android:paddingBottom="5dp"
+                                android:text="TECHNICIAN-REPORTED PROGRESS"
+                                android:textColor="@color/brand_100"
+                                android:textSize="9sp"
+                                android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="14dp"
+                                android:text="Project command center"
+                                android:textColor="@color/white"
+                                android:textSize="26sp"
+                                android:textStyle="bold" />
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:text="Track delivery health at a glance. Progress is sourced from the latest report submitted by the assigned technician."
+                                android:textColor="#D7E4E8"
+                                android:textSize="12sp" />
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="18dp"
+                                android:orientation="horizontal">
+                                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Reports" android:textColor="#B7D3D8" android:textSize="10sp" />
+                                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Average" android:textColor="#B7D3D8" android:textSize="10sp" />
+                                <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="Completed" android:textColor="#B7D3D8" android:textSize="10sp" />
+                            </LinearLayout>
+                            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                                <TextView android:id="@+id/project_hero_reports" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="0" android:textColor="@color/white" android:textSize="17sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/project_hero_average" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="0%" android:textColor="@color/white" android:textSize="17sp" android:textStyle="bold" />
+                                <TextView android:id="@+id/project_hero_completed" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="0" android:textColor="@color/white" android:textSize="17sp" android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
 
                         <!-- Snapshot of the request queue. Real counts only. -->
                         <GridLayout
@@ -1269,7 +1322,7 @@
                                 android:paddingBottom="10dp">
 
                                 <TextView
-                                    android:id="@+id/project_tile_total"
+                                    android:id="@+id/project_metric_average"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="0"
@@ -1281,7 +1334,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
-                                    android:text="@string/projects_metric_total"
+                                    android:text="AVERAGE PROGRESS"
                                     android:textAllCaps="true"
                                     android:textColor="@color/text_muted"
                                     android:textSize="8sp"
@@ -1302,7 +1355,7 @@
                                 android:paddingBottom="10dp">
 
                                 <TextView
-                                    android:id="@+id/project_tile_approved"
+                                    android:id="@+id/project_metric_reports"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="0"
@@ -1314,7 +1367,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
-                                    android:text="@string/projects_metric_approved"
+                                    android:text="TECHNICIAN REPORTS"
                                     android:textAllCaps="true"
                                     android:textColor="@color/text_muted"
                                     android:textSize="8sp"
@@ -1342,7 +1395,7 @@
                                 android:paddingBottom="10dp">
 
                                 <TextView
-                                    android:id="@+id/project_tile_in_progress"
+                                    android:id="@+id/project_metric_active"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="0"
@@ -1354,7 +1407,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
-                                    android:text="@string/projects_metric_in_progress"
+                                    android:text="ACTIVE PROJECTS"
                                     android:textAllCaps="true"
                                     android:textColor="@color/text_muted"
                                     android:textSize="8sp"
@@ -1375,7 +1428,7 @@
                                 android:paddingBottom="10dp">
 
                                 <TextView
-                                    android:id="@+id/project_tile_completed"
+                                    android:id="@+id/project_metric_completion"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:text="0"
@@ -1387,7 +1440,7 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     android:layout_marginTop="2dp"
-                                    android:text="@string/projects_metric_completed"
+                                    android:text="COMPLETION RATE"
                                     android:textAllCaps="true"
                                     android:textColor="@color/text_muted"
                                     android:textSize="8sp"
@@ -1401,6 +1454,20 @@
                             android:layout_marginTop="12dp"
                             android:background="@drawable/bg_booking_panel"
                             android:orientation="vertical">
+
+                            <EditText
+                                android:id="@+id/project_search_input"
+                                android:layout_width="match_parent"
+                                android:layout_height="44dp"
+                                android:layout_margin="12dp"
+                                android:background="@drawable/bg_input"
+                                android:hint="Search projects..."
+                                android:paddingStart="14dp"
+                                android:paddingEnd="14dp"
+                                android:singleLine="true"
+                                android:textColor="@color/text_primary"
+                                android:textColorHint="@color/text_muted"
+                                android:textSize="13sp" />
 
                             <LinearLayout
                                 android:layout_width="match_parent"

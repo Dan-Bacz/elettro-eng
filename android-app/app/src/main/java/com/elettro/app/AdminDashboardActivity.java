@@ -136,6 +136,11 @@ public class AdminDashboardActivity extends AppCompatActivity {
     private JSONArray workersArray, stockMovementsArray;
     private JSONObject operationsSummary;
     private String currentSection = "home";
+    private TextView projectAverage, projectReports, projectActive, projectCompletion, projectsCount;
+    private TextView projectHeroReports, projectHeroAverage, projectHeroCompleted;
+    private EditText projectSearch;
+    private Button projectFilterAll, projectFilterApproved, projectFilterAssigned, projectFilterInProgress, projectFilterCompleted;
+    private String currentProjectFilter = "ALL";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -217,6 +222,20 @@ public class AdminDashboardActivity extends AppCompatActivity {
         bookingSearchInput = findViewById(R.id.booking_search_input);
         bookingSearchClear = findViewById(R.id.booking_search_clear);
         projectsListContainer = findViewById(R.id.projects_list_container);
+        projectAverage = findViewById(R.id.project_metric_average);
+        projectReports = findViewById(R.id.project_metric_reports);
+        projectActive = findViewById(R.id.project_metric_active);
+        projectCompletion = findViewById(R.id.project_metric_completion);
+        projectHeroReports = findViewById(R.id.project_hero_reports);
+        projectHeroAverage = findViewById(R.id.project_hero_average);
+        projectHeroCompleted = findViewById(R.id.project_hero_completed);
+        projectsCount = findViewById(R.id.projects_count);
+        projectSearch = findViewById(R.id.project_search_input);
+        projectFilterAll = findViewById(R.id.project_filter_all);
+        projectFilterApproved = findViewById(R.id.project_filter_approved);
+        projectFilterAssigned = findViewById(R.id.project_filter_assigned);
+        projectFilterInProgress = findViewById(R.id.project_filter_in_progress);
+        projectFilterCompleted = findViewById(R.id.project_filter_completed);
         registrationsListContainer = findViewById(R.id.registrations_list_container);
         inventoryListContainer = findViewById(R.id.inventory_list_container);
         techniciansListContainer = findViewById(R.id.technicians_list_container);
@@ -488,6 +507,28 @@ public class AdminDashboardActivity extends AppCompatActivity {
         orderFilterPending.setOnClickListener(v -> { currentOrderFilter = "PENDING"; updateOrderFilterChips(); renderOrdersList(); });
         orderFilterApproved.setOnClickListener(v -> { currentOrderFilter = "APPROVED"; updateOrderFilterChips(); renderOrdersList(); });
         orderFilterCompleted.setOnClickListener(v -> { currentOrderFilter = "COMPLETED"; updateOrderFilterChips(); renderOrdersList(); });
+
+        projectSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { renderProjectsList(); }
+            @Override public void afterTextChanged(Editable s) { }
+        });
+        projectFilterAll.setOnClickListener(v -> setProjectFilter("ALL"));
+        projectFilterApproved.setOnClickListener(v -> setProjectFilter("APPROVED"));
+        projectFilterAssigned.setOnClickListener(v -> setProjectFilter("ASSIGNED"));
+        projectFilterInProgress.setOnClickListener(v -> setProjectFilter("IN_PROGRESS"));
+        projectFilterCompleted.setOnClickListener(v -> setProjectFilter("COMPLETED"));
+    }
+
+    private void setProjectFilter(String filter) {
+        currentProjectFilter = filter;
+        Button[] chips = {projectFilterAll, projectFilterApproved, projectFilterAssigned, projectFilterInProgress, projectFilterCompleted};
+        String[] keys = {"ALL", "APPROVED", "ASSIGNED", "IN_PROGRESS", "COMPLETED"};
+        for (int i = 0; i < chips.length; i++) {
+            chips[i].setBackgroundResource(keys[i].equals(filter) ? R.drawable.bg_chip_selected : R.drawable.bg_chip_unselected);
+            chips[i].setTextColor(keys[i].equals(filter) ? Color.parseColor("#0B0F10") : Color.parseColor("#68747A"));
+        }
+        renderProjectsList();
     }
 
     private void updateOrderFilterChips() {
@@ -1391,9 +1432,63 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
 
     // === PROJECTS ===
 
+    private int getProjectProgress(JSONObject project, String status) {
+        JSONObject booking = project.optJSONObject("booking");
+        JSONArray reports = booking == null ? null : booking.optJSONArray("reports");
+        if (reports != null && reports.length() > 0) {
+            JSONObject latest = reports.optJSONObject(0);
+            if (latest != null && !latest.isNull("progress")) {
+                return Math.max(0, Math.min(100, latest.optInt("progress", 0)));
+            }
+        }
+        return getStatusProgress(status);
+    }
+
+    private boolean projectMatches(JSONObject project, String status, String query) {
+        if (!"ALL".equals(currentProjectFilter) && !currentProjectFilter.equals(status)) return false;
+        if (query.isEmpty()) return true;
+        JSONObject booking = project.optJSONObject("booking");
+        JSONObject client = booking == null ? null : booking.optJSONObject("client");
+        String text = project.optString("id", "") + " " + project.optString("bookingId", "") + " "
+                + project.optString("title", "") + " " + (booking == null ? "" : booking.optString("title", ""))
+                + " " + (client == null ? "" : client.optString("name", ""));
+        return text.toLowerCase(Locale.US).contains(query);
+    }
+
     private void renderProjectsList() {
         projectsListContainer.removeAllViews();
         if (bookingsArray == null && projectsArray == null) return;
+
+        int total = projectsArray == null ? 0 : projectsArray.length();
+        int approved = 0, assigned = 0, inProgress = 0, completed = 0, reported = 0, progressTotal = 0;
+        if (projectsArray != null) {
+            for (int i = 0; i < projectsArray.length(); i++) {
+                JSONObject item = projectsArray.optJSONObject(i);
+                if (item == null) continue;
+                String itemStatus = item.optString("status", "");
+                if ("APPROVED".equals(itemStatus)) approved++;
+                if ("ASSIGNED".equals(itemStatus)) assigned++;
+                if ("IN_PROGRESS".equals(itemStatus)) inProgress++;
+                if ("COMPLETED".equals(itemStatus)) completed++;
+                JSONObject itemBooking = item.optJSONObject("booking");
+                JSONArray itemReports = itemBooking == null ? null : itemBooking.optJSONArray("reports");
+                JSONObject latestReport = itemReports == null || itemReports.length() == 0 ? null : itemReports.optJSONObject(0);
+                if (latestReport != null && !latestReport.isNull("progress")) reported++;
+                progressTotal += getProjectProgress(item, itemStatus);
+            }
+        }
+        int average = total == 0 ? 0 : Math.round((float) progressTotal / total);
+        int active = assigned + inProgress;
+        int completionRate = total == 0 ? 0 : Math.round((completed * 100f) / total);
+        projectAverage.setText(average + "%");
+        projectReports.setText(String.valueOf(reported));
+        projectActive.setText(String.valueOf(active));
+        projectCompletion.setText(completionRate + "%");
+        projectHeroReports.setText(String.valueOf(reported));
+        projectHeroAverage.setText(average + "%");
+        projectHeroCompleted.setText(String.valueOf(completed));
+        projectsCount.setText(total + " total");
+        String query = projectSearch == null ? "" : projectSearch.getText().toString().trim().toLowerCase(Locale.US);
 
         boolean hasProjects = false;
 
@@ -1407,6 +1502,7 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
                     status = booking.optString("status", status);
                 }
                 if (status.isEmpty()) continue;
+                if (!projectMatches(project, status, query)) continue;
                 hasProjects = true;
 
                 final JSONObject finalProject = project;
@@ -1440,9 +1536,9 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
                 tvInfo.setPadding(0, 4, 0, 0);
                 card.addView(tvInfo);
 
-                int progress = getStatusProgress(status);
+                int progress = getProjectProgress(project, status);
                 TextView tvProgress = new TextView(this);
-                tvProgress.setText("Progress: " + progress + "%");
+                tvProgress.setText("Progress: " + progress + "%  •  " + (progress == getStatusProgress(status) ? "Status estimate" : "Latest technician report"));
                 tvProgress.setTextColor(Color.parseColor("#68747A"));
                 tvProgress.setTextSize(11);
                 tvProgress.setPadding(0, 2, 0, 0);
@@ -1498,7 +1594,16 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
             }
         }
 
-        if (!hasProjects) {
+        if (!hasProjects && projectsArray != null && projectsArray.length() > 0) {
+            TextView noMatch = new TextView(this);
+            noMatch.setText("No projects match your search or status filter.");
+            noMatch.setTextColor(Color.parseColor("#64748B"));
+            noMatch.setTextSize(12);
+            noMatch.setPadding(16, 24, 16, 24);
+            projectsListContainer.addView(noMatch);
+        }
+
+        if (!hasProjects && projectsArray != null && projectsArray.length() == 0 && bookingsArray != null) {
             for (int i = 0; i < bookingsArray.length(); i++) {
                 JSONObject b = bookingsArray.optJSONObject(i);
                 if (b == null) continue;
