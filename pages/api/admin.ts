@@ -196,9 +196,13 @@ export default async function handler(req: any, res: any) {
 
       // --- Booking lifecycle ---
       if (action === 'approve') {
+        const allocatedBudget = Number(req.body.budget)
+        if (!Number.isFinite(allocatedBudget) || allocatedBudget <= 0) {
+          return res.status(400).json({ error: 'Allocate a budget in Philippine pesos before confirming this booking.' })
+        }
         const b = await prisma.booking.update({
           where: { id: bookingId },
-          data: { status: 'APPROVED' },
+          data: { status: 'APPROVED', budget: allocatedBudget },
           include: { client: true, assignedTo: true }
         })
         // Approving a booking automatically creates its project

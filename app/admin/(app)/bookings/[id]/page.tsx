@@ -167,7 +167,7 @@ export default function AdminBookingDetailPage() {
               <Detail label="Client" value={
                 booking.client ? `${booking.client.name} (${booking.client.email})${booking.client.phone ? ` · ${booking.client.phone}` : ''}` : '—'
               } />
-              <Detail label="Budget" value={booking.budget != null ? `$${Number(booking.budget).toLocaleString()}` : '—'} />
+              <Detail label="Allocated Budget" value={booking.budget != null ? `₱${Number(booking.budget).toLocaleString()}` : 'Not allocated'} />
               <Detail label="Start Date" value={formatDate(booking.startDate)} />
               <Detail label="End Date" value={formatDate(booking.endDate)} />
             </dl>
@@ -222,13 +222,18 @@ export default function AdminBookingDetailPage() {
           {booking.status === 'PENDING' && (
             <div className="rounded-2xl border border-slate-200 bg-white p-5">
               <h2 className="text-sm font-black text-slate-900">Approval</h2>
-              <p className="mt-1 text-xs text-slate-500">Approving converts this booking into a project.</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Review the request, allocate the approved project budget, then confirm the booking. The allocation is private to administrators.</p>
+              <label className="mt-4 block text-xs font-bold text-slate-500" htmlFor="approval-budget">Allocated Budget (PHP)</label>
+              <div className="relative mt-1">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">₱</span>
+                <input id="approval-budget" type="number" min="1" step="0.01" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 50000" className="w-full rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+              </div>
               <button
-                onClick={() => post('approve')}
-                disabled={busy}
+                onClick={() => post('approve', { budget: Number(budget) })}
+                disabled={busy || !budget || Number(budget) <= 0}
                 className="mt-3 w-full rounded-xl bg-yellow-400 px-4 py-2.5 text-xs font-bold text-black hover:bg-yellow-500 transition-colors disabled:opacity-50"
               >
-                Approve Booking
+                Confirm Booking with Budget
               </button>
             </div>
           )}
@@ -282,8 +287,8 @@ export default function AdminBookingDetailPage() {
               </select>
             )}
             <div className="mt-3">
-              <label className="block text-xs font-bold text-slate-500 mb-1">Budget (USD)</label>
-              <input type="number" min="0" step="0.01" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 500" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
+              <label className="block text-xs font-bold text-slate-500 mb-1">Allocated Budget (PHP)</label>
+              <input type="number" min="0" step="0.01" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="e.g. 50000" className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-yellow-400" />
             </div>
             <button
               onClick={handleStatus}

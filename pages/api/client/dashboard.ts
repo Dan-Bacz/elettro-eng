@@ -68,8 +68,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         orders: orders.length,
         awaitingOrders,
       },
-      bookings: bookings.map((booking) => ({
-        ...booking,
+      bookings: bookings.map((booking) => {
+        const { budget: _privateAdminBudget, ...clientBooking } = booking
+        return ({
+        ...clientBooking,
         reference: reference('ELT', booking.id),
         assignedTechnicians: Array.from(new Map(
           [
@@ -89,7 +91,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ]
           .filter((update): update is { message: string; createdAt: Date } => update !== null)
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ?? null,
-      })),
+        })
+      }),
       orders: orders.map((order) => ({ ...order, reference: reference('ORD', order.id) })),
       notifications,
     })
