@@ -62,7 +62,7 @@ export default async function handler(req, res) {
       prisma.inventoryItem.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.user.findMany({
         where: { role: { in: ['ADMIN', 'TECH', 'CLIENT', 'SALES', 'WAREHOUSE'] } },
-        select: { id: true, name: true, email: true, role: true, phone: true, address: true, approved: true, status: true, emailVerifiedAt: true, createdAt: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
+        select: { id: true, name: true, email: true, role: true, phone: true, address: true, approved: true, status: true, available: true, emailVerifiedAt: true, createdAt: true, specialization: true, yearsOfExperience: true, skills: true, profileImageUrl: true }
       }),
       prisma.project.findMany({
         orderBy: { createdAt: 'desc' },
@@ -198,10 +198,10 @@ export default async function handler(req, res) {
 
     // Technician status distribution.
     const technicianStatus = {
-      active: activeTechs.filter((t) => !onLeaveTechIds.has(t.id)).length,
+      active: activeTechs.filter((t) => t.available !== false && !onLeaveTechIds.has(t.id)).length,
       onLeave: onLeaveTechIds.size,
       suspended: suspendedTechs.length,
-      inactive: rejectedTechs.length + pendingRegs.filter((t) => !t.approved && t.status === 'PENDING').length,
+      inactive: rejectedTechs.length + pendingRegs.filter((t) => !t.approved && t.status === 'PENDING').length + activeTechs.filter((t) => t.available === false).length,
     }
 
     // Recent projects with real progress (max report progress, else status-based).

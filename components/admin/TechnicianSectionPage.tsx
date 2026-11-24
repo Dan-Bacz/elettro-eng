@@ -20,6 +20,7 @@ export default function TechnicianSectionPage({ section, data, onRefresh }: Prop
   const [leaveForm, setLeaveForm] = useState({ type: 'VACATION', from: '', to: '', commutation: 'NOT_REQUESTED', addressDuringLeave: '', medicalCertificate: false, reason: '' })
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
+  const [availabilityBusy, setAvailabilityBusy] = useState(false)
 
   useEffect(() => {
     async function loadSection() {
@@ -85,6 +86,18 @@ export default function TechnicianSectionPage({ section, data, onRefresh }: Prop
     reader.readAsDataURL(file)
   }
 
+  async function updateAvailability(available: boolean) {
+    setAvailabilityBusy(true)
+    setNotice('')
+    try {
+      const res = await fetch('/api/tech', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ available }) })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(payload.error || 'Unable to update availability')
+      setNotice(available ? 'You are now available for assignments.' : 'You are now marked unavailable.')
+      await onRefresh()
+    } catch (e: any) { setNotice(e.message || 'Unable to update availability') } finally { setAvailabilityBusy(false) }
+  }
+
   const reports = useMemo(() => (data.bookings || []).flatMap((booking: any) => (booking.reports || []).map((report: any) => ({ ...report, booking }))), [data.bookings])
   const filteredMaterials = inventory.filter((item) => String(item.name || '').toLowerCase().includes(materialQuery.toLowerCase()))
 
@@ -106,6 +119,7 @@ export default function TechnicianSectionPage({ section, data, onRefresh }: Prop
         <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Technician access</span>
       </div>
       {notice && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{notice}</div>}
+      {section === 'profile' && <div className={`${card} flex items-center justify-between gap-4`}><div><h2 className="text-sm font-black text-slate-900">Assignment availability</h2><p className="mt-1 text-xs text-slate-500">Turn this off when you are unavailable for new work. Your account stays active.</p></div><button type="button" disabled={availabilityBusy} onClick={() => updateAvailability(data.tech.available === false)} className={`relative h-7 w-12 shrink-0 rounded-full transition ${data.tech.available === false ? 'bg-slate-300' : 'bg-emerald-500'} disabled:opacity-50`} aria-label={data.tech.available === false ? 'Set available' : 'Set unavailable'}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${data.tech.available === false ? 'left-1' : 'left-6'}`} /></button></div>}
 
       {section === 'notifications' && <div className="space-y-3"><div className="flex justify-end"><button onClick={() => markNotification()} className="rounded-xl bg-black px-4 py-2 text-xs font-black text-yellow-400">Mark all read</button></div>{notifications.length === 0 ? <div className={card}><p className="text-sm text-slate-400">No notifications yet.</p></div> : notifications.map((n) => <div key={n.id} className={`${card} ${n.read ? 'opacity-65' : 'border-yellow-200 bg-yellow-50/50'}`} onClick={() => !n.read && markNotification(n.id)}><div className="flex items-start justify-between gap-3"><h2 className="text-sm font-black text-slate-900">{n.title}</h2>{!n.read && <span className="rounded-full bg-yellow-400 px-2 py-1 text-[10px] font-black text-black">NEW</span>}</div><p className="mt-2 text-sm text-slate-600">{n.message}</p><p className="mt-2 text-[11px] text-slate-400">{formatDateTime(n.createdAt)}</p></div>)}</div>}
 

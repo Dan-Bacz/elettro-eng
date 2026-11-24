@@ -10,6 +10,7 @@ export type UserObj = {
   phone?: string | null
   approved?: boolean
   status?: UserStatus
+  available?: boolean
   address?: string | null
   emailVerifiedAt?: string | null
   specialization?: string | null

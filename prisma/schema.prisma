@@ -16,6 +16,7 @@ model User {
   phone                   String?
   approved                Boolean                  @default(false)
   status                  UserStatus               @default(ACTIVE)
+  available               Boolean                  @default(true)
   emailVerifiedAt         DateTime?
   address                 String?
   specialization          String?

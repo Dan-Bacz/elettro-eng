@@ -49,6 +49,7 @@ export default async function handler(req: any, res: any) {
             phone: true,
             role: true,
             status: true,
+            available: true,
             approved: true,
             specialization: true,
             yearsOfExperience: true,
@@ -153,7 +154,7 @@ export default async function handler(req: any, res: any) {
 
       if (!current) return res.status(404).json({ error: 'Technician not found' })
 
-      const { profileImage, removeImage } = req.body || {}
+      const { profileImage, removeImage, available } = req.body || {}
       let profileImageUrl = current.profileImageUrl
 
       if (removeImage === true) {
@@ -175,11 +176,11 @@ export default async function handler(req: any, res: any) {
 
       const updated = await prisma.user.update({
         where: { id: current.id },
-        data: { profileImageUrl },
-        select: { id: true, profileImageUrl: true }
+        data: { profileImageUrl, ...(typeof available === 'boolean' ? { available } : {}) },
+        select: { id: true, profileImageUrl: true, available: true }
       })
 
-      return res.json({ success: true, profileImageUrl: updated.profileImageUrl })
+      return res.json({ success: true, profileImageUrl: updated.profileImageUrl, available: updated.available })
     } catch (error: any) {
       console.error('Tech API error:', error)
       return res.status(500).json({ error: error.message || 'Internal server error' })

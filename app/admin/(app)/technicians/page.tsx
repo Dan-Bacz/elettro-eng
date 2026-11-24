@@ -173,7 +173,7 @@ export default function AdminTechniciansPage() {
                   </td>
                   <td className="px-4 py-3.5 text-xs font-medium text-slate-600">{u.specialization || '—'}</td>
                   <td className="px-4 py-3.5 text-xs font-medium text-slate-600">{u.yearsOfExperience != null ? `${u.yearsOfExperience} yrs` : '—'}</td>
-                  <td className="px-4 py-3.5"><StatusBadge status={u.__status} /></td>
+                  <td className="px-4 py-3.5"><div className="flex flex-wrap gap-1.5"><StatusBadge status={u.__status} />{u.__status === 'ACTIVE' && u.available === false && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">Unavailable</span>}</div></td>
                   <td className="px-4 py-3.5 text-xs text-slate-400">{formatDate(u.createdAt)}</td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-2">
