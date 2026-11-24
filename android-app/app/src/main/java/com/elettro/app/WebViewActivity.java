@@ -109,7 +109,6 @@ public class WebViewActivity extends AppCompatActivity {
 
             String section = null;
             if (id == R.id.nav_my_jobs) section = "jobs";
-            else if (id == R.id.nav_leave) section = "leave";
             else if (id == R.id.nav_notifications) section = "notifications";
             else if (id == R.id.nav_materials) section = "materials";
             else if (id == R.id.nav_profile) section = "profile";

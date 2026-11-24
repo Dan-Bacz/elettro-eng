@@ -4,12 +4,11 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { BarChartIcon, BellIcon, CalendarIcon, GearIcon, GridIcon, HammerIcon, LogoutIcon, UserIcon, CartIcon } from './icons'
+import { BarChartIcon, BellIcon, GearIcon, GridIcon, HammerIcon, LogoutIcon, UserIcon, CartIcon } from './icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/technician/dashboard' },
   { key: 'jobs', label: 'My Jobs', icon: HammerIcon, href: '/technician/dashboard#jobs' },
-  { key: 'leave', label: 'Leave', icon: CalendarIcon, href: '/technician/dashboard#leave' },
   { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/technician/dashboard#notifications' },
   { key: 'materials', label: 'Material Requests', icon: CartIcon, href: '/technician/dashboard#materials' },
   { key: 'profile', label: 'Profile', icon: UserIcon, href: '/technician/dashboard#profile' },

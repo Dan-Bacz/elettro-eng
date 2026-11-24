@@ -249,7 +249,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_my_jobs) { showSection("jobs"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_materials) { showSection("materials"); return true; }
-            if (id == R.id.nav_leave) { showSection("leave"); return true; }
             if (id == R.id.nav_profile) { showSection("profile"); return true; }
             if (id == R.id.nav_logout) { logout(); return true; }
             return false;
@@ -285,12 +284,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 titleRes = R.string.tech_material_title;
                 subRes = R.string.tech_reports_subtitle;
                 menuRes = R.id.nav_materials;
-                break;
-            case "leave":
-                titleRes = R.string.tech_leave_title;
-                subRes = R.string.tech_leave_subtitle;
-                menuRes = R.id.nav_leave;
-                loadLeaveData();
                 break;
             case "profile":
                 titleRes = R.string.tech_profile_title;
