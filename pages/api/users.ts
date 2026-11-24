@@ -38,6 +38,7 @@ export default async function handler(req: any, res: any) {
           phone: true,
           approved: true,
           status: true,
+          available: true,
           address: true,
           specialization: true,
           yearsOfExperience: true,

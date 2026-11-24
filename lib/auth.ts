@@ -22,6 +22,7 @@ export type SessionUser = {
   role: 'ADMIN' | 'SALES' | 'WAREHOUSE' | 'TECH' | 'CLIENT' | 'RIDER'
   approved: boolean
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED'
+  available: boolean
   createdAt: Date
 }
 
@@ -40,6 +41,7 @@ export async function getSessionUser(token?: string | null): Promise<SessionUser
       role: user.role,
       approved: user.approved,
       status: user.status,
+      available: user.available,
       createdAt: user.createdAt,
     }
   } catch (e) {

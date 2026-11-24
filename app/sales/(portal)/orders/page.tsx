@@ -49,6 +49,7 @@ type Rider = {
   name: string
   email: string
   phone?: string | null
+  available?: boolean
 }
 
 function formatDate(iso?: string | null) {
@@ -406,8 +407,8 @@ export default function SalesOrdersPage() {
                 >
                   <option value="">-- Choose a rider --</option>
                   {riders.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({r.email}) {r.phone ? `· ${r.phone}` : ''}
+                    <option key={r.id} value={r.id} disabled={r.available === false}>
+                      {r.name} ({r.email}) {r.phone ? `· ${r.phone}` : ''} {r.available === false ? '(Unavailable)' : '(Available)'}
                     </option>
                   ))}
                 </select>

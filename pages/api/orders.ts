@@ -152,10 +152,10 @@ export default async function handler(req: any, res: any) {
       let assignedRiderUser: any = null
       if (hasRiderId && riderId) {
         assignedRiderUser = await prisma.user.findFirst({
-          where: { id: riderId, role: 'RIDER', status: 'ACTIVE' },
+          where: { id: riderId, role: 'RIDER', status: 'ACTIVE', available: true },
         })
         if (!assignedRiderUser) {
-          return res.status(400).json({ error: 'Selected rider is invalid or not an active rider account.' })
+          return res.status(400).json({ error: 'Selected rider is unavailable or not an active rider account.' })
         }
       }
 

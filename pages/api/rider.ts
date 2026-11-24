@@ -90,6 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           name: user.name,
           email: user.email,
           role: user.role,
+          available: user.available !== false,
         },
         orders: detailedOrders,
         stats: {
@@ -109,6 +110,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // PATCH: Update delivery status (e.g., IN_TRANSIT, DELIVERY_FAILED, CANCELLATION_REQUESTED, RETURN_REQUESTED)
   if (req.method === 'PATCH') {
     const { orderId, status, reason, notes } = req.body || {}
+
+    if (typeof req.body?.available === 'boolean') {
+      const updatedRider = await prisma.user.update({ where: { id: user.id }, data: { available: req.body.available }, select: { id: true, available: true } })
+      return res.status(200).json({ ok: true, available: updatedRider.available })
+    }
 
     if (!orderId || !status) {
       return res.status(400).json({ error: 'Order id and status are required' })
