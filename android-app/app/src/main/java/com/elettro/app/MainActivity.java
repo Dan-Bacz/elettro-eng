@@ -172,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     if ("RIDER".equals(normalizedRole)) {
-                        startActivity(new Intent(this, RiderDashboardActivity.class));
+                        openWebPortal("/rider/dashboard", "Rider Dashboard");
                         finish();
                         return;
                     }
