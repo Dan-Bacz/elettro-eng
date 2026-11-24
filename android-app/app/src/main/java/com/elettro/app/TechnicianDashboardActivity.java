@@ -57,6 +57,7 @@ import java.util.List;
 import java.util.Locale;
 
 public class TechnicianDashboardActivity extends AppCompatActivity {
+    public static final String EXTRA_INITIAL_SECTION = "initial_section";
 
     private static final int REQ_PROFILE_CAMERA = 1101;
     private static final int REQ_PROFILE_GALLERY = 1102;
@@ -134,6 +135,11 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         setupDrawer();
         setupRefresh();
         setupActions();
+
+        String initialSection = getIntent().getStringExtra(EXTRA_INITIAL_SECTION);
+        if (initialSection != null && !initialSection.trim().isEmpty()) {
+            showSection(initialSection);
+        }
 
         loadData();
     }

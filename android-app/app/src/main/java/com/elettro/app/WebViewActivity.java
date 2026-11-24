@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.Gravity;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
@@ -18,6 +19,9 @@ import android.widget.TextView;
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.drawerlayout.widget.DrawerLayout;
+
+import com.google.android.material.navigation.NavigationView;
 
 public class WebViewActivity extends AppCompatActivity {
     public static final String EXTRA_ROUTE = "web_route";
@@ -29,6 +33,9 @@ public class WebViewActivity extends AppCompatActivity {
     private View loadingBar;
     private View errorPanel;
     private TextView errorMessage;
+    private DrawerLayout drawerLayout;
+    private NavigationView techNavView;
+    private View menuButton;
     private boolean returningToLogin;
 
     @Override
@@ -41,6 +48,13 @@ public class WebViewActivity extends AppCompatActivity {
         loadingBar = findViewById(R.id.web_loading);
         errorPanel = findViewById(R.id.web_error_panel);
         errorMessage = findViewById(R.id.web_error_message);
+        drawerLayout = findViewById(R.id.web_drawer_layout);
+        techNavView = findViewById(R.id.web_tech_nav_view);
+        menuButton = findViewById(R.id.web_menu_button);
+
+        String route = getIntent().getStringExtra(EXTRA_ROUTE);
+        if (route == null || route.trim().isEmpty()) route = "/admin/dashboard";
+        configureTechnicianDrawer(route);
 
         configureWebView();
         // SwipeRefreshLayout must only intercept a pull when the WebView is
@@ -63,9 +77,55 @@ public class WebViewActivity extends AppCompatActivity {
             }
         });
 
-        String route = getIntent().getStringExtra(EXTRA_ROUTE);
-        if (route == null || route.trim().isEmpty()) route = "/admin/dashboard";
         loadAuthenticatedRoute(route);
+    }
+
+    private void configureTechnicianDrawer(String route) {
+        if (!route.startsWith("/technician/")) return;
+
+        menuButton.setVisibility(View.VISIBLE);
+        techNavView.setVisibility(View.VISIBLE);
+        menuButton.setOnClickListener(v -> drawerLayout.openDrawer(Gravity.START));
+
+        View header = techNavView.getHeaderView(0);
+        if (header != null) {
+            TextView role = header.findViewById(R.id.drawer_header_role);
+            if (role != null) role.setText(R.string.role_technician);
+            TextView initial = header.findViewById(R.id.drawer_header_initial);
+            if (initial != null) initial.setText("T");
+        }
+
+        techNavView.setNavigationItemSelectedListener(item -> {
+            drawerLayout.closeDrawer(Gravity.START);
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                loadAuthenticatedRoute("/technician/dashboard");
+                return true;
+            }
+            if (id == R.id.nav_logout) {
+                returnToNativeLogin();
+                return true;
+            }
+
+            String section = null;
+            if (id == R.id.nav_my_jobs) section = "jobs";
+            else if (id == R.id.nav_leave) section = "leave";
+            else if (id == R.id.nav_notifications) section = "notifications";
+            else if (id == R.id.nav_materials) section = "materials";
+            else if (id == R.id.nav_inventory_tech) section = "inventory";
+            else if (id == R.id.nav_profile) section = "profile";
+
+            if (section != null) openNativeTechnicianSection(section);
+            return section != null;
+        });
+        techNavView.setCheckedItem(R.id.nav_home);
+    }
+
+    private void openNativeTechnicianSection(String section) {
+        Intent intent = new Intent(this, TechnicianDashboardActivity.class);
+        intent.putExtra(TechnicianDashboardActivity.EXTRA_INITIAL_SECTION, section);
+        startActivity(intent);
+        finish();
     }
 
     @SuppressLint("SetJavaScriptEnabled")
