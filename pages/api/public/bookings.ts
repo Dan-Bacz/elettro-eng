@@ -26,6 +26,9 @@ export default async function handler(req: any, res: any) {
     barangay,
     fullAddress,
     projectLocation,
+    offeringDetails,
+    estimatedAmount,
+    bookingQuestions,
     description,
     buildingType,
     installations,
@@ -65,6 +68,22 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Please provide the complete Mindanao booking address.' })
     }
 
+    const cleanEstimate = Number(estimatedAmount)
+    const cleanQuestions = Array.isArray(bookingQuestions)
+      ? bookingQuestions
+        .map((item: any) => ({
+          offering: String(item?.offering || '').trim(),
+          question: String(item?.question || '').trim(),
+          answer: String(item?.answer || '').trim(),
+        }))
+        .filter((item: { offering: string; question: string; answer: string }) => item.question && item.answer)
+      : []
+    const cleanOfferingDetails = Array.isArray(offeringDetails)
+      ? offeringDetails
+        .map((item: any) => ({ name: String(item?.name || '').trim(), price: Number(item?.price) }))
+        .filter((item: { name: string; price: number }) => item.name && Number.isFinite(item.price))
+      : []
+
     const selectedOffers = Array.isArray(offerings) && offerings.length
       ? offerings.map((i: string) => String(i).trim()).filter(Boolean)
       : Array.isArray(installations) && installations.length
@@ -76,10 +95,13 @@ export default async function handler(req: any, res: any) {
       cleanEmail ? `Client email: ${cleanEmail}` : '',
       phone ? `Client phone: ${String(phone).trim()}` : '',
       selectedOffers.length ? `Selected offerings: ${selectedOffers.join(', ')}` : '',
+      cleanOfferingDetails.length ? `Offering prices: ${cleanOfferingDetails.map((item: { name: string; price: number }) => `${item.name} (₱${item.price.toLocaleString()})`).join(', ')}` : '',
+      Number.isFinite(cleanEstimate) && cleanEstimate > 0 ? `Estimated partial amount: ₱${cleanEstimate.toLocaleString()}` : '',
       buildingType ? `Building type: ${String(buildingType).trim()}` : '',
       `Location: ${cleanProjectLocation}`,
       preferredDate ? `Preferred date: ${String(preferredDate).trim()}` : '',
       preferredTime ? `Preferred time: ${String(preferredTime).trim()}` : '',
+      cleanQuestions.length ? `Booking questions:\n${cleanQuestions.map((item: { offering: string; question: string; answer: string }) => `- ${item.offering}: ${item.question}\n  Answer: ${item.answer}`).join('\n')}` : '',
       description ? String(description).trim() : '',
       attachmentUrl ? `Attachment: ${attachmentUrl}` : '',
     ]
@@ -125,6 +147,7 @@ export default async function handler(req: any, res: any) {
       preferredDate: preferredDate ? String(preferredDate).trim() : undefined,
       preferredTime: preferredTime ? String(preferredTime).trim() : undefined,
       address: cleanProjectLocation,
+      estimatedAmount: Number.isFinite(cleanEstimate) && cleanEstimate > 0 ? cleanEstimate : undefined,
     })
 
     // Notify the client by SMS via the TextBee Android gateway (non-blocking failure)

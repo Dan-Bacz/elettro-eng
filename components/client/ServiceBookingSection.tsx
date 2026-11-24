@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useMemo, useRef, useState } from "react"
-import type { Service } from "./siteData"
+import { getBookingQuestions, type Service } from "./siteData"
 import ClientSessionGate from "./ClientSessionGate"
 import { loadMindanaoLocations, type MindanaoLocation } from "@/lib/mindanaoLocations"
 
@@ -36,6 +36,7 @@ function ServiceBookingForm({ service }: { service: Service }) {
   const [selectedOfferings, setSelectedOfferings] = useState<string[]>([])
   const [otherSelected, setOtherSelected] = useState(false)
   const [otherSpecified, setOtherSpecified] = useState("")
+  const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({})
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [attachment, setAttachment] = useState<string>("")
@@ -58,6 +59,11 @@ function ServiceBookingForm({ service }: { service: Service }) {
     (municipality) => municipality.name === form.cityMunicipality
   )
   const barangayOptions = selectedMunicipality?.barangays || []
+  const selectedNames = selectedOfferingList()
+  const bookingQuestions = getBookingQuestions(service, selectedNames)
+  const estimatedAmount = service.offerings
+    .filter((item) => selectedOfferings.includes(item.name))
+    .reduce((total, item) => total + item.price, 0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -95,6 +101,13 @@ function ServiceBookingForm({ service }: { service: Service }) {
     setSelectedOfferings((prev) =>
       prev.includes(offering) ? prev.filter((t) => t !== offering) : [...prev, offering]
     )
+    setQuestionAnswers((current) => {
+      const next = { ...current }
+      Object.keys(next).forEach((key) => {
+        if (key.includes(offering)) delete next[key]
+      })
+      return next
+    })
   }
 
   function selectedOfferingList(): string[] {
@@ -137,6 +150,9 @@ function ServiceBookingForm({ service }: { service: Service }) {
     if (selectedOfferings.length === 0 && !otherSelected) next.offerings = "Please select at least one offering."
     if (otherSelected && !otherSpecified.trim()) next.other = "Please specify your requirement."
     if (!form.preferredDate) next.preferredDate = "Please choose a preferred date."
+    bookingQuestions.forEach((question) => {
+      if (!questionAnswers[question.id]?.trim()) next[question.id] = "Please answer this question."
+    })
     return next
   }
 
@@ -167,6 +183,15 @@ function ServiceBookingForm({ service }: { service: Service }) {
           description: form.description || undefined,
           buildingType: form.buildingType,
           offerings: selectedOfferingList(),
+          offeringDetails: service.offerings
+            .filter((item) => selectedOfferings.includes(item.name))
+            .map((item) => ({ name: item.name, price: item.price })),
+          estimatedAmount,
+          bookingQuestions: bookingQuestions.map((question) => ({
+            offering: question.offering,
+            question: question.question,
+            answer: questionAnswers[question.id]?.trim() || "",
+          })),
           attachment: attachment || undefined,
         }),
       })
@@ -210,6 +235,7 @@ function ServiceBookingForm({ service }: { service: Service }) {
                 setSelectedOfferings([])
                 setOtherSelected(false)
                 setOtherSpecified("")
+                setQuestionAnswers({})
                 setAttachment("")
                 setAttachmentName("")
                 setFormOpen(false)
@@ -240,12 +266,12 @@ function ServiceBookingForm({ service }: { service: Service }) {
         </p>
         <div className="mt-4 flex flex-wrap gap-2.5">
           {service.offerings.map((offering) => {
-            const active = selectedOfferings.includes(offering)
+            const active = selectedOfferings.includes(offering.name)
             return (
               <button
-                key={offering}
+                key={offering.name}
                 type="button"
-                onClick={() => toggleOffering(offering)}
+                onClick={() => toggleOffering(offering.name)}
                 className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
                   active
                     ? "border-yellow-400 bg-yellow-400 text-black shadow-md shadow-yellow-400/20"
@@ -259,7 +285,7 @@ function ServiceBookingForm({ service }: { service: Service }) {
                 >
                   ✓
                 </span>
-                {offering}
+                <span className="text-left">{offering.name}<span className="ml-2 whitespace-nowrap text-xs font-black">₱{offering.price.toLocaleString()}</span></span>
               </button>
             )
           })}
@@ -301,6 +327,15 @@ function ServiceBookingForm({ service }: { service: Service }) {
           </div>
         )}
         {errors.offerings && <p className="mt-1.5 text-xs text-red-600">{errors.offerings}</p>}
+        <div className="mt-5 rounded-2xl border border-yellow-300 bg-yellow-50 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-yellow-800">Estimated partial amount</p>
+              <p className="mt-1 text-xs text-yellow-900">This is an initial service estimate. Final pricing may change after site inspection.</p>
+            </div>
+            <p className="text-2xl font-black text-gray-900">₱{estimatedAmount.toLocaleString()}</p>
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
@@ -490,6 +525,36 @@ function ServiceBookingForm({ service }: { service: Service }) {
                 </div>
               </div>
             </div>
+
+            {/* Schedule */}
+            {bookingQuestions.length > 0 && (
+              <section className="rounded-2xl border border-cyan-200 bg-cyan-50/60 p-4 sm:p-5">
+                <h4 className="text-xs font-black uppercase tracking-wider text-cyan-800">Project details for your selected services</h4>
+                <p className="mt-1 text-xs leading-5 text-cyan-900">Please answer these questions so our team can prepare a more accurate partial estimate.</p>
+                <div className="mt-4 space-y-4">
+                  {bookingQuestions.map((question) => (
+                    <div key={question.id}>
+                      <label className="block text-sm font-semibold text-gray-700" htmlFor={`question-${question.id}`}>
+                        {question.question} <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id={`question-${question.id}`}
+                        value={questionAnswers[question.id] || ""}
+                        onChange={(event) => {
+                          setQuestionAnswers((current) => ({ ...current, [question.id]: event.target.value }))
+                          setErrors((current) => ({ ...current, [question.id]: "" }))
+                        }}
+                        placeholder={question.placeholder}
+                        rows={2}
+                        className="mt-1.5 w-full resize-y rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder-gray-400 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      />
+                      <p className="mt-1 text-xs font-medium text-gray-500">For: {question.offering}</p>
+                      {errors[question.id] && <p className="mt-1 text-xs text-red-600">{errors[question.id]}</p>}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* Schedule */}
             <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">Preferred Schedule</h4>

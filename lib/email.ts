@@ -158,6 +158,7 @@ export async function sendBookingSubmittedNotification(input: {
   preferredDate?: string
   preferredTime?: string
   address?: string
+  estimatedAmount?: number
 }) {
   for (let attempt = 1; attempt <= ADMIN_NOTIFICATION_MAX_ATTEMPTS; attempt++) {
     try {
@@ -169,6 +170,7 @@ export async function sendBookingSubmittedNotification(input: {
           ? `<p style="margin: 8px 0;"><strong style="color: #333;">Selected Offerings:</strong> ${input.offerings.join(', ')}</p>`
           : '',
         input.address ? `<p style="margin: 8px 0;"><strong style="color: #333;">Project Address:</strong> ${input.address}</p>` : '',
+        input.estimatedAmount ? `<p style="margin: 8px 0;"><strong style="color: #333;">Estimated Partial Amount:</strong> ₱${input.estimatedAmount.toLocaleString()}</p>` : '',
         input.preferredDate ? `<p style="margin: 8px 0;"><strong style="color: #333;">Preferred Date:</strong> ${input.preferredDate}</p>` : '',
         input.preferredTime ? `<p style="margin: 8px 0;"><strong style="color: #333;">Preferred Time:</strong> ${input.preferredTime}</p>` : '',
       ]

@@ -57,9 +57,10 @@ export default async function ServiceDetailPage({ params }: { params: Promise<{ 
               <h2 className="mt-2 text-2xl font-black text-slate-900">Services we provide</h2>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {service.offerings.map((offering) => (
-                  <div key={offering} className="flex items-center gap-3 rounded-xl border border-white bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
+                  <div key={offering.name} className="flex items-center justify-between gap-3 rounded-xl border border-white bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-700">✓</span>
-                    {offering}
+                    {offering.name}
+                    <span className="whitespace-nowrap text-sm font-black text-slate-900">₱{offering.price.toLocaleString()}</span>
                   </div>
                 ))}
               </div>
