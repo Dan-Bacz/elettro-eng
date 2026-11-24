@@ -1,12 +1,16 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import type { Service } from "./siteData"
 import ClientSessionGate from "./ClientSessionGate"
+import { loadMindanaoLocations, type MindanaoLocation } from "@/lib/mindanaoLocations"
 
 type FormState = {
   clientName: string
   email: string
   phone: string
+  province: string
+  cityMunicipality: string
+  barangay: string
   address: string
   buildingType: string
   preferredDate: string
@@ -18,6 +22,9 @@ const INITIAL_FORM: FormState = {
   clientName: "",
   email: "",
   phone: "",
+  province: "",
+  cityMunicipality: "",
+  barangay: "",
   address: "",
   buildingType: "Residential",
   preferredDate: "",
@@ -37,7 +44,35 @@ function ServiceBookingForm({ service }: { service: Service }) {
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
   const [result, setResult] = useState<{ reference: string } | null>(null)
+  const [locations, setLocations] = useState<MindanaoLocation[]>([])
+  const [locationLoading, setLocationLoading] = useState(true)
+  const [locationError, setLocationError] = useState("")
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  const selectedProvince = useMemo(
+    () => locations.find((location) => location.province === form.province),
+    [locations, form.province]
+  )
+  const municipalityOptions = selectedProvince?.municipalities || []
+  const selectedMunicipality = selectedProvince?.municipalities.find(
+    (municipality) => municipality.name === form.cityMunicipality
+  )
+  const barangayOptions = selectedMunicipality?.barangays || []
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setLocationLoading(true)
+    loadMindanaoLocations(controller.signal)
+      .then((data) => {
+        setLocations(data)
+        setLocationError("")
+      })
+      .catch((reason) => {
+        if (reason?.name !== "AbortError") setLocationError(reason?.message || "Location directory unavailable")
+      })
+      .finally(() => setLocationLoading(false))
+    return () => controller.abort()
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -94,7 +129,10 @@ function ServiceBookingForm({ service }: { service: Service }) {
     if (!form.email.trim()) next.email = "Please enter your email address."
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) next.email = "Please enter a valid email address."
     if (!form.phone.trim()) next.phone = "Please enter your mobile number."
-    if (!form.address.trim()) next.address = "Please enter your building / project address."
+    if (!form.province) next.province = "Please select a Mindanao province."
+    if (!form.cityMunicipality) next.cityMunicipality = "Please select a city or municipality."
+    if (!form.barangay) next.barangay = "Please select a barangay."
+    if (!form.address.trim()) next.address = "Please enter your full building / project address."
     if (!form.buildingType) next.buildingType = "Please select a building type."
     if (selectedOfferings.length === 0 && !otherSelected) next.offerings = "Please select at least one offering."
     if (otherSelected && !otherSpecified.trim()) next.other = "Please specify your requirement."
@@ -119,7 +157,11 @@ function ServiceBookingForm({ service }: { service: Service }) {
           email: form.email,
           phone: form.phone,
           service: service.title,
-          projectLocation: form.address,
+          province: form.province,
+          cityMunicipality: form.cityMunicipality,
+          barangay: form.barangay,
+          fullAddress: form.address,
+          projectLocation: [form.province, form.cityMunicipality, form.barangay, form.address].filter(Boolean).join(", "),
           preferredDate: form.preferredDate,
           preferredTime: form.preferredTime,
           description: form.description || undefined,
@@ -346,18 +388,77 @@ function ServiceBookingForm({ service }: { service: Service }) {
                 />
                 {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone}</p>}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="ib-address">
-                  Building / Project Address <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="ib-address"
-                  value={form.address}
-                  onChange={(e) => updateField("address", e.target.value)}
-                  placeholder="Street, Barangay, City"
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
-                />
-                {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
+              <div className="sm:col-span-2">
+                <div className="mb-2 flex items-end justify-between gap-3">
+                  <div>
+                    <h5 className="text-sm font-bold text-gray-800">Booking Address</h5>
+                    <p className="mt-0.5 text-xs text-gray-500">Select a service location within Mindanao, then enter the complete address.</p>
+                  </div>
+                  {locationLoading && <span className="text-xs font-semibold text-gray-500">Loading locations…</span>}
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="ib-province">Province <span className="text-red-500">*</span></label>
+                    <select
+                      id="ib-province"
+                      value={form.province}
+                      onChange={(e) => {
+                        updateField("province", e.target.value)
+                        setForm((current) => ({ ...current, province: e.target.value, cityMunicipality: "", barangay: "" }))
+                      }}
+                      disabled={locationLoading || Boolean(locationError)}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      <option value="">{locationLoading ? "Loading provinces…" : "Select province"}</option>
+                      {locations.map((location) => <option key={location.code} value={location.province}>{location.province}</option>)}
+                    </select>
+                    {errors.province && <p className="mt-1 text-xs text-red-600">{errors.province}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="ib-city">City / Municipality <span className="text-red-500">*</span></label>
+                    <select
+                      id="ib-city"
+                      value={form.cityMunicipality}
+                      onChange={(e) => {
+                        updateField("cityMunicipality", e.target.value)
+                        setForm((current) => ({ ...current, cityMunicipality: e.target.value, barangay: "" }))
+                      }}
+                      disabled={!form.province || locationLoading}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      <option value="">{form.province ? "Select city / municipality" : "Select province first"}</option>
+                      {municipalityOptions.map((municipality) => <option key={municipality.code} value={municipality.name}>{municipality.name}</option>)}
+                    </select>
+                    {errors.cityMunicipality && <p className="mt-1 text-xs text-red-600">{errors.cityMunicipality}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="ib-barangay">Barangay <span className="text-red-500">*</span></label>
+                    <select
+                      id="ib-barangay"
+                      value={form.barangay}
+                      onChange={(e) => updateField("barangay", e.target.value)}
+                      disabled={!form.cityMunicipality || locationLoading}
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      <option value="">{form.cityMunicipality ? "Select barangay" : "Select city first"}</option>
+                      {barangayOptions.map((barangay) => <option key={barangay.code} value={barangay.name}>{barangay.name}</option>)}
+                    </select>
+                    {errors.barangay && <p className="mt-1 text-xs text-red-600">{errors.barangay}</p>}
+                  </div>
+                  <div className="sm:col-span-3">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="ib-address">Full Address <span className="text-red-500">*</span></label>
+                    <input
+                      id="ib-address"
+                      value={form.address}
+                      onChange={(e) => updateField("address", e.target.value)}
+                      placeholder="House / building number, street, subdivision or purok"
+                      autoComplete="street-address"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm placeholder-gray-400 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                    />
+                    {errors.address && <p className="mt-1 text-xs text-red-600">{errors.address}</p>}
+                  </div>
+                </div>
+                {locationError && <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{locationError} Please refresh the page and try again.</p>}
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5" htmlFor="ib-building">

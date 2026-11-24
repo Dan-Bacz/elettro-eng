@@ -21,6 +21,10 @@ export default async function handler(req: any, res: any) {
     service,
     preferredDate,
     preferredTime,
+    province,
+    cityMunicipality,
+    barangay,
+    fullAddress,
     projectLocation,
     description,
     buildingType,
@@ -50,6 +54,17 @@ export default async function handler(req: any, res: any) {
     }
 
     const title = String(service).trim()
+    const locationParts = [province, cityMunicipality, barangay, fullAddress]
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+    const cleanProjectLocation = locationParts.length
+      ? locationParts.join(', ')
+      : String(projectLocation || '').trim()
+
+    if (!cleanProjectLocation) {
+      return res.status(400).json({ error: 'Please provide the complete Mindanao booking address.' })
+    }
+
     const selectedOffers = Array.isArray(offerings) && offerings.length
       ? offerings.map((i: string) => String(i).trim()).filter(Boolean)
       : Array.isArray(installations) && installations.length
@@ -62,7 +77,7 @@ export default async function handler(req: any, res: any) {
       phone ? `Client phone: ${String(phone).trim()}` : '',
       selectedOffers.length ? `Selected offerings: ${selectedOffers.join(', ')}` : '',
       buildingType ? `Building type: ${String(buildingType).trim()}` : '',
-      projectLocation ? `Location: ${String(projectLocation).trim()}` : '',
+      `Location: ${cleanProjectLocation}`,
       preferredDate ? `Preferred date: ${String(preferredDate).trim()}` : '',
       preferredTime ? `Preferred time: ${String(preferredTime).trim()}` : '',
       description ? String(description).trim() : '',
@@ -109,7 +124,7 @@ export default async function handler(req: any, res: any) {
       offerings: selectedOffers,
       preferredDate: preferredDate ? String(preferredDate).trim() : undefined,
       preferredTime: preferredTime ? String(preferredTime).trim() : undefined,
-      address: projectLocation ? String(projectLocation).trim() : undefined,
+      address: cleanProjectLocation,
     })
 
     // Notify the client by SMS via the TextBee Android gateway (non-blocking failure)
