@@ -120,9 +120,8 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject payload = new JSONObject();
                 payload.put("email", email);
                 payload.put("password", password);
-                    // Use the web-compatible session response so every supported
-                    // department can open its existing responsive portal in the app.
-                    payload.put("client", "webview");
+                // The native app is reserved for Admin, Technician, and Rider accounts.
+                payload.put("client", "app");
 
                 String response = ApiClient.post("/auth/login", payload.toString());
                 JSONObject json = new JSONObject(response);
@@ -172,29 +171,8 @@ public class MainActivity extends AppCompatActivity {
                         return;
                     }
 
-                    if ("SALES".equals(normalizedRole)) {
-                        openWebPortal("/sales/dashboard", "Sales Dashboard");
-                        finish();
-                        return;
-                    }
-
-                    if ("WAREHOUSE".equals(normalizedRole)) {
-                        openWebPortal("/warehouse/dashboard", "Warehouse Dashboard");
-                        finish();
-                        return;
-                    }
-
                     if ("RIDER".equals(normalizedRole)) {
                         startActivity(new Intent(this, RiderDashboardActivity.class));
-                        finish();
-                        return;
-                    }
-
-                    if ("SALES".equals(normalizedRole) || "WAREHOUSE".equals(normalizedRole)) {
-                        Intent departmentIntent = new Intent(this, DepartmentDashboardActivity.class);
-                        departmentIntent.putExtra(DepartmentDashboardActivity.EXTRA_ROLE, normalizedRole);
-                        departmentIntent.putExtra(DepartmentDashboardActivity.EXTRA_NAME, user.optString("name", ""));
-                        startActivity(departmentIntent);
                         finish();
                         return;
                     }

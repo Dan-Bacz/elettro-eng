@@ -23,8 +23,8 @@ export default async function handler(req, res) {
   }
 
   // Android app - only TECH and RIDER allowed
-  if (client === 'app' && expectedRole && expectedRole !== 'TECH' && expectedRole !== 'RIDER') {
-    return res.status(400).json({ error: 'Android app is for technicians and riders only' })
+  if (client === 'app' && expectedRole && expectedRole !== 'ADMIN' && expectedRole !== 'TECH' && expectedRole !== 'RIDER') {
+    return res.status(400).json({ error: 'Android app is for Admin, Technician, and Rider accounts only' })
   }
 
   try {
@@ -43,6 +43,10 @@ export default async function handler(req, res) {
 
     if (u.role === 'CLIENT') {
       return res.status(403).json({ error: 'Client accounts must use the client sign-in page.' })
+    }
+
+    if (client === 'app' && u.role !== 'ADMIN' && u.role !== 'TECH' && u.role !== 'RIDER') {
+      return res.status(403).json({ error: 'Warehouse and Sales accounts can only sign in through the web portal.' })
     }
 
     if (u.role === 'TECH' && client !== 'webview' && client !== 'app') {
