@@ -45,6 +45,10 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'Client accounts must use the client sign-in page.' })
     }
 
+    if (u.role === 'TECH' && client !== 'webview' && client !== 'app') {
+      return res.status(403).json({ error: 'Technician sign-in is available only in the Elettro Android app.' })
+    }
+
     if (expectedRole && u.role !== expectedRole) {
       const roleMap = { 'ADMIN': 'Admin', 'WAREHOUSE': 'Warehouse', 'SALES': 'Sales', 'TECH': 'Technician', 'RIDER': 'Rider' }
       return res.status(403).json({ error: `This sign-in page is for ${roleMap[expectedRole] || expectedRole} accounts. Use the sign-in page for your department.` })

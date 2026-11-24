@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     if (session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
 
     if (req.method === 'GET') {
-      if (!['ADMIN', 'WAREHOUSE', 'SALES'].includes(session.role)) return res.status(403).json({ error: 'Forbidden' })
+      if (!['ADMIN', 'WAREHOUSE', 'SALES', 'TECH'].includes(session.role)) return res.status(403).json({ error: 'Forbidden' })
       const items = await prisma.inventoryItem.findMany({
         where: { deletedAt: null },
         orderBy: { createdAt: 'desc' },

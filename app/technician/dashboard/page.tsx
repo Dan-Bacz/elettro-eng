@@ -5,6 +5,7 @@ import StatusBadge from '../../../components/admin/StatusBadge'
 import EmptyState from '../../../components/admin/EmptyState'
 import type { BookingObj, UserObj } from '../../../components/admin/types'
 import { formatDate, formatDateTime } from '../../../components/admin/types'
+import TechnicianSectionPage from '../../../components/admin/TechnicianSectionPage'
 
 type TechPayload = {
   tech: UserObj
@@ -33,6 +34,14 @@ export default function TechnicianDashboardPage() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [reportDrafts, setReportDrafts] = useState<Record<string, ReportDraft>>({})
+  const [section, setSection] = useState('home')
+
+  useEffect(() => {
+    const syncSection = () => setSection(window.location.hash.replace(/^#/, '') || 'home')
+    syncSection()
+    window.addEventListener('hashchange', syncSection)
+    return () => window.removeEventListener('hashchange', syncSection)
+  }, [])
 
   async function load() {
     try {
@@ -164,6 +173,10 @@ export default function TechnicianDashboardPage() {
   const active = data.bookings.filter((b) => ['ASSIGNED', 'IN_PROGRESS'].includes(b.status))
   const completed = data.bookings.filter((b) => b.status === 'COMPLETED')
   const pending = data.bookings.filter((b) => b.status === 'APPROVED')
+
+  if (section !== 'home' && section !== 'jobs') {
+    return <TechnicianSectionPage section={section} data={data} onRefresh={loadCb} />
+  }
 
   return (
     <div className="space-y-7">

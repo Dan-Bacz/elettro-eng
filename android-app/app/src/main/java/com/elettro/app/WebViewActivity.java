@@ -115,17 +115,10 @@ public class WebViewActivity extends AppCompatActivity {
             else if (id == R.id.nav_inventory_tech) section = "inventory";
             else if (id == R.id.nav_profile) section = "profile";
 
-            if (section != null) openNativeTechnicianSection(section);
+            if (section != null) loadAuthenticatedRoute("/technician/dashboard#" + section);
             return section != null;
         });
         techNavView.setCheckedItem(R.id.nav_home);
-    }
-
-    private void openNativeTechnicianSection(String section) {
-        Intent intent = new Intent(this, TechnicianDashboardActivity.class);
-        intent.putExtra(TechnicianDashboardActivity.EXTRA_INITIAL_SECTION, section);
-        startActivity(intent);
-        finish();
     }
 
     @SuppressLint("SetJavaScriptEnabled")
