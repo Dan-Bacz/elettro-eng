@@ -206,9 +206,11 @@ export default async function handler(req, res) {
 
     // Recent projects with real progress (max report progress, else status-based).
     const recentProjects = projects.slice(0, 6).map((p) => {
-      const reportProgress = Number(p.booking?.reports?.[0]?.progress || 0)
-      const statusProgressMap: Record<string, number> = { APPROVED: 15, ASSIGNED: 30, IN_PROGRESS: 65, COMPLETED: 100, CANCELLED: 100, PENDING: 5 }
-      const progress = reportProgress > 0 ? reportProgress : statusProgressMap[p.status || ''] || 5
+      const latestReport = p.booking?.reports?.[0]
+      const statusProgressMap: Record<string, number> = { APPROVED: 15, ASSIGNED: 0, IN_PROGRESS: 0, COMPLETED: 100, CANCELLED: 100, PENDING: 5 }
+      const progress = latestReport?.progress != null
+        ? Math.max(0, Math.min(100, Number(latestReport.progress) || 0))
+        : (statusProgressMap[p.status || ''] ?? 0)
       return {
         id: p.id,
         title: p.title,
@@ -230,7 +232,9 @@ export default async function handler(req, res) {
       clientName: b.client?.name || 'Unknown client',
       technicianName: b.assignedTo?.name || b.project?.assignments?.[0]?.tech?.name || null,
       createdAt: b.createdAt,
-      progress: b.status === 'COMPLETED' ? 100 : b.status === 'IN_PROGRESS' ? 65 : b.status === 'ASSIGNED' ? 30 : b.status === 'APPROVED' ? 15 : 5,
+      progress: b.reports?.[0]?.progress != null
+        ? Math.max(0, Math.min(100, Number(b.reports[0].progress) || 0))
+        : b.status === 'COMPLETED' ? 100 : b.status === 'IN_PROGRESS' ? 0 : b.status === 'ASSIGNED' ? 0 : b.status === 'APPROVED' ? 15 : 5,
     }))
 
     // Approved bookings become projects, so the "recent bookings" widget on the

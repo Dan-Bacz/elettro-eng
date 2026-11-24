@@ -333,6 +333,6 @@ export function formatDateTime(iso?: string | null) {
 }
 
 export function statusProgress(status: string) {
-  const map: Record<string, number> = { PENDING: 5, APPROVED: 20, ASSIGNED: 40, IN_PROGRESS: 70, COMPLETED: 100, CANCELLED: 100 }
+  const map: Record<string, number> = { PENDING: 5, APPROVED: 20, ASSIGNED: 0, IN_PROGRESS: 0, COMPLETED: 100, CANCELLED: 100 }
   return map[status] ?? 5
 }
