@@ -5,6 +5,7 @@ import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
+import ClientSupportWidget from "./ClientSupportWidget"
 
 type ClientShellProps = {
   user: { name: string; email: string }
@@ -125,6 +126,7 @@ export default function ClientShell({ user, children }: ClientShellProps) {
         <main className="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8">{children}</main>
         <footer className="border-t border-slate-200 py-4 text-center text-[11px] font-medium text-slate-400">© {new Date().getFullYear()} ELETTRO Engineering Enterprises — Client Portal</footer>
       </div>
+      <ClientSupportWidget />
     </div>
   )
 }
