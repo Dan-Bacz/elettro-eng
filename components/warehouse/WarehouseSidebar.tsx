@@ -30,6 +30,10 @@ export default function WarehouseSidebar({ collapsed, onToggle }: { collapsed: b
     } catch (e) {
       // ignore
     }
+    if (navigator.userAgent.includes('ElettroAndroid')) {
+      window.location.href = 'elettro://logout'
+      return
+    }
     router.push('/warehouse/login')
   }
 

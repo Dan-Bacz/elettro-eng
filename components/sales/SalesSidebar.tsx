@@ -33,6 +33,10 @@ export default function SalesSidebar({ collapsed, onToggle }: { collapsed: boole
     } catch (e) {
       // ignore
     }
+    if (navigator.userAgent.includes('ElettroAndroid')) {
+      window.location.href = 'elettro://logout'
+      return
+    }
     router.push('/sales/login')
   }
 

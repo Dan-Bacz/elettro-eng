@@ -37,6 +37,10 @@ export default function AdminSidebar({ collapsed, onToggle }: { collapsed: boole
     } catch (e) {
       // ignore
     }
+    if (navigator.userAgent.includes('ElettroAndroid')) {
+      window.location.href = 'elettro://logout'
+      return
+    }
     router.push('/admin/login')
   }
 
