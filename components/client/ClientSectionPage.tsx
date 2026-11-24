@@ -87,6 +87,20 @@ export default function ClientSectionPage({ section }: { section: "bookings" | "
 
   useEffect(() => { load() }, [])
 
+  useEffect(() => {
+    function keepProductLinksInsidePortal(event: MouseEvent) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      const link = target.closest<HTMLAnchorElement>('a[href="/products"]')
+      if (!link) return
+      event.preventDefault()
+      window.location.assign('/client/products')
+    }
+
+    document.addEventListener('click', keepProductLinksInsidePortal, true)
+    return () => document.removeEventListener('click', keepProductLinksInsidePortal, true)
+  }, [])
+
   const bookings = useMemo(() => (data?.bookings || []).filter((item) => {
     const matchesQuery = !query.trim() || `${item.reference} ${item.title} ${item.description || ""}`.toLowerCase().includes(query.trim().toLowerCase())
     return matchesQuery && (filter === "ALL" || item.status === filter)
