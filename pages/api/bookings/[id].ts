@@ -30,7 +30,16 @@ export default async function handler(req: any, res: any) {
           include: {
             assignments: { include: { tech: { select: { id: true, name: true, email: true } } } }
           }
-        }
+        },
+        ...(session.role === 'ADMIN' ? {
+          materialUsages: {
+            orderBy: { createdAt: 'desc' as const },
+            include: {
+              inventoryItem: { select: { id: true, name: true, sku: true, unit: true } },
+              tech: { select: { id: true, name: true } },
+            },
+          },
+        } : {}),
       }
     })
     if (!booking) return res.status(404).json({ error: 'Booking not found' })

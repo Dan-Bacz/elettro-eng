@@ -38,5 +38,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const item = await prisma.inventoryItem.findFirst({ where: { id: inventoryItemId, deletedAt: null }, select: { id: true, unit: true } })
   if (!item) return res.status(404).json({ error: 'Inventory item not found.' })
   const usage = await prisma.projectMaterialUsage.create({ data: { bookingId, inventoryItemId, techId: user.id, quantity, unit: item.unit || 'pcs', note }, include: { inventoryItem: { select: { id: true, name: true, sku: true, unit: true } }, tech: { select: { id: true, name: true } } } })
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: { title: true } })
+  const admins = await prisma.user.findMany({ where: { role: 'ADMIN', status: 'ACTIVE' }, select: { id: true } })
+  if (admins.length) {
+    await prisma.notification.createMany({
+      data: admins.map(admin => ({
+        userId: admin.id,
+        type: 'MATERIAL_USAGE',
+        title: 'Project Material Usage Recorded',
+        message: `${user.name} recorded ${quantity} ${item.unit || 'pcs'} used on "${booking?.title || 'project'}".`,
+        link: `/admin/projects/${bookingId}`,
+      })),
+    })
+  }
   return res.status(201).json({ usage })
 }

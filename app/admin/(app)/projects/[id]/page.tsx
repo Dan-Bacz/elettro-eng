@@ -206,6 +206,20 @@ export default function AdminProjectDetailPage() {
             </dl>
           </div>
 
+          {(() => {
+            const materialUsages = ((booking as any).materialUsages || []) as { id: string; quantity: number; unit?: string | null; note?: string | null; createdAt: string; inventoryItem?: { name?: string; unit?: string | null }; tech?: { name?: string } }[]
+            const totalUnits = materialUsages.reduce((sum, usage) => sum + Number(usage.quantity || 0), 0)
+            return (
+              <div className="rounded-2xl border border-cyan-200 bg-cyan-50/60 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-700">Field consumption</p><h2 className="mt-1 text-sm font-black text-slate-900">Actual Material Usage</h2><p className="mt-1 text-xs text-slate-500">Materials reported as consumed by technicians on this project.</p></div>
+                  <div className="rounded-xl bg-white px-3 py-2 text-right"><div className="text-lg font-black text-cyan-800">{totalUnits}</div><div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total units</div></div>
+                </div>
+                {materialUsages.length === 0 ? <p className="mt-4 rounded-xl bg-white p-4 text-xs text-slate-400">No material usage has been recorded yet.</p> : <div className="mt-4 space-y-2">{materialUsages.map(usage => <div key={usage.id} className="flex flex-col gap-2 rounded-xl bg-white p-3 sm:flex-row sm:items-center sm:justify-between"><div><div className="text-xs font-black text-slate-800">{usage.inventoryItem?.name || 'Material'}</div><div className="mt-1 text-[11px] text-slate-500">By {usage.tech?.name || 'Technician'} · {formatDateTime(usage.createdAt)}{usage.note ? ` · ${usage.note}` : ''}</div></div><span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-black text-cyan-800">{usage.quantity} {usage.unit || usage.inventoryItem?.unit || 'pcs'}</span></div>)}</div>}
+              </div>
+            )
+          })()}
+
           {/* Activity timeline */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <h2 className="text-sm font-black text-slate-900">Activity Log</h2>
