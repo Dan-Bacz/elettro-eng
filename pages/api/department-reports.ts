@@ -209,7 +209,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ error: 'Forbidden' })
       }
 
-      const [users, bookings, projects, technicianReports, activities, inventory, orders, sales, requests, releases, movements] = await Promise.all([
+      const [users, bookings, projects, technicianReports, activities, materialUsages, inventory, orders, sales, requests, releases, movements] = await Promise.all([
         prisma.user.findMany({
           where: { role: { in: ['ADMIN', 'TECH', 'SALES', 'WAREHOUSE', 'RIDER'] }, ...(hasDateFilter ? { createdAt: dateFilter } : {}) },
           orderBy: { createdAt: 'desc' },
@@ -238,6 +238,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           where: hasDateFilter ? { createdAt: dateFilter } : undefined,
           orderBy: { createdAt: 'desc' },
           include: { tech: { select: { name: true } }, booking: { select: { title: true } } },
+        }),
+        prisma.projectMaterialUsage.findMany({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          orderBy: { createdAt: 'desc' },
+          include: { booking: { select: { title: true } }, inventoryItem: { select: { name: true, unit: true } }, tech: { select: { name: true } } },
         }),
         prisma.inventoryItem.findMany({
           where: hasDateFilter ? { createdAt: dateFilter } : undefined,
@@ -301,12 +306,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           movementCount: movements.length,
           technicianReportCount: technicianReports.length,
           activityCount: activities.length,
+          materialUsageCount: materialUsages.length,
         },
         users,
         bookings,
         projects,
         technicianReports,
         activities,
+        materialUsages,
         inventory,
         lowStockItems,
         orders,

@@ -31,6 +31,7 @@ model User {
   technicianActivities    TechnicianActivity[]
   notifications           Notification[]
   materialRequests        MaterialRequest[]
+  materialUsages          ProjectMaterialUsage[]
   projectAssignments      ProjectAssignment[]
   leaveRequests           LeaveRequest[]           @relation("TechLeaves")
   leaveCredits            LeaveCredits?            @relation("TechLeaveCredits")
@@ -99,6 +100,7 @@ model Booking {
   reports              Report[]
   materialRequests     MaterialRequest[]
   warehouseRequests    WarehouseRequest[]
+  materialUsages       ProjectMaterialUsage[]
   project              Project?
 }
 
@@ -169,6 +171,7 @@ model InventoryItem {
   salesSaleItems        SalesSaleItem[]
   warehouseRequestItems WarehouseRequestItem[]
   inventoryMovements    InventoryMovement[]
+  materialUsages        ProjectMaterialUsage[]
 
   @@index([deletedAt])
 }
@@ -186,6 +189,26 @@ model Report {
   nextWork  String?
   photoUrls String?
   createdAt DateTime @default(now())
+}
+
+// Materials actually consumed while carrying out a project. Warehouse
+// requests/releases track movement into a project; this records field usage.
+model ProjectMaterialUsage {
+  id              String        @id @default(uuid())
+  bookingId       String
+  booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  techId          String
+  tech            User          @relation(fields: [techId], references: [id], onDelete: Restrict)
+  quantity        Int
+  unit            String?
+  note            String?
+  createdAt       DateTime      @default(now())
+
+  @@index([bookingId, createdAt])
+  @@index([inventoryItemId, createdAt])
+  @@index([techId, createdAt])
 }
 
 model MaterialRequest {

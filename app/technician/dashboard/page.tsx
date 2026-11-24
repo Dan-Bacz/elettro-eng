@@ -13,6 +13,9 @@ type TechPayload = {
   bookings: BookingObj[]
 }
 
+type InventoryOption = { id: string; name: string; unit?: string | null }
+type UsageDraft = { inventoryItemId: string; quantity: string; note: string }
+
 type ChecklistItem = { id: string; text: string; checked: boolean }
 type ReportDraft = {
   progress: string
@@ -35,6 +38,8 @@ export default function TechnicianDashboardPage() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [reportDrafts, setReportDrafts] = useState<Record<string, ReportDraft>>({})
+  const [inventoryItems, setInventoryItems] = useState<InventoryOption[]>([])
+  const [usageDrafts, setUsageDrafts] = useState<Record<string, UsageDraft>>({})
   const [section, setSection] = useState('home')
 
   useEffect(() => {
@@ -46,13 +51,17 @@ export default function TechnicianDashboardPage() {
 
   async function load() {
     try {
-      const res = await fetch('/api/tech')
+      const [res, inventoryRes] = await Promise.all([fetch('/api/tech'), fetch('/api/inventory')])
       if (!res.ok) {
         if (res.status === 401) { router.push('/technician/login'); return }
         throw new Error('Failed to load your jobs')
       }
       const payload = await res.json()
       setData(payload)
+      if (inventoryRes.ok) {
+        const inventoryPayload = await inventoryRes.json()
+        setInventoryItems((Array.isArray(inventoryPayload) ? inventoryPayload : inventoryPayload.inventory || []).filter((item: InventoryOption) => item.id && item.name))
+      }
       setError('')
     } catch (e: any) {
       setError(e.message || 'Failed to load your jobs')
@@ -144,6 +153,32 @@ export default function TechnicianDashboardPage() {
       await loadCb()
     } catch (e: any) {
       setNotice(e.message || 'Failed to submit progress report')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function usageDraftFor(bookingId: string): UsageDraft {
+    return usageDrafts[bookingId] || { inventoryItemId: '', quantity: '1', note: '' }
+  }
+
+  async function submitUsage(bookingId: string) {
+    const draft = usageDraftFor(bookingId)
+    setBusy(true)
+    setNotice('')
+    try {
+      const res = await fetch('/api/project-material-usage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId, ...draft, quantity: Number(draft.quantity) }),
+      })
+      const payload = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(payload.error || 'Failed to record material usage')
+      setUsageDrafts(current => ({ ...current, [bookingId]: { inventoryItemId: '', quantity: '1', note: '' } }))
+      setNotice('Project material usage recorded.')
+      await loadCb()
+    } catch (e: any) {
+      setNotice(e.message || 'Failed to record material usage')
     } finally {
       setBusy(false)
     }
@@ -260,6 +295,28 @@ export default function TechnicianDashboardPage() {
                     <div className="border-t border-slate-100 bg-slate-50/60 p-4 space-y-4">
                       {/* Description */}
                       {b.description && <p className="rounded-xl bg-white p-3 text-xs text-slate-600">{b.description}</p>}
+
+                      {/* Actual materials consumed on this project */}
+                      {(() => {
+                        const draft = usageDraftFor(b.id)
+                        const materialUsages = (b as any).materialUsages || []
+                        return (
+                          <div className="rounded-2xl border border-cyan-200 bg-cyan-50/60 p-4">
+                            <h3 className="text-sm font-black text-slate-900">Record material usage</h3>
+                            <p className="mt-1 text-[11px] text-slate-500">Log the materials actually consumed in the field. Warehouse releases remain separate from project usage.</p>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_100px_1fr_auto]">
+                              <select value={draft.inventoryItemId} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, inventoryItemId: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500">
+                                <option value="">Select material</option>
+                                {inventoryItems.map(item => <option key={item.id} value={item.id}>{item.name} ({item.unit || 'pcs'})</option>)}
+                              </select>
+                              <input type="number" min="1" step="1" value={draft.quantity} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, quantity: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500" placeholder="Qty" />
+                              <input value={draft.note} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, note: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500" placeholder="Usage note (optional)" />
+                              <button type="button" onClick={() => submitUsage(b.id)} disabled={busy || !draft.inventoryItemId} className="rounded-xl bg-cyan-700 px-4 py-2 text-xs font-black text-white transition hover:bg-cyan-800 disabled:opacity-50">Record</button>
+                            </div>
+                            {materialUsages.length > 0 && <div className="mt-3 space-y-1.5">{materialUsages.map((usage: any) => <div key={usage.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs"><span className="font-bold text-slate-700">{usage.inventoryItem?.name || 'Material'}</span><span className="text-slate-500">{usage.quantity} {usage.unit || usage.inventoryItem?.unit || 'pcs'}{usage.note ? ` · ${usage.note}` : ''}</span></div>)}</div>}
+                          </div>
+                        )
+                      })()}
 
                       {/* Structured progress report */}
                       {(() => {
