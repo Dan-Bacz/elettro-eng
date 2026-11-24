@@ -1,6 +1,7 @@
 package com.elettro.app;
 
 import android.annotation.SuppressLint;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -99,7 +100,7 @@ public class WebViewActivity extends AppCompatActivity {
                 loadingBar.setVisibility(View.GONE);
                 refreshLayout.setRefreshing(false);
                 if (url.contains("/login")) {
-                    showError("Your session has expired. Please sign in again.");
+                    returnToNativeLogin();
                 }
             }
 
@@ -131,5 +132,20 @@ public class WebViewActivity extends AppCompatActivity {
         refreshLayout.setRefreshing(false);
         errorMessage.setText(message);
         errorPanel.setVisibility(View.VISIBLE);
+    }
+
+    private void returnToNativeLogin() {
+        getSharedPreferences("elettro_login", MODE_PRIVATE)
+                .edit()
+                .remove(MainActivity.KEY_TOKEN)
+                .apply();
+        com.elettro.app.network.ApiClient.setAuthToken("");
+        CookieManager.getInstance().removeAllCookies(null);
+        CookieManager.getInstance().flush();
+
+        Intent login = new Intent(this, MainActivity.class);
+        login.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(login);
+        finish();
     }
 }
