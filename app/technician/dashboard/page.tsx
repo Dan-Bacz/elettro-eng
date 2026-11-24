@@ -166,43 +166,49 @@ export default function TechnicianDashboardPage() {
   const pending = data.bookings.filter((b) => b.status === 'APPROVED')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
+      <style jsx global>{` .tech-depth { transform: translateZ(0); transition: transform .25s ease, box-shadow .25s ease; } .tech-depth:hover { transform: translateY(-3px); box-shadow: 0 24px 45px -26px rgba(15,23,42,.42); } `}</style>
       {/* Welcome */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h1 className="text-xl font-black text-slate-900">Welcome, {data.tech.name.split(' ')[0]} 👋</h1>
-        <p className="mt-1 text-sm text-slate-500">
+      <div className="relative isolate overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-[#122b35] to-[#08727f] p-6 text-white shadow-[0_32px_70px_-32px_rgba(8,114,127,.8)] sm:p-8">
+        <div className="pointer-events-none absolute -right-24 -top-32 h-80 w-80 rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-amber-300/15 blur-3xl" />
+        <div className="relative">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100"><span className="h-2 w-2 rounded-full bg-emerald-300" /> Live technician overview</div>
+        <h1 className="text-2xl font-black tracking-tight text-white sm:text-4xl">Welcome, {data.tech.name.split(' ')[0]} 👋</h1>
+        <p className="mt-1 text-sm text-slate-300">
           {data.tech.specialization ? `${data.tech.specialization} · ` : ''}You have {active.length} active job{active.length === 1 ? '' : 's'}.
         </p>
+        </div>
       </div>
 
       {notice && (
-        <div className={`rounded-xl border px-4 py-3 text-sm font-bold ${notice.toLowerCase().includes('fail') ? 'border-red-200 bg-red-50 text-red-600' : 'border-emerald-200 bg-emerald-50 text-emerald-600'}`}>
+        <div className={`rounded-2xl border px-4 py-3 text-sm font-bold shadow-sm ${notice.toLowerCase().includes('fail') ? 'border-red-200 bg-red-50 text-red-600' : 'border-emerald-200 bg-emerald-50 text-emerald-600'}`}>
           {notice}
         </div>
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
           <div className="text-2xl font-black text-slate-900">{data.bookings.length}</div>
           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total Assigned</div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
           <div className="text-2xl font-black text-yellow-600">{active.length}</div>
           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">In Progress</div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
           <div className="text-2xl font-black text-emerald-600">{completed.length}</div>
           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed</div>
         </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
           <div className="text-2xl font-black text-slate-900">{pending.length}</div>
           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Assigned Jobs</div>
         </div>
       </div>
 
       {/* Bookings */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+      <div id="jobs" className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)] sm:p-6">
         <h2 className="text-sm font-black text-slate-900">My Jobs ({data.bookings.length})</h2>
 
         {data.bookings.length === 0 ? (
