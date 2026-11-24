@@ -95,6 +95,10 @@ export default function SalesLoginPage(){
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
+
+            <Link href="/forgot-password?role=sales" className="block text-center text-sm font-semibold text-gray-400 transition-colors hover:text-yellow-400">
+              Forgot your password?
+            </Link>
           </form>
         </div>
 

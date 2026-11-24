@@ -115,6 +115,10 @@ function ClientLoginForm() {
             <button type="submit" disabled={submitting} className="inline-flex w-full items-center justify-center rounded-xl bg-yellow-400 px-6 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/20 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-60">
               {submitting ? "Signing in..." : "Sign in to client portal"}
             </button>
+
+            <Link href="/forgot-password?role=client" className="block text-center text-sm font-semibold text-gray-400 transition hover:text-yellow-400">
+              Forgot your password?
+            </Link>
           </form>
 
           <button type="button" disabled={!email || resending} onClick={resend} className="mt-4 w-full text-center text-sm font-semibold text-gray-400 transition hover:text-yellow-400 disabled:cursor-not-allowed disabled:text-gray-600">

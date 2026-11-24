@@ -5,7 +5,7 @@ import { CODE_TTL_MINUTES, isValidEmail } from '../../../lib/password-reset'
 
 const prisma = new PrismaClient()
 const RESEND_COOLDOWN_MS = 60 * 1000
-const GENERIC_MESSAGE = 'If that email belongs to an active staff account, a reset code is on its way.'
+const GENERIC_MESSAGE = 'If that email belongs to an active account, a reset code is on its way.'
 
 // Pads the response so the endpoint does not reveal which emails are registered.
 const MIN_RESPONSE_MS = 400
@@ -36,9 +36,9 @@ export default async function handler(req, res) {
   try {
     const user = await prisma.user.findUnique({ where: { email } })
 
-    // Unknown emails, clients, and inactive staff all receive the same response.
+    // Unknown emails and inactive accounts all receive the same response.
     const eligible = !!user
-      && ['ADMIN', 'TECH', 'SALES', 'WAREHOUSE'].includes(user.role)
+      && ['ADMIN', 'TECH', 'SALES', 'WAREHOUSE', 'CLIENT'].includes(user.role)
       && (user.status || 'ACTIVE') === 'ACTIVE'
       && !!user.password
 
