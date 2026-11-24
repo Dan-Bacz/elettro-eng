@@ -27,17 +27,17 @@ export default function TechShell({ user, children }: TechShellProps) {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0b0f10]">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <Link href="/technician/dashboard" className="flex items-center gap-2">
-            <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 rounded-lg object-cover" />
-            <div>
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-3 sm:px-4">
+          <Link href="/technician/dashboard" className="flex min-w-0 items-center gap-2">
+            <Image src="/logo-elettro.jpg" alt="Elettro Engineering Enterprises" width={36} height={36} className="h-9 w-9 shrink-0 rounded-lg object-cover" />
+            <div className="min-w-0">
               <div className="text-sm font-black leading-tight text-white tracking-wide">ELETTRO</div>
               <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-semibold">Technician</div>
             </div>
           </Link>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="flex min-w-0 items-center gap-2">
               {user.profileImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={user.profileImageUrl} alt={user.name} className="h-8 w-8 rounded-full object-cover border border-white/20" />
@@ -46,8 +46,8 @@ export default function TechShell({ user, children }: TechShellProps) {
                   {(user.name || 'T').charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="hidden sm:block">
-                <div className="text-xs font-black text-white leading-tight">{user.name}</div>
+              <div className="hidden max-w-[24vw] min-w-0 sm:block">
+                <div className="truncate text-xs font-black leading-tight text-white">{user.name}</div>
                 <div className="text-[10px] text-gray-500 font-medium">Technician</div>
               </div>
             </div>

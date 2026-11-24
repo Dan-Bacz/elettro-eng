@@ -120,7 +120,9 @@ public class MainActivity extends AppCompatActivity {
                 JSONObject payload = new JSONObject();
                 payload.put("email", email);
                 payload.put("password", password);
-                payload.put("client", "app");
+                    // Use the web-compatible session response so every supported
+                    // department can open its existing responsive portal in the app.
+                    payload.put("client", "webview");
 
                 String response = ApiClient.post("/auth/login", payload.toString());
                 JSONObject json = new JSONObject(response);
@@ -159,13 +161,25 @@ public class MainActivity extends AppCompatActivity {
 
                     String normalizedRole = role.toUpperCase(Locale.US);
                     if ("ADMIN".equals(normalizedRole)) {
-                        startActivity(new Intent(this, AdminDashboardActivity.class));
+                        openWebPortal("/admin/dashboard", "Admin Dashboard");
                         finish();
                         return;
                     }
 
                     if ("TECH".equals(normalizedRole) || "TECHNICIAN".equals(normalizedRole)) {
-                        startActivity(new Intent(this, TechnicianDashboardActivity.class));
+                        openWebPortal("/technician/dashboard", "Technician Dashboard");
+                        finish();
+                        return;
+                    }
+
+                    if ("SALES".equals(normalizedRole)) {
+                        openWebPortal("/sales/dashboard", "Sales Dashboard");
+                        finish();
+                        return;
+                    }
+
+                    if ("WAREHOUSE".equals(normalizedRole)) {
+                        openWebPortal("/warehouse/dashboard", "Warehouse Dashboard");
                         finish();
                         return;
                     }
@@ -195,5 +209,12 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         }).start();
+    }
+
+    private void openWebPortal(String route, String title) {
+        Intent intent = new Intent(this, WebViewActivity.class);
+        intent.putExtra(WebViewActivity.EXTRA_ROUTE, route);
+        intent.putExtra(WebViewActivity.EXTRA_TITLE, title);
+        startActivity(intent);
     }
 }

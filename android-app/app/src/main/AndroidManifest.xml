@@ -50,6 +50,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity android:name=".AdminDashboardActivity" />
+        <activity android:name=".WebViewActivity" android:screenOrientation="portrait" />
         <activity android:name=".TechnicianDashboardActivity" />
         <activity android:name=".RiderDashboardActivity" />
         <activity android:name=".DepartmentDashboardActivity" />
