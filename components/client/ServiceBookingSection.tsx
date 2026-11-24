@@ -245,10 +245,10 @@ function ServiceBookingForm({ service }: { service: Service }) {
               Submit Another Booking
             </button>
             <a
-              href="/"
+              href="/client/dashboard"
               className="px-6 py-3 rounded-lg border border-gray-300 text-gray-700 text-sm font-bold hover:border-gray-900 transition-colors"
             >
-              Back to Home
+              Back to Dashboard
             </a>
           </div>
         </div>
