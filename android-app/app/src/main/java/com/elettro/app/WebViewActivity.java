@@ -29,6 +29,7 @@ public class WebViewActivity extends AppCompatActivity {
     private View loadingBar;
     private View errorPanel;
     private TextView errorMessage;
+    private boolean returningToLogin;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,10 +89,26 @@ public class WebViewActivity extends AppCompatActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if (isLoginUrl(request.getUrl().toString())) {
+                    returnToNativeLogin();
+                    return true;
+                }
                 return !isAppUrl(request.getUrl());
             }
 
+            @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (isLoginUrl(url)) {
+                    returnToNativeLogin();
+                    return true;
+                }
+                return !isAppUrl(Uri.parse(url));
+            }
+
             @Override public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                if (isLoginUrl(url)) {
+                    returnToNativeLogin();
+                    return;
+                }
                 loadingBar.setVisibility(View.VISIBLE);
                 errorPanel.setVisibility(View.GONE);
             }
@@ -127,6 +144,11 @@ public class WebViewActivity extends AppCompatActivity {
         return APP_ORIGIN.equals(uri.getScheme() + "://" + uri.getHost());
     }
 
+    private boolean isLoginUrl(String url) {
+        return isAppUrl(Uri.parse(url)) && Uri.parse(url).getPath() != null
+                && Uri.parse(url).getPath().endsWith("/login");
+    }
+
     private void showError(String message) {
         loadingBar.setVisibility(View.GONE);
         refreshLayout.setRefreshing(false);
@@ -135,6 +157,8 @@ public class WebViewActivity extends AppCompatActivity {
     }
 
     private void returnToNativeLogin() {
+        if (returningToLogin || isFinishing()) return;
+        returningToLogin = true;
         getSharedPreferences("elettro_login", MODE_PRIVATE)
                 .edit()
                 .remove(MainActivity.KEY_TOKEN)
