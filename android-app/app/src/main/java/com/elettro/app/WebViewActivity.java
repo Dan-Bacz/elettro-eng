@@ -41,6 +41,10 @@ public class WebViewActivity extends AppCompatActivity {
         errorMessage = findViewById(R.id.web_error_message);
 
         configureWebView();
+        // SwipeRefreshLayout must only intercept a pull when the WebView is
+        // already at the very top. Otherwise an upward page scroll can be
+        // mistaken for refresh and trap the WebView near its current position.
+        refreshLayout.setOnChildScrollUpCallback((parent, child) -> webView.canScrollVertically(-1));
         refreshLayout.setOnRefreshListener(() -> {
             errorPanel.setVisibility(View.GONE);
             webView.reload();
@@ -75,6 +79,8 @@ public class WebViewActivity extends AppCompatActivity {
         settings.setSupportZoom(false);
         settings.setTextZoom(100);
         settings.setUserAgentString(settings.getUserAgentString() + " ElettroAndroid/1.0");
+        webView.setVerticalScrollBarEnabled(false);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
