@@ -112,7 +112,6 @@ public class WebViewActivity extends AppCompatActivity {
             else if (id == R.id.nav_leave) section = "leave";
             else if (id == R.id.nav_notifications) section = "notifications";
             else if (id == R.id.nav_materials) section = "materials";
-            else if (id == R.id.nav_inventory_tech) section = "inventory";
             else if (id == R.id.nav_profile) section = "profile";
 
             if (section != null) loadAuthenticatedRoute("/technician/dashboard#" + section);

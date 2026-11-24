@@ -249,7 +249,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             if (id == R.id.nav_my_jobs) { showSection("jobs"); return true; }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_materials) { showSection("materials"); return true; }
-            if (id == R.id.nav_inventory_tech) { showSection("inventory"); return true; }
             if (id == R.id.nav_leave) { showSection("leave"); return true; }
             if (id == R.id.nav_profile) { showSection("profile"); return true; }
             if (id == R.id.nav_logout) { logout(); return true; }
@@ -286,12 +285,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 titleRes = R.string.tech_material_title;
                 subRes = R.string.tech_reports_subtitle;
                 menuRes = R.id.nav_materials;
-                break;
-            case "inventory":
-                titleRes = R.string.tech_inventory_title;
-                subRes = R.string.tech_inventory_subtitle;
-                menuRes = R.id.nav_inventory_tech;
-                if (inventoryArray == null) loadInventory();
                 break;
             case "leave":
                 titleRes = R.string.tech_leave_title;
