@@ -53,7 +53,10 @@ export default function ClientSupportWidget() {
           <form onSubmit={sendMessage} className="flex gap-2 border-t border-slate-200 bg-white p-3"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask a question…" maxLength={600} className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-xs outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100" aria-label="Support question" /><button type="submit" disabled={sending || !input.trim()} className="rounded-xl bg-yellow-400 px-3.5 py-2 text-xs font-black text-black hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-50">Send</button></form>
         </section>
       )}
-      <button type="button" onClick={() => setOpen((current) => !current)} aria-label={open ? "Close AI support" : "Open AI support"} className="ml-auto flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-yellow-400 text-2xl text-black shadow-xl shadow-slate-900/20 transition hover:scale-105 hover:bg-yellow-300">{open ? "×" : "✦"}</button>
+      <button type="button" onClick={() => setOpen((current) => !current)} aria-label={open ? "Close AI support" : "Open AI support"} className="ml-auto flex h-14 items-center gap-2 rounded-full border-4 border-white bg-yellow-400 px-4 text-sm font-black text-black shadow-xl shadow-slate-900/20 transition hover:scale-105 hover:bg-yellow-300">
+        <span className="text-xl leading-none">{open ? "×" : "✦"}</span>
+        <span>{open ? "Close Chat" : "Chat with AI Support"}</span>
+      </button>
     </div>
   )
 }
