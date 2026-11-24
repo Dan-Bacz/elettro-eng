@@ -6,6 +6,7 @@ import EmptyState from '../../../components/admin/EmptyState'
 import type { BookingObj, UserObj } from '../../../components/admin/types'
 import { formatDate, formatDateTime } from '../../../components/admin/types'
 import TechnicianSectionPage from '../../../components/admin/TechnicianSectionPage'
+import TechnicianAnalytics from '../../../components/admin/TechnicianAnalytics'
 
 type TechPayload = {
   tech: UserObj
@@ -219,6 +220,8 @@ export default function TechnicianDashboardPage() {
           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Assigned Jobs</div>
         </div>
       </div>
+
+      <TechnicianAnalytics bookings={data.bookings} />
 
       {/* Bookings */}
       <div id="jobs" className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)] sm:p-6">
