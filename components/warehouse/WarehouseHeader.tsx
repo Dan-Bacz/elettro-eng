@@ -67,12 +67,16 @@ export default function AdminHeader({ user, unreadCount, onRefreshNotifications 
     setLoggingOut(true)
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/warehouse/login')
     } catch (e) {
-      router.push('/warehouse/login')
+      // Continue to the native login shell if the WebView request fails too.
     } finally {
       setLoggingOut(false)
     }
+    if (navigator.userAgent.includes('ElettroAndroid')) {
+      window.location.href = 'elettro://logout'
+      return
+    }
+    router.push('/warehouse/login')
   }
 
   return (

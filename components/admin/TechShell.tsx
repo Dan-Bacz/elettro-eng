@@ -21,6 +21,10 @@ export default function TechShell({ user, children }: TechShellProps) {
     } catch (e) {
       // ignore
     }
+    if (navigator.userAgent.includes('ElettroAndroid')) {
+      window.location.href = 'elettro://logout'
+      return
+    }
     router.push('/technician/login')
   }
 

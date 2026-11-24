@@ -67,12 +67,16 @@ export default function SalesHeader({ user, unreadCount, onRefreshNotifications 
     setLoggingOut(true)
     try {
       await fetch('/api/auth/logout', { method: 'POST' })
-      router.push('/sales/login')
     } catch (e) {
-      router.push('/sales/login')
+      // Continue to the native login shell if the WebView request fails too.
     } finally {
       setLoggingOut(false)
     }
+    if (navigator.userAgent.includes('ElettroAndroid')) {
+      window.location.href = 'elettro://logout'
+      return
+    }
+    router.push('/sales/login')
   }
 
   return (

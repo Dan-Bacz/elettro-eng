@@ -89,6 +89,10 @@ public class WebViewActivity extends AppCompatActivity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                if ("elettro://logout".equals(request.getUrl().toString())) {
+                    returnToNativeLogin();
+                    return true;
+                }
                 if (isLoginUrl(request.getUrl().toString())) {
                     returnToNativeLogin();
                     return true;
@@ -97,6 +101,10 @@ public class WebViewActivity extends AppCompatActivity {
             }
 
             @Override public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if ("elettro://logout".equals(url)) {
+                    returnToNativeLogin();
+                    return true;
+                }
                 if (isLoginUrl(url)) {
                     returnToNativeLogin();
                     return true;
