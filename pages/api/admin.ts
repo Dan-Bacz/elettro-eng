@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { sendTechnicianApprovalNotification } from '../../lib/email'
 import { getJwtSecret } from '../../lib/auth'
+import { sendTextbeeSms } from '../../lib/textbee'
 
 const prisma = new PrismaClient()
 
@@ -226,6 +227,10 @@ export default async function handler(req: any, res: any) {
         }
         if (b.clientId) {
           await notifyUser(b.clientId, 'BOOKING', 'Booking Approved', `Your booking "${b.title}" has been approved and converted into a project.`, '/client')
+          void sendTextbeeSms(
+            b.client?.phone,
+            `Elettro Engineering: Your booking "${b.title}" has been approved. Our team will proceed with project coordination.`,
+          )
         }
         return res.json(b)
       }
@@ -366,6 +371,10 @@ export default async function handler(req: any, res: any) {
 
         if (booking.clientId) {
           await notifyUser(booking.clientId, 'BOOKING', 'Booking Declined', `Your booking "${booking.title}" was declined by our team. Please contact us for details.`, '/client')
+          void sendTextbeeSms(
+            booking.client?.phone,
+            `Elettro Engineering: Your booking "${booking.title}" was rejected after review. Please contact us for more information.`,
+          )
         }
         return res.json(b)
       }
