@@ -218,9 +218,15 @@ export default function InventoryModal({ open, initial, categories, submitting, 
       imageUrl: image.url || undefined,
       imageData: image.dataUrl || undefined,
     }
-    // Stock edits are handled by the warehouse API as an audited movement.
-    // This allows warehouse staff to increase or decrease current stock safely.
-    payload.quantity = Math.max(0, Number(quality) || 0)
+    const requestedStock = Math.max(0, Number(quality) || 0)
+    const currentStock = initial?.id ? Math.max(0, Number(initial.quantity) || 0) : 0
+    if (initial?.id && requestedStock < currentStock) {
+      setSystemError('Current stock can only be increased while editing an item.')
+      return
+    }
+    // Stock edits are handled by the warehouse API as an audited increase movement.
+    // Stock decreases must come from a recorded warehouse release or adjustment flow.
+    payload.quantity = requestedStock
     void onSubmit(payload)
   }
 
@@ -404,8 +410,8 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="₱" />
               <Field label="Sell Price" type="number" inputMode="decimal" min={0} step="0.01" value={sellPrice} onChange={setSellPrice} placeholder="Retail price" prefix="₱" />
               <div>
-                <Field label={initial?.id ? 'Current Stock' : 'Initial Stock *'} type="number" inputMode="numeric" min={0} step={1} value={quality} onChange={setQuality} placeholder="0" required={!initial?.id} />
-                {initial?.id && <p className="mt-1 text-[10px] leading-4 text-slate-400">Changing this value records a stock movement.</p>}
+                <Field label={initial?.id ? 'Current Stock (increase only)' : 'Initial Stock *'} type="number" inputMode="numeric" min={initial?.id ? Math.max(0, Number(initial.quantity) || 0) : 0} step={1} value={quality} onChange={setQuality} placeholder="0" required={!initial?.id} />
+                {initial?.id && <p className="mt-1 text-[10px] leading-4 text-slate-400">You can add stock here. Decreases must be recorded through a warehouse release or adjustment.</p>}
               </div>
               <Field label="Minimum Stock" type="number" inputMode="numeric" min={0} step={1} value={minStock} onChange={setMinStock} placeholder="10" />
             </div>

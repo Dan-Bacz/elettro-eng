@@ -164,6 +164,9 @@ export default async function handler(req, res) {
         if (!Number.isInteger(parsedQuantity) || parsedQuantity < 0 || parsedQuantity > MAX_STOCK_QUANTITY) {
           return res.status(400).json({ error: `Stock must be a whole number from 0 to ${MAX_STOCK_QUANTITY.toLocaleString()}.` })
         }
+        if (parsedQuantity < existing.quantity) {
+          return res.status(400).json({ error: 'Stock can only be increased while editing an inventory item.' })
+        }
         requestedQuantity = parsedQuantity
       }
       if (typeof body.name !== 'undefined') {
@@ -229,12 +232,12 @@ export default async function handler(req, res) {
         })
         if (changed.count !== 1) throw new Error('STOCK_CHANGED')
 
-        if (requestedQuantity !== undefined && requestedQuantity !== existing.quantity) {
+        if (requestedQuantity !== undefined && requestedQuantity > existing.quantity) {
           const delta = requestedQuantity - existing.quantity
           await tx.inventoryMovement.create({
             data: {
               inventoryItemId: existing.id,
-              type: delta > 0 ? InventoryMovementType.STOCK_RECEIVED : InventoryMovementType.ADJUSTMENT,
+              type: InventoryMovementType.STOCK_RECEIVED,
               quantity: delta,
               stockBefore: existing.quantity,
               stockAfter: requestedQuantity,
@@ -243,20 +246,6 @@ export default async function handler(req, res) {
             },
           })
 
-          if (existing.quantity > existing.reorderLevel && requestedQuantity <= existing.reorderLevel) {
-            const admins = await tx.user.findMany({ where: { role: 'ADMIN', status: 'ACTIVE' }, select: { id: true } })
-            if (admins.length) {
-              await tx.notification.createMany({
-                data: admins.map((admin) => ({
-                  userId: admin.id,
-                  type: 'LOW_STOCK',
-                  title: 'Low Stock Alert',
-                  message: `${existing.name} reached ${requestedQuantity} after a warehouse stock edit.`,
-                  link: '/admin/inventory',
-                })),
-              })
-            }
-          }
         }
 
         return tx.inventoryItem.findUnique({ where: { id: String(id) } })
