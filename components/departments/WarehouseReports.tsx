@@ -40,7 +40,7 @@ export default function WarehouseReports() {
       const params = new URLSearchParams({ department: 'WAREHOUSE' })
       if (startDate) params.set('startDate', startDate)
       if (endDate) params.set('endDate', endDate)
-      const response = await fetch(`/api/department-reports?${params.toString()}`)
+      const response = await fetch(`/api/department-reports?${params.toString()}`, { cache: 'no-store' })
       if (response.status === 401) { router.push('/warehouse/login'); return }
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || 'Unable to generate the warehouse report.')
