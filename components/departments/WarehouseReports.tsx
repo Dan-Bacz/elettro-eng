@@ -55,7 +55,7 @@ export default function WarehouseReports() {
   useEffect(() => { void load() }, [load])
 
   const filtered = useMemo(() => {
-    if (!data || !query.trim()) return data || emptyData
+    if (!data || !query.trim()) return data ? { ...emptyData, ...data, releases: data.releases || [] } : emptyData
     const term = query.trim().toLowerCase()
     const includes = (value: unknown) => String(value || '').toLowerCase().includes(term)
     return {
@@ -63,7 +63,7 @@ export default function WarehouseReports() {
       inventory: data.inventory.filter(item => includes(item.name) || includes(item.sku) || includes(item.category)),
       lowStockItems: data.lowStockItems.filter(item => includes(item.name) || includes(item.sku)),
       requests: data.requests.filter(item => includes(item.reference) || includes(item.source) || includes(item.status) || includes(item.requester?.name)),
-      releases: data.releases.filter(item => includes(item.receiptNumber) || includes(item.request?.reference) || includes(item.releasedBy?.name)),
+      releases: (data.releases || []).filter(item => includes(item.receiptNumber) || includes(item.request?.reference) || includes(item.releasedBy?.name)),
       movements: data.movements.filter(item => includes(item.inventoryItem?.name) || includes(item.worker?.name) || includes(item.type) || includes(item.reason)),
       receipts: data.receipts.filter(item => includes(item.reference) || includes(item.snapshot?.requestReference) || includes(item.snapshot?.warehouseWorker)),
     }

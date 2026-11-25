@@ -86,6 +86,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       })
 
+      const releases = await prisma.warehouseRelease.findMany({
+        where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          releasedBy: { select: { name: true } },
+          request: { select: { reference: true, source: true } },
+          items: { select: { quantity: true } },
+        },
+      })
+
       const salesRequests = requests.filter((r) => r.source !== 'TECHNICIAN')
       const technicianRequests = requests.filter((r) => r.source === 'TECHNICIAN')
 
@@ -117,6 +127,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         requests,
         salesRequests,
         technicianRequests,
+        releases,
         movements,
         receipts,
       })
