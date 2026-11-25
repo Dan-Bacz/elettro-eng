@@ -1,8 +1,9 @@
-import { PrismaClient } from '@prisma/client'
+import { InventoryMovementType, PrismaClient } from '@prisma/client'
 import { uploadToCloudinary } from '../../lib/cloudinary'
 import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 
 const prisma = new PrismaClient()
+const MAX_STOCK_QUANTITY = 1_000_000
 
 async function nextElettroSku() {
   const existing = await prisma.inventoryItem.findMany({
@@ -152,20 +153,24 @@ export default async function handler(req, res) {
       const body = req.body || {}
       const { id } = body
       if (!id) return res.status(400).json({ error: 'Inventory item id required' })
-      if (typeof body.quantity !== 'undefined') {
-        return res.status(400).json({ error: 'Use the warehouse stock action to receive or adjust stock.' })
-      }
 
       const existing = await prisma.inventoryItem.findUnique({ where: { id: String(id) } })
       if (!existing || existing.deletedAt) return res.status(404).json({ error: 'Inventory item not found' })
       const data: any = {}
+      const hasQuantity = typeof body.quantity !== 'undefined'
+      let requestedQuantity: number | undefined
+      if (hasQuantity) {
+        const parsedQuantity = Number(body.quantity)
+        if (!Number.isInteger(parsedQuantity) || parsedQuantity < 0 || parsedQuantity > MAX_STOCK_QUANTITY) {
+          return res.status(400).json({ error: `Stock must be a whole number from 0 to ${MAX_STOCK_QUANTITY.toLocaleString()}.` })
+        }
+        requestedQuantity = parsedQuantity
+      }
       if (typeof body.name !== 'undefined') {
         if (!String(body.name).trim()) return res.status(400).json({ error: 'Item name cannot be empty' })
         data.name = String(body.name).trim()
       }
-      if (typeof body.quantity !== 'undefined') {
-        data.quantity = Math.max(0, Math.round(Number(body.quantity) || 0))
-      }
+      if (requestedQuantity !== undefined) data.quantity = requestedQuantity
 
       const optional = ['sku', 'category', 'brand', 'model', 'description', 'unit'] as const
       for (const key of optional) {
@@ -217,9 +222,44 @@ export default async function handler(req, res) {
         }
       }
 
-      const item = await prisma.inventoryItem.update({
-        where: { id: String(id) },
-        data
+      const item = await prisma.$transaction(async (tx) => {
+        const changed = await tx.inventoryItem.updateMany({
+          where: { id: String(id), quantity: existing.quantity },
+          data,
+        })
+        if (changed.count !== 1) throw new Error('STOCK_CHANGED')
+
+        if (requestedQuantity !== undefined && requestedQuantity !== existing.quantity) {
+          const delta = requestedQuantity - existing.quantity
+          await tx.inventoryMovement.create({
+            data: {
+              inventoryItemId: existing.id,
+              type: delta > 0 ? InventoryMovementType.STOCK_RECEIVED : InventoryMovementType.ADJUSTMENT,
+              quantity: delta,
+              stockBefore: existing.quantity,
+              stockAfter: requestedQuantity,
+              workerId: session.id,
+              reason: String(body.stockReason || 'Stock quantity updated while editing the inventory item').trim().slice(0, 1000),
+            },
+          })
+
+          if (existing.quantity > existing.reorderLevel && requestedQuantity <= existing.reorderLevel) {
+            const admins = await tx.user.findMany({ where: { role: 'ADMIN', status: 'ACTIVE' }, select: { id: true } })
+            if (admins.length) {
+              await tx.notification.createMany({
+                data: admins.map((admin) => ({
+                  userId: admin.id,
+                  type: 'LOW_STOCK',
+                  title: 'Low Stock Alert',
+                  message: `${existing.name} reached ${requestedQuantity} after a warehouse stock edit.`,
+                  link: '/admin/inventory',
+                })),
+              })
+            }
+          }
+        }
+
+        return tx.inventoryItem.findUnique({ where: { id: String(id) } })
       })
       return res.json(item)
     }
@@ -269,6 +309,9 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' })
   } catch (e) {
+    if (e instanceof Error && e.message === 'STOCK_CHANGED') {
+      return res.status(409).json({ error: 'Stock changed during this edit. Refresh the inventory and try again.' })
+    }
     console.error('Inventory API error', e)
     return res.status(500).json({ error: (e as any)?.message || 'Server error' })
   }

@@ -218,9 +218,9 @@ export default function InventoryModal({ open, initial, categories, submitting, 
       imageUrl: image.url || undefined,
       imageData: image.dataUrl || undefined,
     }
-    // Existing stock must continue through the warehouse stock-adjustment flow;
-    // editing a product should not silently overwrite its quantity.
-    if (!initial?.id) payload.quantity = Math.max(0, Number(quality) || 0)
+    // Stock edits are handled by the warehouse API as an audited movement.
+    // This allows warehouse staff to increase or decrease current stock safely.
+    payload.quantity = Math.max(0, Number(quality) || 0)
     void onSubmit(payload)
   }
 
@@ -381,7 +381,10 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <Select label="Unit *" value={unit} onChange={setUnit} options={Array.from(new Set([...UNIT_OPTIONS, ...(unit && !UNIT_OPTIONS.includes(unit) ? [unit] : [])]))} required />
               <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="₱" />
               <Field label="Sell Price" type="number" inputMode="decimal" min={0} step="0.01" value={sellPrice} onChange={setSellPrice} placeholder="Retail price" prefix="₱" />
-              <Field label={initial?.id ? 'Current Stock' : 'Initial Stock *'} type="number" inputMode="numeric" min={0} step={1} value={quality} onChange={setQuality} placeholder="0" required={!initial?.id} />
+              <div>
+                <Field label={initial?.id ? 'Current Stock' : 'Initial Stock *'} type="number" inputMode="numeric" min={0} step={1} value={quality} onChange={setQuality} placeholder="0" required={!initial?.id} />
+                {initial?.id && <p className="mt-1 text-[10px] leading-4 text-slate-400">Changing this value records a stock movement.</p>}
+              </div>
               <Field label="Minimum Stock" type="number" inputMode="numeric" min={0} step={1} value={minStock} onChange={setMinStock} placeholder="10" />
             </div>
             <div>
