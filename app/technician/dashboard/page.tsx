@@ -207,8 +207,6 @@ export default function TechnicianDashboardPage() {
   }
 
   const active = data.bookings.filter((b) => ['ASSIGNED', 'IN_PROGRESS'].includes(b.status))
-  const completed = data.bookings.filter((b) => b.status === 'COMPLETED')
-  const pending = data.bookings.filter((b) => b.status === 'APPROVED')
 
   if (section !== 'home' && section !== 'jobs') {
     return <TechnicianSectionPage section={section} data={data} onRefresh={loadCb} />
@@ -235,26 +233,6 @@ export default function TechnicianDashboardPage() {
           {notice}
         </div>
       )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
-          <div className="text-2xl font-black text-slate-900">{data.bookings.length}</div>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Total Assigned</div>
-        </div>
-        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
-          <div className="text-2xl font-black text-yellow-600">{active.length}</div>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">In Progress</div>
-        </div>
-        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
-          <div className="text-2xl font-black text-emerald-600">{completed.length}</div>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed</div>
-        </div>
-        <div className="tech-depth rounded-[1.6rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)]">
-          <div className="text-2xl font-black text-slate-900">{pending.length}</div>
-          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Assigned Jobs</div>
-        </div>
-      </div>
 
       <TechnicianAnalytics bookings={data.bookings} />
 
