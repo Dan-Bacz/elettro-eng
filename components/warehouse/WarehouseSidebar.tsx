@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { key: 'requests', label: 'Requests & Releases', icon: InboxIcon, href: '/warehouse/requests' },
   { key: 'inventory', label: 'Inventory & Stock', icon: PackageIcon, href: '/warehouse/inventory' },
   { key: 'receipts', label: 'Receipts', icon: BarChartIcon, href: '/warehouse/receipts' },
+  { key: 'reports', label: 'Reports', icon: BarChartIcon, href: '/warehouse/reports' },
 ]
 
 export default function WarehouseSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {

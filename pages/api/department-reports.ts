@@ -69,7 +69,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const movements = await prisma.inventoryMovement.findMany({
         where: hasDateFilter ? { createdAt: dateFilter } : undefined,
         orderBy: { createdAt: 'desc' },
-        take: 200,
         include: {
           inventoryItem: { select: { name: true, sku: true, unit: true } },
           worker: { select: { name: true, role: true } },
@@ -79,7 +78,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const receipts = await prisma.warehouseReceipt.findMany({
         where: hasDateFilter ? { createdAt: dateFilter } : undefined,
         orderBy: { createdAt: 'desc' },
-        take: 100,
         select: {
           id: true,
           reference: true,
