@@ -108,12 +108,28 @@ export default async function handler(req: any, res: any) {
         ? JSON.stringify({ summary: String(workDone || '').trim().slice(0, 2000), checklist: normalizedChecklist })
         : (workDone || null)
 
+      const increment = progress != null ? Number(progress) : 0
+      if (!Number.isInteger(increment) || increment < 0 || increment > 100) {
+        return res.status(400).json({ error: 'Progress addition must be a whole number from 0 to 100.' })
+      }
+
+      const latestReport = await prisma.report.findFirst({
+        where: { bookingId: booking.id },
+        orderBy: { createdAt: 'desc' },
+        select: { progress: true },
+      })
+      const currentProgress = latestReport?.progress ?? 0
+      const nextProgress = currentProgress + increment
+      if (nextProgress > 100) {
+        return res.status(400).json({ error: `Progress cannot exceed 100%. Current progress is ${currentProgress}%. Add ${100 - currentProgress}% or less.` })
+      }
+
       const newReport = await prisma.report.create({
         data: {
           authorId: user.id,
           bookingId: booking.id,
           content: String(content),
-          progress: progress != null ? Math.max(0, Math.min(100, Math.round(Number(progress)))) : null,
+          progress: progress != null ? nextProgress : null,
           workDone: workDetails,
           issues: issues || null,
           nextWork: nextWork || null,
@@ -126,7 +142,7 @@ export default async function handler(req: any, res: any) {
       })
 
       // Optionally auto-update booking progress toward IN_PROGRESS
-      if (progress != null && Number(progress) > 0) {
+      if (progress != null && nextProgress > 0) {
         const current = await prisma.booking.findUnique({
           where: { id: booking.id },
           select: { status: true }

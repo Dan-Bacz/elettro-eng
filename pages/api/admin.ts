@@ -101,6 +101,17 @@ export default async function handler(req: any, res: any) {
         })
         if (!bookingRow) return res.status(404).json({ error: 'Booking not found' })
 
+        if (status === 'COMPLETED') {
+          const latestReport = await prisma.report.findFirst({
+            where: { bookingId },
+            orderBy: { createdAt: 'desc' },
+            select: { progress: true },
+          })
+          if ((latestReport?.progress ?? 0) < 100) {
+            return res.status(400).json({ error: `The project can only be completed when technician progress reaches 100%. Current progress is ${latestReport?.progress ?? 0}%.` })
+          }
+        }
+
         const project = await prisma.project.findUnique({
           where: { bookingId },
           select: { id: true, status: true }

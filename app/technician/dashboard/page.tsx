@@ -131,7 +131,7 @@ export default function TechnicianDashboardPage() {
     const draft = draftFor(bookingId)
     const progress = Number(draft.progress)
     if (!Number.isInteger(progress) || progress < 0 || progress > 100) {
-      setNotice('Progress must be a whole number from 0 to 100.')
+      setNotice('Progress addition must be a whole number from 0 to 100.')
       return
     }
     if (!draft.content.trim()) {
@@ -149,7 +149,7 @@ export default function TechnicianDashboardPage() {
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(payload.error || 'Failed to submit progress report')
       setReportDrafts((current) => ({ ...current, [bookingId]: { progress: String(progress), content: '', workDone: '', issues: '', nextWork: '', checklist: [] } }))
-      setNotice('Progress report submitted. Admin analytics now use this percentage.')
+      setNotice('Progress report submitted and added to the project total.')
       await loadCb()
     } catch (e: any) {
       setNotice(e.message || 'Failed to submit progress report')
@@ -324,8 +324,8 @@ export default function TechnicianDashboardPage() {
                         return (
                           <div className="rounded-2xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-white p-4">
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                              <div><h3 className="text-sm font-black text-slate-900">Submit project progress</h3><p className="mt-1 text-[11px] text-slate-500">Describe what was completed, check the finished tasks, and set the current percentage.</p></div>
-                              <label className="flex items-center gap-2 text-xs font-black text-slate-700">Progress %<input type="number" min="0" max="100" value={draft.progress} onChange={(e) => updateDraft(b.id, { progress: e.target.value })} className="w-20 rounded-lg border border-yellow-200 bg-white px-2 py-1.5 text-center font-black outline-none focus:ring-2 focus:ring-yellow-300" /></label>
+                              <div><h3 className="text-sm font-black text-slate-900">Add project progress</h3><p className="mt-1 text-[11px] text-slate-500">Add the work completed in this update. Each report is added to the previous total until the project reaches 100%.</p></div>
+                              <div className="flex items-center gap-2"><span className="rounded-lg bg-emerald-100 px-2.5 py-1.5 text-xs font-black text-emerald-700">Current: {b.reports?.[0]?.progress ?? 0}%</span><label className="flex items-center gap-2 text-xs font-black text-slate-700">Add %<input type="number" min="0" max="100" value={draft.progress} onChange={(e) => updateDraft(b.id, { progress: e.target.value })} className="w-20 rounded-lg border border-yellow-200 bg-white px-2 py-1.5 text-center font-black outline-none focus:ring-2 focus:ring-yellow-300" /></label></div>
                             </div>
                             <textarea value={draft.content} onChange={(e) => updateDraft(b.id, { content: e.target.value })} placeholder="Progress summary (required)" rows={2} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200" />
                             <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3"><div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Work checklist</span><button type="button" onClick={() => updateDraft(b.id, { checklist: [...draft.checklist, { id: `${Date.now()}-${draft.checklist.length}`, text: '', checked: false }] })} className="rounded-lg bg-slate-950 px-2.5 py-1.5 text-[10px] font-black text-yellow-300">+ Add task</button></div>{draft.checklist.length === 0 ? <p className="mt-2 text-[11px] text-slate-400">Add the project tasks you are tracking, then check each completed task.</p> : <div className="mt-2 space-y-2">{draft.checklist.map((item) => <div key={item.id} className="flex items-center gap-2"><input type="checkbox" checked={item.checked} onChange={(e) => updateDraft(b.id, { checklist: draft.checklist.map((task) => task.id === item.id ? { ...task, checked: e.target.checked } : task) })} className="h-4 w-4 accent-yellow-400" /><input value={item.text} onChange={(e) => updateDraft(b.id, { checklist: draft.checklist.map((task) => task.id === item.id ? { ...task, text: e.target.value } : task) })} placeholder="Task or deliverable" className={`min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-yellow-400 ${item.checked ? 'text-slate-400 line-through' : 'text-slate-700'}`} /><button type="button" onClick={() => updateDraft(b.id, { checklist: draft.checklist.filter((task) => task.id !== item.id) })} className="px-1 text-xs font-black text-red-400 hover:text-red-600">×</button></div>)}</div>}</div>
@@ -342,7 +342,8 @@ export default function TechnicianDashboardPage() {
                           <button
                             key={s}
                             onClick={() => updateStatus(b.id, s)}
-                            disabled={busy || b.status === s}
+                            disabled={busy || b.status === s || (s === 'COMPLETED' && (b.reports?.[0]?.progress ?? 0) < 100)}
+                            title={s === 'COMPLETED' && (b.reports?.[0]?.progress ?? 0) < 100 ? 'Submit progress updates until the project reaches 100%.' : undefined}
                             className={`rounded-full px-3 py-1 text-[11px] font-bold transition-colors disabled:opacity-40 ${
                               b.status === s
                                 ? 'bg-black text-yellow-400'
