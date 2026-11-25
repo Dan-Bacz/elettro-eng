@@ -176,12 +176,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       })
 
+      const startOfToday = new Date()
+      startOfToday.setHours(0, 0, 0, 0)
+      const posSalesDateFilter = hasDateFilter ? dateFilter : { gte: startOfToday }
       const [posSalesAggregate, completedSalesCount] = await Promise.all([
         prisma.salesSale.aggregate({
-          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          where: { createdAt: posSalesDateFilter },
           _sum: { total: true },
         }),
-        prisma.salesSale.count({ where: hasDateFilter ? { createdAt: dateFilter } : undefined }),
+        prisma.salesSale.count({ where: { createdAt: posSalesDateFilter } }),
       ])
 
       const pendingOrders = orders.filter((o) => o.status === 'PENDING')
