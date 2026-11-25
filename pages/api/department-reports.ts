@@ -163,7 +163,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           releasedBy: { select: { name: true } },
           salesRecipient: { select: { name: true } },
           receipt: { select: { reference: true } },
-          request: { select: { reference: true, customerReference: true } },
+          request: { select: { reference: true, customerReference: true, source: true } },
           items: {
             include: {
               requestItem: {
@@ -176,6 +176,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       })
 
+      const [posSalesAggregate, completedSalesCount] = await Promise.all([
+        prisma.salesSale.aggregate({
+          where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+          _sum: { total: true },
+        }),
+        prisma.salesSale.count({ where: hasDateFilter ? { createdAt: dateFilter } : undefined }),
+      ])
+
       const pendingOrders = orders.filter((o) => o.status === 'PENDING')
       const approvedOrders = orders.filter((o) => o.status === 'APPROVED')
       const inTransitOrders = orders.filter((o) => o.deliveryStatus === 'IN_TRANSIT')
@@ -185,8 +193,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const returnedOrders = orders.filter((o) => o.deliveryStatus === 'RETURNED' || o.deliveryStatus === 'RETURN_REQUESTED')
       const receivedSalesOrders = orders.filter(isFullyReceivedSale)
 
-      const totalSalesRevenue = receivedSalesOrders
-        .reduce((sum, o) => sum + o.total, 0)
+      const grossSalesIncome = Number(posSalesAggregate._sum.total || 0)
+      const salesStockReleases = releases.filter((release) => release.request?.source === 'INTERNAL_SALES')
 
       return res.status(200).json({
         department: 'SALES',
@@ -200,9 +208,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           failedDeliveries: failedDeliveries.length,
           cancelledOrders: cancelledOrders.length,
           returnedOrders: returnedOrders.length,
-          totalSalesRevenue,
-          releasesHandedOver: releases.filter((r) => r.receivedBySalesId).length,
-          releasesPendingHandover: releases.filter((r) => !r.receivedBySalesId).length,
+          totalSalesRevenue: grossSalesIncome,
+          grossSalesIncome,
+          completedSalesCount,
+          releasesHandedOver: salesStockReleases.filter((r) => r.receivedBySalesId).length,
+          releasesPendingHandover: salesStockReleases.filter((r) => !r.receivedBySalesId).length,
         },
         orders,
         releases,

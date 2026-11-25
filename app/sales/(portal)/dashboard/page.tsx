@@ -17,6 +17,8 @@ type SalesReportData = {
     cancelledOrders: number
     returnedOrders: number
     totalSalesRevenue: number
+    grossSalesIncome: number
+    completedSalesCount: number
     releasesHandedOver: number
     releasesPendingHandover: number
   }
@@ -100,7 +102,7 @@ export default function SalesDashboardPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 backdrop-blur"><div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Orders</div><div className="mt-2 text-3xl font-black">{summary?.totalOrders || 0}</div><div className="mt-1 text-[10px] font-bold text-slate-400">all time</div></div>
             <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/10 backdrop-blur"><div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Handover</div><div className="mt-2 text-3xl font-black">{summary?.releasesHandedOver || 0}</div><div className="mt-1 text-[10px] font-bold text-slate-400">confirmed releases</div></div>
-            <div className="col-span-2 rounded-2xl bg-yellow-400 p-4 text-slate-950 shadow-lg shadow-yellow-500/20 sm:col-span-1"><div className="text-[10px] font-black uppercase tracking-wider text-slate-700">Sales value</div><div className="mt-2 text-2xl font-black">{money(summary?.totalSalesRevenue || 0)}</div><div className="mt-1 text-[10px] font-bold text-slate-700">received sales</div></div>
+            <div className="col-span-2 rounded-2xl bg-yellow-400 p-4 text-slate-950 shadow-lg shadow-yellow-500/20 sm:col-span-1"><div className="text-[10px] font-black uppercase tracking-wider text-slate-700">Gross income</div><div className="mt-2 text-2xl font-black">{money(summary?.grossSalesIncome || 0)}</div><div className="mt-1 text-[10px] font-bold text-slate-700">{summary?.completedSalesCount || 0} completed POS sales</div></div>
           </div>
         </div>
       </section>
@@ -113,7 +115,7 @@ export default function SalesDashboardPage() {
         <>
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: 'Completed sales', value: summary?.receivedOrders || 0, detail: `${money(summary?.totalSalesRevenue || 0)} received value`, icon: CartIcon, tone: 'from-emerald-500 to-teal-600', href: '/sales/orders' },
+              { label: 'Completed sales', value: summary?.completedSalesCount || 0, detail: `${money(summary?.grossSalesIncome || 0)} gross income`, icon: CartIcon, tone: 'from-emerald-500 to-teal-600', href: '/sales/receipts' },
               { label: 'Pending orders', value: summary?.pendingOrders || 0, detail: 'Awaiting confirmation', icon: InboxIcon, tone: 'from-amber-400 to-orange-500', href: '/sales/orders' },
               { label: 'Warehouse queue', value: summary?.ordersAwaitingFulfillment || 0, detail: 'Needs material release', icon: PackageIcon, tone: 'from-blue-500 to-indigo-600', href: '/sales/requests' },
               { label: 'In transit', value: summary?.inTransitDeliveries || 0, detail: 'Currently out for delivery', icon: BarChartIcon, tone: 'from-violet-500 to-purple-700', href: '/sales/deliveries' },
