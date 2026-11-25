@@ -109,7 +109,7 @@ export default function AdminReportsPage() {
 
   const summary = data?.summary || {}
   const cards = [
-    ['Sales revenue', money(summary.totalSalesRevenue), 'Counter sales', 'from-cyan-400 to-blue-500'],
+    ['Total sales income', money(summary.totalSalesRevenue), 'POS + successful client orders', 'from-cyan-400 to-blue-500'],
     ['Client orders', summary.totalOrders || 0, `${summary.deliveredOrders || 0} delivered`, 'from-violet-400 to-indigo-500'],
     ['Warehouse stock', summary.inventoryCount || 0, `${summary.lowStockCount || 0} low stock`, 'from-emerald-400 to-teal-500'],
     ['Projects', summary.totalProjects || 0, `${summary.completedProjects || 0} completed`, 'from-amber-300 to-orange-500'],

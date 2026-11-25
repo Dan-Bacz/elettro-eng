@@ -117,10 +117,11 @@ export default function AdminSalesPage() {
   })
 
   const pendingCount = orders.filter((o) => o.status === 'PENDING').length
-  const orderRevenue = orders.reduce((sum, order) => sum + Number(order.total || 0) + Number(order.shipping || 0), 0)
+  const successfulOrders = orders.filter((order) => order.isFullyReceived === true || (order.isFullyReceived === undefined && order.status === 'COMPLETED'))
+  const orderRevenue = successfulOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
   const counterRevenue = counterSales.reduce((sum, sale) => sum + Number(sale.total || 0), 0)
   const combinedRevenue = orderRevenue + counterRevenue
-  const completedOrders = orders.filter((order) => order.status === 'COMPLETED').length
+  const completedOrders = successfulOrders.length
   const averageCounterSale = counterSales.length ? counterRevenue / counterSales.length : 0
   const salesStockUnits = salesStock.reduce((sum, item) => sum + Number(item.availableQuantity || 0), 0)
 

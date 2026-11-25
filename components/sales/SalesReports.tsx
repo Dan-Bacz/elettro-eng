@@ -31,6 +31,8 @@ type ReportData = {
     successfulOrderIncome: number
     completedSalesCount: number
     successfulOrdersCount: number
+    reportGrossSalesIncome: number
+    reportCompletedSalesCount: number
   }
   sales: SalesReport[]
   successfulOrders: SuccessfulOrder[]
@@ -97,7 +99,7 @@ export default function SalesReports() {
   const summary = data?.summary
   const cards = [
     ['Total income', money(summary?.totalIncome), 'POS gross + successful client orders', 'from-yellow-400 to-orange-500'],
-    ['POS gross income', money(summary?.grossSalesIncome), `${summary?.completedSalesCount || 0} completed transactions`, 'from-cyan-400 to-blue-500'],
+    ['POS gross income', money(summary?.reportGrossSalesIncome), `${summary?.reportCompletedSalesCount || 0} completed transactions`, 'from-cyan-400 to-blue-500'],
     ['Successful orders', summary?.successfulOrdersCount || 0, `${money(summary?.successfulOrderIncome)} order income`, 'from-emerald-400 to-teal-500'],
   ] as const
 

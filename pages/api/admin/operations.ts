@@ -44,12 +44,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       prisma.order.findMany({
         orderBy: { createdAt: 'desc' },
         take: 100,
-        select: { id: true, clientName: true, status: true, total: true, createdAt: true, items: { select: { name: true, quantity: true } } },
+        select: { id: true, clientName: true, status: true, total: true, createdAt: true, items: { select: { name: true, quantity: true } }, warehouseRequest: { select: { status: true } } },
       }),
     ])
 
     const lowStock = inventory.filter((item) => item.quantity <= item.reorderLevel).length
-    const revenue = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0)
+    const successfulOrderRevenue = orders.reduce((sum, order) => order.status === 'COMPLETED' && (!order.warehouseRequest || order.warehouseRequest.status === 'FULFILLED') ? sum + Number(order.total || 0) : sum, 0)
+    const revenue = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0) + successfulOrderRevenue
 
     return res.status(200).json({
       syncedAt: new Date().toISOString(),

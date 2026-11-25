@@ -187,13 +187,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const startOfToday = new Date()
       startOfToday.setHours(0, 0, 0, 0)
-      const posSalesDateFilter = hasDateFilter ? dateFilter : { gte: startOfToday }
-      const [posSalesAggregate, completedSalesCount] = await Promise.all([
+      const dailySalesDateFilter = { gte: startOfToday }
+      const reportSalesDateFilter = hasDateFilter ? { createdAt: dateFilter } : {}
+      const [dailyPosSalesAggregate, dailyCompletedSalesCount, reportPosSalesAggregate, reportCompletedSalesCount] = await Promise.all([
         prisma.salesSale.aggregate({
-          where: { createdAt: posSalesDateFilter },
+          where: { createdAt: dailySalesDateFilter },
           _sum: { total: true },
         }),
-        prisma.salesSale.count({ where: { createdAt: posSalesDateFilter } }),
+        prisma.salesSale.count({ where: { createdAt: dailySalesDateFilter } }),
+        prisma.salesSale.aggregate({ where: reportSalesDateFilter, _sum: { total: true } }),
+        prisma.salesSale.count({ where: reportSalesDateFilter }),
       ])
 
       const pendingOrders = orders.filter((o) => o.status === 'PENDING')
@@ -205,9 +208,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const returnedOrders = orders.filter((o) => o.deliveryStatus === 'RETURNED' || o.deliveryStatus === 'RETURN_REQUESTED')
       const receivedSalesOrders = orders.filter(isFullyReceivedSale)
 
-      const grossSalesIncome = Number(posSalesAggregate._sum.total || 0)
+      const dailySuccessfulOrders = receivedSalesOrders.filter((order) => new Date(order.createdAt) >= startOfToday)
+      const grossSalesIncome = Number(dailyPosSalesAggregate._sum.total || 0)
       const successfulOrderIncome = receivedSalesOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
-      const totalIncome = grossSalesIncome + successfulOrderIncome
+      const dailySuccessfulOrderIncome = dailySuccessfulOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+      const reportGrossSalesIncome = Number(reportPosSalesAggregate._sum.total || 0)
+      const totalIncome = reportGrossSalesIncome + successfulOrderIncome
+      const dailyTotalIncome = grossSalesIncome + dailySuccessfulOrderIncome
       const salesStockReleases = releases.filter((release) => release.request?.source === 'INTERNAL_SALES')
 
       return res.status(200).json({
@@ -224,7 +231,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           returnedOrders: returnedOrders.length,
           totalSalesRevenue: grossSalesIncome,
           grossSalesIncome,
-          completedSalesCount,
+          completedSalesCount: dailyCompletedSalesCount,
+          dailyTotalIncome,
+          dailySuccessfulOrdersCount: dailySuccessfulOrders.length,
+          reportGrossSalesIncome,
+          reportCompletedSalesCount,
           successfulOrdersCount: receivedSalesOrders.length,
           successfulOrderIncome,
           totalIncome,
@@ -290,7 +301,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         prisma.order.findMany({
           where: hasDateFilter ? { createdAt: dateFilter } : undefined,
           orderBy: { createdAt: 'desc' },
-          include: { client: { select: { name: true, email: true } }, assignedRider: { select: { name: true } }, items: true },
+          include: { client: { select: { name: true, email: true } }, assignedRider: { select: { name: true } }, items: true, warehouseRequest: { select: { status: true } } },
         }),
         prisma.salesSale.findMany({
           where: hasDateFilter ? { createdAt: dateFilter } : undefined,
@@ -319,7 +330,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const completedProjects = projects.filter((item) => item.status === 'COMPLETED')
       const deliveredOrders = orders.filter((item) => item.deliveryStatus === 'DELIVERED')
       const completedBookings = bookings.filter((item) => item.status === 'COMPLETED')
-      const totalSalesRevenue = sales.reduce((total, sale) => total + Number(sale.total || 0), 0)
+      const successfulOrders = orders.filter(isFullyReceivedSale)
+      const totalSalesRevenue = sales.reduce((total, sale) => total + Number(sale.total || 0), 0) + successfulOrders.reduce((total, order) => total + Number(order.total || 0), 0)
       const inventoryValue = inventory.reduce((total, item) => total + item.quantity * Number(item.buyPrice || 0), 0)
 
       return res.status(200).json({
