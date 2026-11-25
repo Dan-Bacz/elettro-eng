@@ -48,6 +48,7 @@ function ServiceBookingForm({ service }: { service: Service }) {
   const [locations, setLocations] = useState<MindanaoLocation[]>([])
   const [locationLoading, setLocationLoading] = useState(true)
   const [locationError, setLocationError] = useState("")
+  const [blackoutDates, setBlackoutDates] = useState<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const selectedProvince = useMemo(
@@ -78,6 +79,13 @@ function ServiceBookingForm({ service }: { service: Service }) {
       })
       .finally(() => setLocationLoading(false))
     return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/public/booking-availability", { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { dates: [] })
+      .then((data) => setBlackoutDates(new Set((data.dates || []).map((item: { date: string }) => item.date))))
+      .catch(() => setBlackoutDates(new Set()))
   }, [])
 
   useEffect(() => {
@@ -150,6 +158,16 @@ function ServiceBookingForm({ service }: { service: Service }) {
     if (selectedOfferings.length === 0 && !otherSelected) next.offerings = "Please select at least one offering."
     if (otherSelected && !otherSpecified.trim()) next.other = "Please specify your requirement."
     if (!form.preferredDate) next.preferredDate = "Please choose a preferred date."
+    if (form.preferredDate) {
+      const chosen = new Date(`${form.preferredDate}T00:00:00.000Z`)
+      if (chosen.getUTCDay() === 0) next.preferredDate = "Bookings are unavailable every Sunday."
+      if (blackoutDates.has(form.preferredDate)) next.preferredDate = "This date is fully booked. Please choose another date."
+    }
+    if (!form.preferredTime) next.preferredTime = "Please choose a preferred time."
+    else {
+      const [hour, minute] = form.preferredTime.split(":").map(Number)
+      if (hour < 6 || hour > 18 || (hour === 18 && minute > 0)) next.preferredTime = "Choose a time between 6:00 AM and 6:00 PM."
+    }
     bookingQuestions.forEach((question) => {
       if (!questionAnswers[question.id]?.trim()) next[question.id] = "Please answer this question."
     })
@@ -568,9 +586,17 @@ function ServiceBookingForm({ service }: { service: Service }) {
                   type="date"
                   min={new Date().toISOString().split("T")[0]}
                   value={form.preferredDate}
-                  onChange={(e) => updateField("preferredDate", e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    const chosen = new Date(`${value}T00:00:00.000Z`)
+                    updateField("preferredDate", value)
+                    if (value && (chosen.getUTCDay() === 0 || blackoutDates.has(value))) {
+                      setErrors((current) => ({ ...current, preferredDate: chosen.getUTCDay() === 0 ? "Bookings are unavailable every Sunday." : "This date is fully booked." }))
+                    }
+                  }}
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                 />
+                <p className="mt-1 text-xs font-medium text-gray-500">Available Monday–Saturday. Fully booked dates are unavailable.</p>
                 {errors.preferredDate && <p className="mt-1 text-xs text-red-600">{errors.preferredDate}</p>}
               </div>
               <div>
@@ -580,10 +606,15 @@ function ServiceBookingForm({ service }: { service: Service }) {
                 <input
                   id="ib-time"
                   type="time"
+                  min="06:00"
+                  max="18:00"
+                  step="1800"
                   value={form.preferredTime}
                   onChange={(e) => updateField("preferredTime", e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-colors"
                 />
+                <p className="mt-1 text-xs font-medium text-gray-500">Service hours: 6:00 AM–6:00 PM.</p>
+                {errors.preferredTime && <p className="mt-1 text-xs text-red-600">{errors.preferredTime}</p>}
               </div>
             </div>
 

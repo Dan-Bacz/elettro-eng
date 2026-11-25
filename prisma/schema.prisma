@@ -104,6 +104,17 @@ model Booking {
   project              Project?
 }
 
+model BookingBlackoutDate {
+  id        String   @id @default(uuid())
+  date      DateTime @unique
+  reason    String?
+  createdById String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
+}
+
 // A project is created automatically when a booking is approved.
 // Technicians are assigned to the project team; project status is driven by
 // technician reporting once the team has been assigned.

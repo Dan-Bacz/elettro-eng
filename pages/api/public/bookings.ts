@@ -40,9 +40,21 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Please select a service' })
   }
 
+  const cleanDate = String(preferredDate || '').trim()
+  const cleanTime = String(preferredTime || '').trim()
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(cleanDate)) return res.status(400).json({ error: 'Please choose a valid booking date.' })
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(cleanTime)) return res.status(400).json({ error: 'Please choose a booking time.' })
+  const bookingDay = new Date(`${cleanDate}T00:00:00.000Z`)
+  const [hour, minute] = cleanTime.split(':').map(Number)
+  if (bookingDay.getUTCDay() === 0) return res.status(400).json({ error: 'Bookings are unavailable every Sunday.' })
+  if (hour < 6 || hour > 18 || (hour === 18 && minute > 0)) return res.status(400).json({ error: 'Bookings are available from 6:00 AM to 6:00 PM.' })
+
   try {
     const client = await requireVerifiedClient(req, res)
     if (!client) return
+
+    const blackout = await prisma.bookingBlackoutDate.findUnique({ where: { date: bookingDay }, select: { reason: true } })
+    if (blackout) return res.status(400).json({ error: blackout.reason || 'This date is fully booked. Please choose another date.' })
 
     const cleanName = client.name
     const cleanEmail = client.email
@@ -115,7 +127,7 @@ export default async function handler(req: any, res: any) {
           title,
           description: details || null,
           status: 'PENDING',
-          startDate: preferredDate ? new Date(String(preferredDate)) : null,
+          startDate: new Date(`${cleanDate}T${cleanTime}:00.000Z`),
         },
       })
 
@@ -144,8 +156,8 @@ export default async function handler(req: any, res: any) {
       reference,
       buildingType: buildingType ? String(buildingType).trim() : undefined,
       offerings: selectedOffers,
-      preferredDate: preferredDate ? String(preferredDate).trim() : undefined,
-      preferredTime: preferredTime ? String(preferredTime).trim() : undefined,
+      preferredDate: cleanDate,
+      preferredTime: cleanTime,
       address: cleanProjectLocation,
       estimatedAmount: Number.isFinite(cleanEstimate) && cleanEstimate > 0 ? cleanEstimate : undefined,
     })

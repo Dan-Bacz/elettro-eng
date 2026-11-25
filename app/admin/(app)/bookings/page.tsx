@@ -7,6 +7,7 @@ import StatusBadge from '../../../../components/admin/StatusBadge'
 import EmptyState from '../../../../components/admin/EmptyState'
 import type { BookingObj } from '../../../../components/admin/types'
 import { formatDate } from '../../../../components/admin/types'
+import BookingAvailabilityCalendar from '../../../../components/admin/BookingAvailabilityCalendar'
 
 type Filter = 'PENDING' | 'ALL'
 
@@ -133,6 +134,8 @@ export default function AdminBookingsPage() {
         </div>
         <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:grid-cols-4">{[['Open requests', totalBookings], ['Under review', statusCounts.PENDING ?? 0], ['Assigned', statusCounts.ASSIGNED ?? 0], ['In progress', statusCounts.IN_PROGRESS ?? 0]].map(([label, value]) => <div key={String(label)}><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>)}</div>
       </section>
+
+      <BookingAvailabilityCalendar />
 
       <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <section aria-label="Client booking requests" className="min-w-0 space-y-4">
