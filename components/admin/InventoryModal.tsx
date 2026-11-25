@@ -225,27 +225,37 @@ export default function InventoryModal({ open, initial, categories, submitting, 
   }
 
   const fieldClass =
-    'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-shadow'
+    'w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition-all placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-cyan-500/10'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-0 sm:p-4 backdrop-blur-sm" onClick={() => !submitting && onClose()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md sm:p-6" onClick={() => !submitting && onClose()}>
       <div
-        className="w-full max-w-4xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl"
+        className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-[2rem] border border-white/20 bg-white shadow-[0_32px_100px_rgba(15,23,42,0.35)]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-5 py-4">
-          <div>
-            <h3 className="text-base font-black text-slate-900">{initial?.id ? 'Edit Item' : 'Add New Item'}</h3>
-            <p className="mt-0.5 text-[11px] font-medium text-slate-400">
+        <div className="flex items-center justify-between border-b border-white/10 bg-slate-950 px-5 py-4 text-white sm:px-7 sm:py-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-yellow-400 text-slate-950 shadow-lg shadow-yellow-400/20">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v18M3 12h18M5.64 5.64l12.72 12.72M18.36 5.64L5.64 18.36" />
+              </svg>
+            </div>
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="text-base font-black tracking-tight sm:text-lg">{initial?.id ? 'Edit Inventory Item' : 'Add Inventory Item'}</h3>
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.16em] text-cyan-300">Warehouse</span>
+              </div>
+              <p className="text-[11px] font-medium text-slate-400">
               {initial?.id ? 'Update details, pricing and stock' : 'Add an electrical product or equipment'}
             </p>
+          </div>
           </div>
           <button
             type="button"
             onClick={() => !submitting && onClose()}
             aria-label="Close"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-50 hover:text-slate-600"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -253,14 +263,21 @@ export default function InventoryModal({ open, initial, categories, submitting, 
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 p-5 md:grid-cols-[300px_1fr] md:gap-8 md:p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_top_right,_rgba(6,182,212,0.06),_transparent_32%),linear-gradient(to_bottom,_#ffffff,_#f8fafc)] p-4 sm:p-6 md:p-7">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-[280px_1fr] md:gap-8">
           {/* LEFT: image upload via import or camera */}
           <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500">Product Image</label>
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <label className="block text-sm font-black text-slate-900">Product image</label>
+                  <p className="mt-0.5 text-[10px] font-medium text-slate-400">Make the item easy to identify</p>
+                </div>
+                <span className="rounded-full bg-cyan-50 px-2 py-1 text-[9px] font-black uppercase tracking-wider text-cyan-700">Optional</span>
+              </div>
 
               {image.preview ? (
-                <div className="relative mt-1.5 aspect-square overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                <div className="relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={image.preview} alt="Product preview" className="h-full w-full object-cover" />
                   <button
@@ -284,11 +301,11 @@ export default function InventoryModal({ open, initial, categories, submitting, 
                   }}
                   onDragLeave={() => setDragging(false)}
                   onDrop={handleDrop}
-                  className={`mt-1.5 flex aspect-square w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors ${
-                    dragging ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200 bg-slate-50/60 hover:border-yellow-400 hover:bg-yellow-50/40'
+                  className={`flex aspect-square w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed transition-all ${
+                    dragging ? 'border-cyan-500 bg-cyan-50' : 'border-slate-200 bg-slate-50/70 hover:border-cyan-400 hover:bg-cyan-50/50'
                   }`}
                 >
-                  <svg className="h-8 w-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <svg className="h-8 w-8 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -307,7 +324,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:border-yellow-400 hover:text-yellow-700"
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-black text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-700"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                   <path
@@ -321,7 +338,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <button
                 type="button"
                 onClick={startCamera}
-                className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold text-slate-700 transition-colors hover:border-yellow-400 hover:text-yellow-700"
+                className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-black text-slate-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-400 hover:text-cyan-700"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                   <path
@@ -337,7 +354,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
             {cameraError && <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700">{cameraError}</div>}
 
             {cameraOpen && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-900 p-3 shadow-lg shadow-slate-900/10">
                 <video ref={videoRef} autoPlay playsInline muted className="aspect-square w-full rounded-lg bg-black object-cover" />
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <button
@@ -367,8 +384,13 @@ export default function InventoryModal({ open, initial, categories, submitting, 
           </div>
 
           {/* RIGHT: fields */}
-          <div className="space-y-4">
-            {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-bold text-red-600">{error}</div>}
+          <div className="space-y-5">
+            {error && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-bold text-red-600">{error}</div>}
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-4 flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-50 text-cyan-700"><span className="text-sm font-black">01</span></div>
+                <div><h4 className="text-sm font-black text-slate-900">Product identity</h4><p className="mt-0.5 text-[10px] font-medium text-slate-400">Set the details used across warehouse records.</p></div>
+              </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Product Name *" value={name} onChange={setName} placeholder="e.g. LED Bulb 12W" required />
               <Select label="Category *" value={category} onChange={setCategory} options={categories} required />
@@ -387,26 +409,28 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               </div>
               <Field label="Minimum Stock" type="number" inputMode="numeric" min={0} step={1} value={minStock} onChange={setMinStock} placeholder="10" />
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500">Description / Specifications</label>
+            </div>
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-3 flex items-center justify-between"><div><h4 className="text-sm font-black text-slate-900">Description & specifications</h4><p className="mt-0.5 text-[10px] font-medium text-slate-400">Add useful notes for purchasing and field teams.</p></div><span className="text-[10px] font-bold text-slate-400">Optional</span></div>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 placeholder="Optional notes, specs, or product details…"
-                className={`${fieldClass} mt-1 resize-none`}
+                className={`${fieldClass} resize-none`}
               />
             </div>
+          </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col-reverse items-stretch justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col-reverse items-stretch justify-end gap-3 border-t border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:px-7">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg border border-slate-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+            className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-black text-slate-600 transition-all hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50"
           >
             Cancel
           </button>
@@ -414,7 +438,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
             type="button"
             onClick={handleSubmit}
             disabled={submitting || !name.trim() || !category.trim() || !unit.trim()}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-yellow-400 px-6 py-2.5 text-xs font-black text-black shadow-sm transition-colors hover:bg-yellow-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3 text-xs font-black text-white shadow-lg shadow-slate-950/15 transition-all hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? (
               <>
@@ -459,7 +483,7 @@ function Field({
   readOnly?: boolean
 }) {
   const fieldClass =
-    'w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-shadow'
+    'w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition-all placeholder:text-slate-400 focus:border-cyan-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-cyan-500/10'
   const inner = (
     <input
       type={type}
@@ -515,7 +539,7 @@ function Select({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition-shadow"
+        className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-3 text-sm font-semibold text-slate-800 shadow-sm transition-all focus:border-cyan-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-cyan-500/10"
       >
         <option value="">— Select category —</option>
         {options.map((o) => (
