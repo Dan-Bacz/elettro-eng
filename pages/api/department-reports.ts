@@ -176,6 +176,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         },
       })
 
+      const sales = await prisma.salesSale.findMany({
+        where: hasDateFilter ? { createdAt: dateFilter } : undefined,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          items: true,
+          createdBy: { select: { name: true } },
+        },
+      })
+
       const startOfToday = new Date()
       startOfToday.setHours(0, 0, 0, 0)
       const posSalesDateFilter = hasDateFilter ? dateFilter : { gte: startOfToday }
@@ -197,6 +206,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const receivedSalesOrders = orders.filter(isFullyReceivedSale)
 
       const grossSalesIncome = Number(posSalesAggregate._sum.total || 0)
+      const successfulOrderIncome = receivedSalesOrders.reduce((sum, order) => sum + Number(order.total || 0), 0)
+      const totalIncome = grossSalesIncome + successfulOrderIncome
       const salesStockReleases = releases.filter((release) => release.request?.source === 'INTERNAL_SALES')
 
       return res.status(200).json({
@@ -214,10 +225,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           totalSalesRevenue: grossSalesIncome,
           grossSalesIncome,
           completedSalesCount,
+          successfulOrdersCount: receivedSalesOrders.length,
+          successfulOrderIncome,
+          totalIncome,
           releasesHandedOver: salesStockReleases.filter((r) => r.receivedBySalesId).length,
           releasesPendingHandover: salesStockReleases.filter((r) => !r.receivedBySalesId).length,
         },
         orders,
+        sales,
+        successfulOrders: receivedSalesOrders,
         releases,
         failedDeliveries,
         cancelledOrders,

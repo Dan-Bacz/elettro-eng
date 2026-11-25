@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { key: 'orders', label: 'Client Orders', icon: CartIcon, href: '/sales/orders' },
   { key: 'pos', label: 'Create Sale', icon: CartIcon, href: '/sales/pos' },
   { key: 'sales-receipts', label: 'Sales Receipts', icon: DocumentIcon, href: '/sales/sales-receipts' },
+  { key: 'reports', label: 'Sales Reports', icon: DocumentIcon, href: '/sales/reports' },
   { key: 'stock', label: 'Sales Stock', icon: PackageIcon, href: '/sales/stock' },
   { key: 'requests', label: 'Warehouse Requests', icon: InboxIcon, href: '/sales/requests' },
   { key: 'receipts', label: 'Release Receipts', icon: DocumentIcon, href: '/sales/receipts' },
