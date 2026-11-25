@@ -72,6 +72,7 @@ export default function AdminBookingsPage() {
   const [filter, setFilter] = useState<Filter>('ALL')
   const [totalBookings, setTotalBookings] = useState(0)
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
+  const [availabilityOpen, setAvailabilityOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -130,12 +131,12 @@ export default function AdminBookingsPage() {
         <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-cyan-300/10 blur-3xl" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl"><span className="inline-flex rounded-full border border-yellow-300/25 bg-yellow-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-yellow-200">Client request inbox</span><h1 className="mt-4 text-3xl font-black tracking-tight sm:text-4xl">Booking command center</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">Review new service requests, understand the client need, and move approved work into Projects.</p></div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200">Approved bookings leave this inbox and become projects for technician assignment and progress tracking.</div>
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-4 text-xs font-semibold leading-5 text-slate-200"><p>Approved bookings leave this inbox and become projects for technician assignment and progress tracking.</p><button type="button" onClick={() => setAvailabilityOpen(true)} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-yellow-400 px-4 py-2.5 text-xs font-black text-slate-950 shadow-lg shadow-yellow-400/20 transition hover:bg-yellow-300"><span className="text-base">▣</span> Manage Fully Booked Dates</button></div>
         </div>
         <div className="relative mt-8 grid grid-cols-2 gap-4 border-t border-white/15 pt-5 sm:grid-cols-4">{[['Open requests', totalBookings], ['Under review', statusCounts.PENDING ?? 0], ['Assigned', statusCounts.ASSIGNED ?? 0], ['In progress', statusCounts.IN_PROGRESS ?? 0]].map(([label, value]) => <div key={String(label)}><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>)}</div>
       </section>
 
-      <BookingAvailabilityCalendar />
+      {availabilityOpen && <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4 sm:p-8"><div className="mx-auto max-w-4xl rounded-[2rem] bg-slate-100 p-4 shadow-2xl sm:p-6"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-700">Admin schedule controls</p><h2 className="mt-1 text-xl font-black text-slate-950">Fully booked dates</h2></div><button type="button" onClick={() => setAvailabilityOpen(false)} aria-label="Close fully booked dates" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-xl font-bold text-slate-500 hover:bg-slate-50">×</button></div><BookingAvailabilityCalendar /></div></div>}
 
       <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <section aria-label="Client booking requests" className="min-w-0 space-y-4">
