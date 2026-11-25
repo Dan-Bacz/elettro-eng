@@ -160,6 +160,7 @@ model InventoryItem {
   category              String?
   brand                 String?
   model                 String?
+  size                  String?
   description           String?
   quantity              Int                    @default(0)
   unit                  String?

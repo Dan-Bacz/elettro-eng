@@ -86,6 +86,7 @@ export type InventoryItemObj = {
   category?: string | null
   brand?: string | null
   model?: string | null
+  size?: string | null
   description?: string | null
   quantity: number
   unit?: string | null

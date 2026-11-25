@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, DragEvent } from 'react'
 import type { InventoryItemObj } from './types'
+import { inventorySkuPrefix } from '../../lib/inventory-sku'
 
 type InventoryModalProps = {
   open: boolean
@@ -54,6 +55,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
   const [category, setCategory] = useState('')
   const [brand, setBrand] = useState('')
   const [model, setModel] = useState('')
+  const [size, setSize] = useState('')
   const [sku, setSku] = useState('')
   const [unit, setUnit] = useState('pcs')
   const [quality, setQuality] = useState('0')
@@ -79,6 +81,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
     setCategory(initial?.category || '')
     setBrand(initial?.brand || '')
     setModel(initial?.model || '')
+    setSize(initial?.size || '')
     setSku(initial?.sku || '')
     setUnit(initial?.unit || 'pcs')
     setQuality(initial?.quantity != null ? String(initial.quantity) : '0')
@@ -210,6 +213,7 @@ export default function InventoryModal({ open, initial, categories, submitting, 
       category: category.trim(),
       brand: brand.trim() || undefined,
       model: model.trim() || undefined,
+      size: size.trim(),
       description: description.trim() || undefined,
       unit: unit.trim() || 'pcs',
       buyPrice: buy,
@@ -401,10 +405,11 @@ export default function InventoryModal({ open, initial, categories, submitting, 
               <Field label="Product Name *" value={name} onChange={setName} placeholder="e.g. LED Bulb 12W" required />
               <Select label="Category *" value={category} onChange={setCategory} options={categories} required />
               <Field label="Manufacturer / Brand" value={brand} onChange={setBrand} placeholder="e.g. Philips" />
-              <Field label="Model Number" value={model} onChange={setModel} placeholder="e.g. LED-12W-220V" />
+              <Field label="Model / Type" value={model} onChange={setModel} placeholder="e.g. LED-12W-220V" />
+              <Field label="Size" value={size} onChange={setSize} placeholder="e.g. 2.0 mm²" />
               <div>
                 <label className="mb-1 block text-xs font-bold text-slate-500">SKU / Product Number</label>
-                <div className="flex h-[38px] items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500">{initial?.sku || 'ELETTRO-###'}</div>
+                <div className="flex h-[38px] items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-500">{initial?.sku || (category ? `${inventorySkuPrefix(category)}-###` : 'Select a category')}</div>
               </div>
               <Select label="Unit *" value={unit} onChange={setUnit} options={Array.from(new Set([...UNIT_OPTIONS, ...(unit && !UNIT_OPTIONS.includes(unit) ? [unit] : [])]))} required />
               <Field label="Buy Price" type="number" inputMode="decimal" min={0} step="0.01" value={buyPrice} onChange={setBuyPrice} placeholder="Cost per unit" prefix="₱" />

@@ -319,7 +319,8 @@ export default function WarehouseInventory() {
                 <th className="px-4 py-3 font-black">#</th>
                 <th className="px-3 py-3 font-black">Product</th>
                 <th className="px-3 py-3 font-black">Manufacturer / Brand</th>
-                <th className="px-3 py-3 font-black">Model / SKU</th>
+                <th className="px-3 py-3 font-black">Model / Type</th>
+                <th className="px-3 py-3 font-black">Size</th>
                 <th className="px-3 py-3 font-black">Category</th>
                 <th className="px-3 py-3 text-right font-black">Buy Price</th>
                 <th className="px-3 py-3 text-right font-black">Sell Price</th>
@@ -355,6 +356,7 @@ export default function WarehouseInventory() {
                     </td>
                     <td className="px-3 py-2.5 text-xs font-medium text-slate-600">{item.brand || '—'}</td>
                     <td className="px-3 py-2.5 text-xs font-medium text-slate-600">{item.model || '—'}</td>
+                    <td className="px-3 py-2.5 text-xs font-medium text-slate-600">{item.size || '—'}</td>
                     <td className="px-3 py-2.5">
                       <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-500">
                         {item.category || 'Uncategorized'}
@@ -420,7 +422,7 @@ export default function WarehouseInventory() {
                       <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${status.className}`}>{status.label}</span>
                     </div>
                     <div className="mt-0.5 truncate text-[11px] text-slate-400">
-                      {[item.brand, item.model, item.category].filter(Boolean).join(' · ') || 'Uncategorized'}
+                      {[item.brand, item.model, item.size, item.category].filter(Boolean).join(' · ') || 'Uncategorized'}
                     </div>
                     {item.sku && <div className="mt-0.5 text-[10px] font-medium text-slate-300">SKU: {item.sku}</div>}
                   </div>

@@ -9,6 +9,7 @@ type InventoryItem = {
   category?: string
   brand?: string
   model?: string
+  size?: string
   description?: string
   quantity: number
   unit?: string
@@ -25,6 +26,7 @@ type ItemForm = {
   category: string
   brand: string
   model: string
+  size: string
   description: string
   quantity: number
   unit: string
@@ -38,6 +40,7 @@ const emptyForm: ItemForm = {
   category: "",
   brand: "",
   model: "",
+  size: "",
   description: "",
   quantity: 1,
   unit: "pcs",
@@ -113,6 +116,7 @@ export default function InventoryPage(){
       category: item.category || "",
       brand: item.brand || "",
       model: item.model || "",
+      size: item.size || "",
       description: item.description || "",
       quantity: item.quantity,
       unit: item.unit || "pcs",
@@ -592,11 +596,11 @@ export default function InventoryPage(){
               {/* SKU + Category */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU / Code</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">SKU / Code (generated automatically)</label>
                   <input
                     value={form.sku}
-                    onChange={(e) => updateField("sku", e.target.value)}
-                    placeholder="SKU-001"
+                    readOnly
+                    placeholder="Assigned when saved"
                     className={inputClass}
                   />
                 </div>
@@ -627,7 +631,7 @@ export default function InventoryPage(){
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Model / Type</label>
                   <input
                     value={form.model}
                     onChange={(e) => updateField("model", e.target.value)}
@@ -635,6 +639,11 @@ export default function InventoryPage(){
                     className={inputClass}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                <input value={form.size} onChange={(e) => updateField("size", e.target.value)} placeholder="e.g. 2.0 mm²" className={inputClass} />
               </div>
 
               {/* Quantity + Unit */}

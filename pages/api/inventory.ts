@@ -1,20 +1,22 @@
 import { InventoryMovementType, PrismaClient } from '@prisma/client'
 import { uploadToCloudinary } from '../../lib/cloudinary'
 import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
+import { inventorySkuPrefix } from '../../lib/inventory-sku'
 
 const prisma = new PrismaClient()
 const MAX_STOCK_QUANTITY = 1_000_000
 
-async function nextElettroSku() {
+async function nextInventorySku(category: string | undefined) {
+  const prefix = inventorySkuPrefix(category)
   const existing = await prisma.inventoryItem.findMany({
-    where: { sku: { startsWith: 'ELETTRO-' } },
+    where: { sku: { startsWith: `${prefix}-` } },
     select: { sku: true },
   })
   const highest = existing.reduce((max, item) => {
-    const match = item.sku?.match(/^ELETTRO-(\d+)$/)
+    const match = item.sku?.match(new RegExp(`^${prefix}-(\\d+)$`))
     return match ? Math.max(max, Number(match[1])) : max
   }, 0)
-  return `ELETTRO-${String(highest + 1).padStart(3, '0')}`
+  return `${prefix}-${String(highest + 1).padStart(3, '0')}`
 }
 
 function parsePrice(value: unknown): number | null {
@@ -77,6 +79,7 @@ export default async function handler(req, res) {
                 category: true,
                 brand: true,
                 model: true,
+                size: true,
                 description: true,
                 unit: true,
                 quantity: true,
@@ -127,6 +130,7 @@ export default async function handler(req, res) {
           category: body.category ? String(body.category).trim() : undefined,
           brand: body.brand ? String(body.brand).trim() : undefined,
           model: body.model ? String(body.model).trim() : undefined,
+          size: body.size ? String(body.size).trim() : undefined,
           description: body.description ? String(body.description).trim() : undefined,
           unit: body.unit ? String(body.unit).trim() : 'pcs',
           quantity: Math.max(0, Math.round(Number(body.quantity) || 0)),
@@ -140,7 +144,7 @@ export default async function handler(req, res) {
       let item
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          item = await prisma.inventoryItem.create({ data: { ...data, sku: await nextElettroSku() } })
+          item = await prisma.inventoryItem.create({ data: { ...data, sku: await nextInventorySku(data.category) } })
           break
         } catch (error: any) {
           if (error?.code !== 'P2002' || attempt === 2) throw error
@@ -175,7 +179,7 @@ export default async function handler(req, res) {
       }
       if (requestedQuantity !== undefined) data.quantity = requestedQuantity
 
-      const optional = ['sku', 'category', 'brand', 'model', 'description', 'unit'] as const
+      const optional = ['sku', 'category', 'brand', 'model', 'size', 'description', 'unit'] as const
       for (const key of optional) {
         if (typeof body[key] !== 'undefined') {
           data[key] = body[key] ? String(body[key]).trim() : null
