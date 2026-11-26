@@ -299,7 +299,7 @@ export default function WarehouseInventory() {
       {loadError && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{loadError}</div>}
 
       {/* Desktop table */}
-      <div className="hidden overflow-x-auto rounded-xl border border-slate-200 bg-white md:block">
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white md:block">
         {loading ? (
           <div className="space-y-2 p-4">
             {[...Array(5)].map((_, i) => (
@@ -313,20 +313,20 @@ export default function WarehouseInventory() {
             <p className="mt-1 text-xs text-slate-500">Add your first item to get started.</p>
           </div>
         ) : (
-          <table className="w-full min-w-[1120px] text-left">
+          <table className="w-full table-fixed text-left text-[11px] [&_th]:overflow-hidden [&_th]:text-ellipsis [&_th]:whitespace-nowrap [&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:whitespace-nowrap">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50/70 text-[10px] uppercase tracking-wider text-slate-400">
-                <th className="px-4 py-3 font-black">#</th>
-                <th className="px-3 py-3 font-black">Product</th>
-                <th className="px-3 py-3 font-black">Manufacturer / Brand</th>
-                <th className="px-3 py-3 font-black">Model / Type</th>
-                <th className="px-3 py-3 font-black">Size</th>
-                <th className="px-3 py-3 font-black">Category</th>
-                <th className="px-3 py-3 text-right font-black">Buy Price</th>
-                <th className="px-3 py-3 text-right font-black">Sell Price</th>
-                <th className="px-3 py-3 text-center font-black">Stock</th>
-                <th className="px-3 py-3 text-center font-black">Status</th>
-                <th className="sticky right-0 z-10 bg-slate-50/95 px-3 py-3 text-right font-black shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.55)]">Actions</th>
+                <th className="w-[4%] px-2 py-3 font-black">#</th>
+                <th className="w-[17%] px-2 py-3 font-black">Product</th>
+                <th className="w-[11%] px-2 py-3 font-black">Brand</th>
+                <th className="w-[10%] px-2 py-3 font-black">Model</th>
+                <th className="w-[8%] px-2 py-3 font-black">Size</th>
+                <th className="w-[12%] px-2 py-3 font-black">Category</th>
+                <th className="w-[9%] px-2 py-3 text-right font-black">Buy</th>
+                <th className="w-[9%] px-2 py-3 text-right font-black">Sell</th>
+                <th className="w-[8%] px-2 py-3 text-center font-black">Stock</th>
+                <th className="w-[8%] px-2 py-3 text-center font-black">Status</th>
+                <th className="sticky right-0 z-10 w-[7%] bg-slate-50/95 px-2 py-3 text-right font-black shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.55)]">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -371,7 +371,7 @@ export default function WarehouseInventory() {
                     <td className="px-3 py-2.5 text-center">
                       <span className={`inline-flex rounded-md border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${status.className}`}>{status.label}</span>
                     </td>
-                    <td className="sticky right-0 z-[1] bg-white px-3 py-2.5 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
+                    <td className="sticky right-0 z-[1] truncate bg-white px-2 py-2.5 text-right shadow-[-8px_0_12px_-12px_rgba(15,23,42,0.35)]">
                       <div className="flex justify-end gap-1">
                         <button type="button" onClick={() => { setEditingItem(item); setSubmitError(''); setModalOpen(true) }} className="rounded-md px-2 py-1 text-[10px] font-black text-blue-700 hover:bg-blue-50">Edit</button>
                       </div>
