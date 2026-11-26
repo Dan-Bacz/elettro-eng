@@ -285,7 +285,7 @@ export default function CheckoutModal() {
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                 <CheckIcon className="w-8 h-8" />
               </div>
-              <h2 className="mt-4 text-2xl font-black text-gray-900">Order Placed Successfully</h2>
+              <h2 className="mt-4 text-2xl font-black text-gray-900">{confirmation.fulfillmentMethod === "PICKUP" ? "Item Reserved Successfully" : "Order Placed Successfully"}</h2>
               <p className="mt-2 text-sm text-gray-500">
                 Thank you, <strong className="text-gray-800">{form.clientName.trim()}</strong>! We have received your
                 order and our team will review it shortly.
@@ -561,7 +561,7 @@ export default function CheckoutModal() {
                   disabled={submitting}
                   className="mt-5 w-full rounded-xl bg-yellow-400 px-4 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:opacity-60"
                 >
-                  {submitting ? "Placing Order…" : `Place Order · ${formatPeso(subtotal + (fulfillmentMethod === "DELIVERY" ? shippingEstimate?.shippingFee || 0 : 0), 2)}`}
+                  {submitting ? (fulfillmentMethod === "PICKUP" ? "Reserving Item…" : "Placing Order…") : fulfillmentMethod === "PICKUP" ? "Reserve Item" : `Place Order · ${formatPeso(subtotal + (fulfillmentMethod === "DELIVERY" ? shippingEstimate?.shippingFee || 0 : 0), 2)}`}
                 </button>
                 <p className="mt-2 text-center text-[10px] text-gray-400">
                   A valid email and mobile number are required so we can confirm your order.
