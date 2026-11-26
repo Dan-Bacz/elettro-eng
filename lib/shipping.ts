@@ -1,4 +1,7 @@
+// Mahayag, Zamboanga del Sur delivery origin.
 const ORIGIN = { latitude: 8.1297, longitude: 123.4383 }
+const SHIPPING_RATE_PER_BLOCK = 20
+const SHIPPING_DISTANCE_BLOCK_KM = 3
 const cache = new Map<string, { latitude: number; longitude: number }>()
 
 type DeliveryAddress = {
@@ -60,7 +63,8 @@ export async function calculateShipping(address: DeliveryAddress): Promise<Shipp
   const distanceKm = haversineKm(ORIGIN, destination)
   return {
     distanceKm: Math.round(distanceKm * 10) / 10,
-    shippingFee: Math.max(30, Math.ceil(distanceKm / 5) * 30),
+    // Charge ₱20 for every started 3 km from Mahayag.
+    shippingFee: distanceKm > 0 ? Math.ceil(distanceKm / SHIPPING_DISTANCE_BLOCK_KM) * SHIPPING_RATE_PER_BLOCK : 0,
   }
 }
 

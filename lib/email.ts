@@ -3,7 +3,7 @@ import nodemailer, { type SendMailOptions } from 'nodemailer'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'lanzaderasjezamae959@gmail.com'
 const SMTP_HOST = 'smtp.gmail.com'
 const ADMIN_NOTIFICATION_MAX_ATTEMPTS = 2
-let cachedIpv4: string | null = null
+const SMTP_TIMEOUT_MS = 12000
 
 function getGmailCredentials() {
   const user = process.env.GMAIL_USER?.trim().replace(/^['"]|['"]$/g, '')
@@ -18,15 +18,13 @@ function getGmailCredentials() {
   return { user, appPassword, sender }
 }
 
-async function getTransporter() {
+function getTransporter(options: { secure: boolean; port: number } = { secure: true, port: 465 }) {
   const { user, appPassword } = getGmailCredentials()
   return nodemailer.createTransport({
-    // STARTTLS on port 587 is more reliable from serverless functions than
-    // Gmail's implicit-TLS port 465, which can hang in some deployments.
     host: SMTP_HOST,
-    port: 587,
-    secure: false,
-    requireTLS: true,
+    port: options.port,
+    secure: options.secure,
+    ...(options.secure ? {} : { requireTLS: true }),
     connectionTimeout: 8000,
     greetingTimeout: 8000,
     socketTimeout: 10000,
@@ -49,25 +47,21 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 async function sendVerificationWithFallback(message: SendMailOptions) {
   const { user, appPassword } = getGmailCredentials()
+  if (!user || !appPassword) {
+    throw new Error('Email delivery is not configured. Set GMAIL_USER and GMAIL_APP_PASSWORD.')
+  }
+
+  // Gmail's implicit TLS endpoint is quicker and more reliable for short-lived
+  // serverless requests. Keep port 587 as a fallback for hosts that block 465.
   const transports = [
-    getTransporter(),
-    Promise.resolve(nodemailer.createTransport({
-      service: 'gmail',
-      connectionTimeout: 8000,
-      greetingTimeout: 8000,
-      socketTimeout: 10000,
-      auth: {
-        user,
-        pass: appPassword,
-      },
-    })),
+    getTransporter({ secure: true, port: 465 }),
+    getTransporter({ secure: false, port: 587 }),
   ]
   let lastError: unknown
   const errors: string[] = []
-  for (const transporterPromise of transports) {
+  for (const transporter of transports) {
     try {
-      const transporter = await transporterPromise
-      return await withTimeout(transporter.sendMail(message), 10000)
+      return await withTimeout(transporter.sendMail(message), SMTP_TIMEOUT_MS)
     } catch (error) {
       lastError = error
       errors.push(error instanceof Error ? error.message : String(error))
@@ -140,7 +134,6 @@ export async function sendAdminRegistrationNotification(user: { name: string; em
       }), 25000)
       return
     } catch (error: any) {
-      cachedIpv4 = null
       if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
         console.error(`Failed to send admin registration notification email (attempt ${attempt}):`, error)
       }
@@ -211,7 +204,6 @@ export async function sendBookingSubmittedNotification(input: {
       }), 25000)
       return
     } catch (error: any) {
-      cachedIpv4 = null
       if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
         console.error(`Failed to send booking submitted notification email (attempt ${attempt}):`, error)
       }
@@ -294,7 +286,6 @@ export async function sendOrderSubmittedNotification(input: {
       }), 25000)
       return
     } catch (error: any) {
-      cachedIpv4 = null
       if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
         console.error(`Failed to send order submitted notification email (attempt ${attempt}):`, error)
       }
@@ -351,7 +342,6 @@ export async function sendLeaveDecisionNotification(input: {
       }), 25000)
       return
     } catch (error: any) {
-      cachedIpv4 = null
       if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
         console.error(`Failed to send leave decision notification email (attempt ${attempt}):`, error)
       }
@@ -395,7 +385,6 @@ export async function sendTechnicianApprovalNotification(user: { name: string; e
       }), 25000)
       return
     } catch (error: any) {
-      cachedIpv4 = null
       if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
         console.error(`Failed to send ${role.toLowerCase()} approval notification email (attempt ${attempt}):`, error)
       }
@@ -452,7 +441,6 @@ export async function sendPasswordResetCodeEmail(input: PasswordResetEmail & { e
       }), 25000)
       return
     } catch (error: any) {
-      cachedIpv4 = null
       if (attempt === ADMIN_NOTIFICATION_MAX_ATTEMPTS) {
         console.error(`Failed to send password reset code email (attempt ${attempt}):`, error)
       }
