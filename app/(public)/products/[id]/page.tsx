@@ -17,7 +17,7 @@ function SpecRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function ProductDetail() {
+export function ProductDetail({ portal = false }: { portal?: boolean }) {
   const rawParams = useParams<{ id: string }>()
   const id = rawParams?.id
 
@@ -37,6 +37,7 @@ function ProductDetail() {
   }, [id])
 
   const imageSrc = product && (product.imageUrl || product.imageData)
+  const productsPath = portal ? "/client/products" : "/products"
   const outOfStock = product ? Number(product.quantity || 0) <= 0 : true
   const hasPrice = product != null && product.sellPrice != null && Number(product.sellPrice) > 0
   const badges = useMemo(() => (product ? productBadges(product) : []), [product])
@@ -63,11 +64,11 @@ function ProductDetail() {
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           {/* Breadcrumb */}
           <nav className="text-sm text-gray-500" aria-label="Breadcrumb">
-            <Link href="/" className="hover:text-yellow-600 transition-colors">
-              Home
+            <Link href={portal ? "/client/dashboard" : "/"} className="hover:text-yellow-600 transition-colors">
+              {portal ? "Client Portal" : "Home"}
             </Link>
             <span className="mx-2">/</span>
-            <Link href="/products" className="hover:text-yellow-600 transition-colors">
+            <Link href={productsPath} className="hover:text-yellow-600 transition-colors">
               Products
             </Link>
             <span className="mx-2">/</span>
@@ -163,7 +164,7 @@ function ProductDetail() {
 
               <div className="mt-8 rounded-2xl border border-cyan-200/80 bg-gradient-to-r from-cyan-50 via-white to-yellow-50 p-4 shadow-sm">
                 <p className="text-sm font-black text-slate-900">Product information only</p>
-                <p className="mt-1 text-xs leading-5 text-slate-600">Shopping and checkout are available from the authenticated client portal.</p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">{portal ? "You are viewing this product inside your authenticated client portal." : "Shopping and checkout are available from the authenticated client portal."}</p>
               </div>
 
               {/* Specs */}
@@ -191,9 +192,9 @@ function ProductDetail() {
         heading="Ready to Order?"
         subheading="Request a product or schedule a service today — it only takes a minute."
         primaryLabel="Book a Service"
-        primaryHref="/book-service"
-        secondaryLabel="Contact Us"
-        secondaryHref="/contact"
+        primaryHref={portal ? "/client/services" : "/book-service"}
+        secondaryLabel={portal ? "Back to Products" : "Contact Us"}
+        secondaryHref={portal ? productsPath : "/contact"}
       />
     </>
   )

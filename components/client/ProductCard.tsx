@@ -1,5 +1,6 @@
 "use client"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 export type InventoryProduct = {
   id: string
@@ -17,6 +18,8 @@ export type InventoryProduct = {
 }
 
 export default function ProductCard({ product }: { product: InventoryProduct }) {
+  const pathname = usePathname()
+  const detailsHref = pathname?.startsWith("/client/") ? `/client/products/${product.id}` : `/products/${product.id}`
   const imageSrc = product.imageUrl || product.imageData
   const outOfStock = product.quantity <= 0
 
@@ -64,14 +67,14 @@ export default function ProductCard({ product }: { product: InventoryProduct }) 
 
         <div className="mt-4 flex gap-2">
           <Link
-            href={`/products/${product.id}`}
+            href={detailsHref}
             className="inline-flex items-center justify-center gap-1.5 flex-1 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 text-sm font-bold hover:border-gray-900 hover:text-gray-900 transition-colors"
           >
             Details
           </Link>
           {!outOfStock && (
             <Link
-              href={`/products/${product.id}`}
+              href={detailsHref}
               className="inline-flex items-center justify-center gap-1.5 flex-1 px-4 py-2.5 rounded-lg bg-yellow-400 text-black text-sm font-bold hover:bg-yellow-300 transition-colors"
             >
               Shop options

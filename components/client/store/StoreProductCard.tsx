@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { useCart } from "./CartContext"
 import ProductImage from "./ProductImage"
@@ -10,6 +11,8 @@ import { BADGE_TONE_CLASSES, formatPeso, isDiscounted, productBadges, type Store
 
 export default function StoreProductCard({ product, showCartAction = true }: { product: StoreProduct; showCartAction?: boolean }) {
   const { addItem } = useCart()
+  const pathname = usePathname()
+  const detailsHref = pathname?.startsWith("/client/") ? `/client/products/${product.id}` : `/products/${product.id}`
   const [added, setAdded] = useState(false)
   const outOfStock = Number(product.quantity || 0) <= 0
   const hasPrice = product.sellPrice != null && Number(product.sellPrice) > 0
@@ -34,7 +37,7 @@ export default function StoreProductCard({ product, showCartAction = true }: { p
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-[1.35rem] border border-slate-200/80 bg-white shadow-[0_16px_35px_-28px_rgba(15,23,42,.8)] transition-all duration-300 hover:-translate-y-1.5 hover:border-yellow-300 hover:shadow-[0_24px_45px_-24px_rgba(15,23,42,.45)]">
-      <Link href={`/products/${product.id}`} aria-label={product.name} className="relative block">
+      <Link href={detailsHref} aria-label={product.name} className="relative block">
         <div className="relative h-[220px] overflow-hidden bg-gradient-to-br from-slate-50 via-white to-cyan-50/50 p-4">
           <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-yellow-300/20 blur-2xl transition group-hover:bg-yellow-300/35" />
           <ProductImage
@@ -64,7 +67,7 @@ export default function StoreProductCard({ product, showCartAction = true }: { p
           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">{product.categoryGroup}</span>
         ) : null}
 
-        <Link href={`/products/${product.id}`} className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-snug text-gray-900 hover:text-yellow-700 transition-colors">
+        <Link href={detailsHref} className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-snug text-gray-900 hover:text-yellow-700 transition-colors">
           {product.name}
         </Link>
 
@@ -116,7 +119,7 @@ export default function StoreProductCard({ product, showCartAction = true }: { p
               {added ? "Added" : outOfStock ? "Out of Stock" : "Add to Cart"}
             </button>
           ) : (
-            <Link href={`/products/${product.id}`} className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0b5360]">
+            <Link href={detailsHref} className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0b5360]">
               View Details
             </Link>
           )}
