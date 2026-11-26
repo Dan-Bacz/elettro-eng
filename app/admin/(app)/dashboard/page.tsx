@@ -9,6 +9,7 @@ import KpiCard from '../../../../components/admin/dashboard/KpiCard'
 import BookingTrendChart from '../../../../components/admin/dashboard/BookingTrendChart'
 import AnimatedDonut from '../../../../components/admin/dashboard/AnimatedDonut'
 import ProgressBar from '../../../../components/admin/dashboard/ProgressBar'
+import OperationsPulse from '../../../../components/admin/dashboard/OperationsPulse'
 import { InboxIcon, ClockIcon, GearIcon, CheckCircleIcon, CalendarIcon, BarChartIcon, BellIcon, PackageIcon, UserPlusIcon, AlertIcon, ArrowRightIcon, HammerIcon, CartIcon } from '../../../../components/admin/icons'
 import type { DashboardData } from '../../../../components/admin/types'
 import { formatDate } from '../../../../components/admin/types'
@@ -222,7 +223,17 @@ export default function AdminDashboardPage() {
         </Link>
       </div>
 
-      {/* C. Analytics */}
+      {/* D. Warehouse + Sales stock + unified system events */}
+      <div className="card-enter" style={{ animationDelay: '0.2s' }}>
+        <OperationsPulse
+          warehouseStock={data.warehouseStock || []}
+          salesStock={data.salesStock || []}
+          salesStockSummary={data.salesStockSummary || { products: 0, availableUnits: 0, releasedUnits: 0, soldUnits: 0, value: 0 }}
+          eventTimeline={data.eventTimeline || []}
+        />
+      </div>
+
+      {/* E. Analytics */}
       <div className="card-enter grid grid-cols-1 gap-5 lg:grid-cols-5" style={{ animationDelay: '0.16s' }}>
         {/* Bookings Overview line chart */}
         <div className={`${cardCls} lg:col-span-3`}>
@@ -254,7 +265,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* D. Recent Bookings */}
+      {/* F. Recent Bookings */}
       <div className={`card-enter ${cardCls}`} style={{ animationDelay: '0.24s' }}>
         <div className="flex items-center justify-between">
           <div>
@@ -306,7 +317,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* E + F: Recent Projects + Technician Performance */}
+      {/* G + H: Recent Projects + Technician Performance */}
       <div className="card-enter grid grid-cols-1 gap-5 lg:grid-cols-2" style={{ animationDelay: '0.3s' }}>
         <div className={cardCls}>
           <div className="flex items-center justify-between">
@@ -377,7 +388,7 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* G + H: Top Stock + Alerts */}
+      {/* I + J: Top Stock + Alerts */}
       <div className="card-enter grid grid-cols-1 gap-5 lg:grid-cols-2" style={{ animationDelay: '0.36s' }}>
         {/* G. Top Stock Items */}
         <div className={cardCls}>

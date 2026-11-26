@@ -202,6 +202,44 @@ export type DashboardData = {
     totalUnits: number
     topLow: { id: string; name: string; quantity: number; status: string }[]
   }
+  warehouseStock: {
+    id: string
+    name: string
+    sku: string | null
+    category: string | null
+    unit: string | null
+    quantity: number
+    reorderLevel: number
+    buyPrice: number | null
+    sellPrice: number | null
+    status: string
+  }[]
+  salesStock: {
+    id: string
+    name: string
+    sku: string | null
+    unit: string | null
+    sellPrice: number | null
+    releasedQuantity: number
+    soldQuantity: number
+    availableQuantity: number
+  }[]
+  salesStockSummary: {
+    products: number
+    availableUnits: number
+    releasedUnits: number
+    soldUnits: number
+    value: number
+  }
+  eventTimeline: {
+    id: string
+    type: string
+    title: string
+    description: string
+    createdAt: string
+    actor: string
+    href: string
+  }[]
   flow: { status: string; label: string; count: number; latestAt: string | null }[]
   technicianStatus: { active: number; onLeave: number; suspended: number; inactive: number }
   recentProjects: {

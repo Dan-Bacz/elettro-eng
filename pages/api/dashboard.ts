@@ -47,7 +47,7 @@ export default async function handler(req, res) {
   if (session.role !== 'ADMIN' || session.status !== 'ACTIVE') return res.status(403).json({ error: 'Forbidden' })
 
   try {
-    const [bookings, inventory, users, projects, admin, recentNotifications, pendingLeaves, activeLeaves, activities, orders] = await Promise.all([
+    const [bookings, inventory, users, projects, admin, recentNotifications, pendingLeaves, activeLeaves, activities, orders, allNotifications, recentSales, recentWarehouseRequests, recentWarehouseReleases, recentMovements, recentUsers] = await Promise.all([
       prisma.booking.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
@@ -94,6 +94,36 @@ export default async function handler(req, res) {
           items: { orderBy: { createdAt: 'asc' } },
           client: { select: { id: true, name: true, email: true, phone: true } },
         },
+      }),
+      prisma.notification.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 30,
+        include: { user: { select: { name: true, role: true } } },
+      }),
+      prisma.salesSale.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: { createdBy: { select: { name: true } }, items: { select: { name: true, quantity: true } } },
+      }),
+      prisma.warehouseRequest.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: { id: true, reference: true, source: true, status: true, createdAt: true, requester: { select: { name: true } } },
+      }),
+      prisma.warehouseRelease.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: { id: true, receiptNumber: true, createdAt: true, receivedBySalesAt: true, releasedBy: { select: { name: true } }, request: { select: { reference: true } } },
+      }),
+      prisma.inventoryMovement.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: { id: true, type: true, quantity: true, reason: true, createdAt: true, worker: { select: { name: true } }, inventoryItem: { select: { name: true } } },
+      }),
+      prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        select: { id: true, name: true, role: true, status: true, createdAt: true },
       }),
     ])
 
@@ -195,6 +225,47 @@ export default async function handler(req, res) {
       { status: 'Low Stock', value: stockLow.length },
       { status: 'Out of Stock', value: stockOut.length },
     ]
+
+    // Warehouse stock is the physical inventory balance. Sales stock is the
+    // stock received by Sales from Warehouse, less completed POS quantities.
+    const salesReleasedByItem = new Map<string, number>()
+    const salesReleaseRows = await prisma.warehouseRelease.findMany({
+      where: { receivedBySalesId: { not: null }, request: { source: 'INTERNAL_SALES' } },
+      select: { items: { select: { quantity: true, requestItem: { select: { inventoryItemId: true } } } } },
+    })
+    for (const release of salesReleaseRows) {
+      for (const line of release.items) salesReleasedByItem.set(line.requestItem.inventoryItemId, (salesReleasedByItem.get(line.requestItem.inventoryItemId) || 0) + line.quantity)
+    }
+    const salesSoldRows = await prisma.salesSaleItem.groupBy({ by: ['inventoryItemId'], _sum: { quantity: true } })
+    const salesSoldByItem = new Map(salesSoldRows.map((row) => [row.inventoryItemId, row._sum.quantity || 0]))
+    const warehouseStock = inventory.filter((item) => !item.deletedAt).map((item) => ({
+      id: item.id,
+      name: item.name,
+      sku: item.sku,
+      category: item.category,
+      unit: item.unit,
+      quantity: Number(item.quantity || 0),
+      reorderLevel: item.reorderLevel,
+      buyPrice: item.buyPrice,
+      sellPrice: item.sellPrice,
+      status: stockStatus(item),
+    })).sort((a, b) => a.quantity - b.quantity)
+    const salesStock = inventory.filter((item) => !item.deletedAt && salesReleasedByItem.has(item.id)).map((item) => {
+      const releasedQuantity = salesReleasedByItem.get(item.id) || 0
+      const soldQuantity = salesSoldByItem.get(item.id) || 0
+      return { id: item.id, name: item.name, sku: item.sku, unit: item.unit, sellPrice: item.sellPrice, releasedQuantity, soldQuantity, availableQuantity: Math.max(0, releasedQuantity - soldQuantity) }
+    }).sort((a, b) => a.availableQuantity - b.availableQuantity)
+
+    const eventTimeline = [
+      ...allNotifications.map((item) => ({ id: `notification-${item.id}`, type: item.type || 'INFO', title: item.title, description: item.message || 'System notification', createdAt: item.createdAt, actor: item.user?.name || 'System', href: item.link || '/admin/notifications' })),
+      ...recentSales.map((sale) => ({ id: `sale-${sale.id}`, type: 'SALE', title: `Sale ${sale.reference} completed`, description: `${sale.items.reduce((sum, item) => sum + item.quantity, 0)} item(s) · ₱${Number(sale.total).toLocaleString()}`, createdAt: sale.createdAt, actor: sale.createdBy?.name || 'Sales', href: '/admin/sales' })),
+      ...recentWarehouseRequests.map((request) => ({ id: `request-${request.id}`, type: 'REQUEST', title: `Material request ${request.reference}`, description: `${request.source.replace(/_/g, ' ')} · ${request.status.replace(/_/g, ' ')}`, createdAt: request.createdAt, actor: request.requester?.name || 'Team member', href: '/admin/materials-requests' })),
+      ...recentWarehouseReleases.map((release) => ({ id: `release-${release.id}`, type: 'RELEASE', title: `Warehouse release ${release.receiptNumber}`, description: release.receivedBySalesAt ? 'Received by Sales' : `Released for ${release.request.reference}`, createdAt: release.receivedBySalesAt || release.createdAt, actor: release.releasedBy?.name || 'Warehouse', href: '/admin/stock-movements' })),
+      ...recentMovements.map((movement) => ({ id: `movement-${movement.id}`, type: 'STOCK', title: `${movement.type.replace(/_/g, ' ')} · ${movement.inventoryItem.name}`, description: `${movement.quantity > 0 ? '+' : ''}${movement.quantity} ${movement.inventoryItem.name} · ${movement.reason || 'Stock activity'}`, createdAt: movement.createdAt, actor: movement.worker?.name || 'Warehouse', href: '/admin/stock-movements' })),
+      ...recentUsers.map((user) => ({ id: `user-${user.id}`, type: 'USER', title: `${user.role} account activity`, description: `${user.name} · ${user.status}`, createdAt: user.createdAt, actor: user.name, href: '/admin/staff' })),
+      ...bookings.slice(0, 20).map((booking) => ({ id: `booking-${booking.id}`, type: 'BOOKING', title: `Booking ${booking.status.toLowerCase().replace(/_/g, ' ')}`, description: `${booking.title} · ${booking.client?.name || 'Client'}`, createdAt: booking.createdAt, actor: booking.client?.name || 'Client', href: `/admin/bookings/${booking.id}` })),
+      ...projects.slice(0, 20).map((project) => ({ id: `project-${project.id}`, type: 'PROJECT', title: `Project ${project.status.toLowerCase().replace(/_/g, ' ')}`, description: project.title, createdAt: project.createdAt, actor: project.booking?.client?.name || 'Project team', href: `/admin/projects/${project.booking?.id || project.id}` })),
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 40)
 
     // Technician status distribution.
     const technicianStatus = {
@@ -308,6 +379,16 @@ export default async function handler(req, res) {
           .slice(0, 6)
           .map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, status: stockStatus(i) })),
       },
+      warehouseStock,
+      salesStock,
+      salesStockSummary: {
+        products: salesStock.length,
+        availableUnits: salesStock.reduce((sum, item) => sum + item.availableQuantity, 0),
+        releasedUnits: salesStock.reduce((sum, item) => sum + item.releasedQuantity, 0),
+        soldUnits: salesStock.reduce((sum, item) => sum + item.soldQuantity, 0),
+        value: salesStock.reduce((sum, item) => sum + item.availableQuantity * Number(item.sellPrice || 0), 0),
+      },
+      eventTimeline,
       flow: ['PENDING', 'APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED'].map((status) => ({
         status,
         label: FLOW_LABELS[status],
