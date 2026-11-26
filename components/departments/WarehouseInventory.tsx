@@ -374,7 +374,6 @@ export default function WarehouseInventory() {
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex justify-end gap-1">
                         <button type="button" onClick={() => { setEditingItem(item); setSubmitError(''); setModalOpen(true) }} className="rounded-md px-2 py-1 text-[10px] font-black text-blue-700 hover:bg-blue-50">Edit</button>
-                        <button type="button" onClick={() => void handleDeleteItem(item)} className="rounded-md px-2 py-1 text-[10px] font-black text-red-600 hover:bg-red-50">Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -447,7 +446,6 @@ export default function WarehouseInventory() {
 
                 <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
                   <button type="button" onClick={() => { setEditingItem(item); setSubmitError(''); setModalOpen(true) }} className="rounded-lg border border-blue-200 px-3 py-1.5 text-[10px] font-black text-blue-700 hover:bg-blue-50">Edit product</button>
-                  <button type="button" onClick={() => void handleDeleteItem(item)} className="rounded-lg border border-red-200 px-3 py-1.5 text-[10px] font-black text-red-600 hover:bg-red-50">Delete</button>
                 </div>
 
               </div>
