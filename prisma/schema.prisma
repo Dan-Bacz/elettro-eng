@@ -427,6 +427,7 @@ enum WarehouseRequestSource {
 enum WarehouseRequestStatus {
   PENDING
   UNDER_REVIEW
+  APPROVED
   PARTIALLY_FULFILLED
   FULFILLED
   CANCELLATION_REQUESTED

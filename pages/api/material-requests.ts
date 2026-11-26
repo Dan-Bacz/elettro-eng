@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, WarehouseRequestStatus } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { getJwtSecret } from '../../lib/auth'
 
@@ -160,7 +160,7 @@ export default async function handler(req: any, res: any) {
             type: 'MATERIAL_REQUEST',
             title: 'New Material Request',
             message: `${user.name} requested materials for "${booking.title}".`,
-            link: '/admin/projects'
+            link: '/admin/materials-requests'
           }))
         })
       }
@@ -188,9 +188,16 @@ export default async function handler(req: any, res: any) {
       })
       if (!request) return res.status(404).json({ error: 'Material request not found' })
 
-      const updated = await prisma.materialRequest.update({
-        where: { id: String(id) },
-        data: { status: approved ? 'APPROVED' : 'REJECTED', adminNote: adminNote || request.adminNote }
+      const updated = await prisma.$transaction(async (tx) => {
+        const changed = await tx.materialRequest.update({
+          where: { id: String(id) },
+          data: { status: approved ? 'APPROVED' : 'REJECTED', adminNote: adminNote || request.adminNote }
+        })
+        await tx.warehouseRequest.updateMany({
+          where: { materialRequestId: request.id, status: { in: ['PENDING', 'UNDER_REVIEW'] } },
+          data: { status: approved ? WarehouseRequestStatus.APPROVED : WarehouseRequestStatus.REJECTED, updatedAt: new Date() },
+        })
+        return changed
       })
 
       if (request.techId !== request.booking?.assignedToId) {

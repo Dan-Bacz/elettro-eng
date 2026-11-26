@@ -217,6 +217,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           })
         }
 
+        const admins = await tx.user.findMany({ where: { role: 'ADMIN', status: 'ACTIVE' }, select: { id: true } })
+        if (admins.length) {
+          await tx.notification.createMany({
+            data: admins.map((admin) => ({
+              userId: admin.id,
+              type: 'MATERIAL_REQUEST',
+              title: 'New Materials Request',
+              message: `${user.name} submitted request ${reference}. Admin approval is required before release.`,
+              link: '/admin/materials-requests',
+            })),
+          })
+        }
+
         return created
       })
 
@@ -251,6 +264,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let allowed = false
     if ((user.role === 'SALES' || user.role === 'TECH') && request.requesterId === user.id && status === 'CANCELLATION_REQUESTED') {
       allowed = ['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0
+    } else if (user.role === 'ADMIN') {
+      allowed =
+        (status === 'APPROVED' && ['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0) ||
+        (status === 'REJECTED' && ['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0)
     } else if (user.role === 'WAREHOUSE') {
       allowed =
         (status === 'UNDER_REVIEW' && request.status === 'PENDING') ||
@@ -293,12 +310,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
       }
 
-      if (requester.role === 'SALES' || requester.role === 'CLIENT') {
+      if (nextStatus === 'APPROVED' || nextStatus === 'REJECTED') {
+        if (request.materialRequestId) {
+          await tx.materialRequest.update({
+            where: { id: request.materialRequestId },
+            data: { status: nextStatus === 'APPROVED' ? 'APPROVED' : 'REJECTED' },
+          }).catch(() => {})
+        }
+        await tx.notification.create({
+          data: {
+            userId: request.requesterId,
+            type: 'MATERIAL_REQUEST',
+            title: nextStatus === 'APPROVED' ? 'Material Request Approved' : 'Material Request Rejected',
+            message: `Request ${request.reference} was ${nextStatus.toLowerCase()}.`,
+            link: requester.role === 'TECH' ? '/technician/dashboard' : '/sales/requests',
+          },
+        }).catch(() => {})
+      } else if (requester.role === 'SALES' || requester.role === 'CLIENT') {
         await tx.notification.create({
           data: {
             userId: requester.id,
             type: 'WAREHOUSE_REQUEST',
-            title: nextStatus === 'UNDER_REVIEW' ? 'Warehouse Request Accepted' : nextStatus === 'REJECTED' ? 'Warehouse Request Rejected' : nextStatus === 'CANCELLATION_REQUESTED' ? 'Cancellation Requested' : 'Warehouse Request Cancelled',
+            title: nextStatus === 'UNDER_REVIEW' ? 'Warehouse Request Accepted' : nextStatus === 'CANCELLATION_REQUESTED' ? 'Cancellation Requested' : 'Warehouse Request Cancelled',
             message: `Request ${request.reference} is now ${nextStatus.toLowerCase().replace('_', ' ')}.`,
             link: requester.role === 'CLIENT' ? '/client/dashboard' : '/sales/requests',
           },
@@ -308,7 +341,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data: {
             userId: requester.id,
             type: 'WAREHOUSE_REQUEST',
-            title: nextStatus === 'UNDER_REVIEW' ? 'Material Request Under Review' : nextStatus === 'REJECTED' ? 'Material Request Rejected' : nextStatus === 'CANCELLATION_REQUESTED' ? 'Cancellation Requested' : 'Material Request Cancelled',
+            title: nextStatus === 'UNDER_REVIEW' ? 'Material Request Under Review' : nextStatus === 'CANCELLATION_REQUESTED' ? 'Cancellation Requested' : 'Material Request Cancelled',
             message: `Your material request ${request.reference} for ${request.projectReference || 'project'} is now ${nextStatus.toLowerCase().replace('_', ' ')}.`,
             link: '/technician/dashboard',
           },
@@ -316,7 +349,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (request.materialRequestId) {
           await tx.materialRequest.update({
             where: { id: request.materialRequestId },
-            data: { status: nextStatus === 'UNDER_REVIEW' ? 'UNDER_REVIEW' : nextStatus === 'REJECTED' ? 'REJECTED' : 'CANCELLED' }
+            data: { status: nextStatus === 'UNDER_REVIEW' ? 'UNDER_REVIEW' : 'CANCELLED' }
           }).catch(() => {})
         }
       }

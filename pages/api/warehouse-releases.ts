@@ -215,7 +215,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
       if (!request) throw new Error('REQUEST_NOT_FOUND')
-      if (!['UNDER_REVIEW', 'PARTIALLY_FULFILLED'].includes(request.status)) throw new Error('REQUEST_NOT_RELEASEABLE')
+      if (!['APPROVED', 'PARTIALLY_FULFILLED'].includes(request.status)) throw new Error('REQUEST_NOT_RELEASEABLE')
 
       if (request.source === 'CLIENT_ORDER' && (!request.order || !['APPROVED', 'PROCESSING'].includes(request.order.status))) {
         throw new Error('ORDER_NOT_APPROVED')

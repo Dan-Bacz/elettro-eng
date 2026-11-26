@@ -33,7 +33,7 @@ type WarehouseRequest = {
 type Verification = { quantity: string; unavailableQuantity: string; discrepancyNotes: string; verified: boolean }
 
 type SourceTab = 'ALL' | 'SALES' | 'TECHNICIAN'
-type StatusTab = 'ALL' | 'PENDING' | 'UNDER_REVIEW' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLATION_REQUESTED' | 'REJECTED' | 'CANCELLED'
+type StatusTab = 'ALL' | 'PENDING' | 'UNDER_REVIEW' | 'APPROVED' | 'PARTIALLY_FULFILLED' | 'FULFILLED' | 'CANCELLATION_REQUESTED' | 'REJECTED' | 'CANCELLED'
 
 export default function WarehouseRequests() {
   const router = useRouter()
@@ -229,7 +229,7 @@ export default function WarehouseRequests() {
 
         {/* Status Filter Tabs */}
         <div className="flex flex-wrap gap-1 border-t border-slate-100 pt-2 text-xs">
-          {(['ALL', 'PENDING', 'UNDER_REVIEW', 'PARTIALLY_FULFILLED', 'FULFILLED', 'CANCELLATION_REQUESTED', 'REJECTED', 'CANCELLED'] as StatusTab[]).map(
+          {(['ALL', 'PENDING', 'UNDER_REVIEW', 'APPROVED', 'PARTIALLY_FULFILLED', 'FULFILLED', 'CANCELLATION_REQUESTED', 'REJECTED', 'CANCELLED'] as StatusTab[]).map(
             (status) => (
               <button
                 key={status}
@@ -270,7 +270,7 @@ export default function WarehouseRequests() {
             const isTechnician = request.source === 'TECHNICIAN'
             const isClientOrder = request.source === 'CLIENT_ORDER'
             const canReview = request.status === 'PENDING'
-            const canRelease = ['UNDER_REVIEW', 'PARTIALLY_FULFILLED'].includes(request.status)
+            const canRelease = ['APPROVED', 'PARTIALLY_FULFILLED'].includes(request.status)
 
             return (
               <article key={request.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
