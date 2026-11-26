@@ -19,15 +19,6 @@ const FILTERS: { value: Filter; label: string }[] = [
 ]
 
 const BOOKINGS_LIST_STATUSES = ['PENDING']
-const STATUS_ROWS = [
-  { value: 'PENDING', label: 'Under Review', tone: 'bg-amber-500' },
-  { value: 'APPROVED', label: 'Approved', tone: 'bg-blue-500' },
-  { value: 'ASSIGNED', label: 'Assigned', tone: 'bg-emerald-500' },
-  { value: 'IN_PROGRESS', label: 'In Progress', tone: 'bg-violet-500' },
-  { value: 'COMPLETED', label: 'Completed', tone: 'bg-slate-500' },
-  { value: 'CANCELLED', label: 'Cancelled', tone: 'bg-rose-500' },
-]
-
 function readRequestDetails(description?: string | null) {
   const details: Record<string, string> = {}
   const notes: string[] = []
@@ -237,23 +228,6 @@ export default function AdminBookingsPage() {
           )}
         </section>
 
-        <aside aria-label="Booking status summary" className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-24px_rgba(15,23,42,0.7)] xl:sticky xl:top-4">
-          <h2 className="text-sm font-black text-slate-900">Booking Status</h2>
-          <p className="mt-1 text-xs text-slate-500">Current request counts</p>
-          <dl className="mt-4 divide-y divide-slate-100">
-            {STATUS_ROWS.map((row) => (
-              <div key={row.value} className="flex items-center justify-between gap-3 py-2.5">
-                <dt className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                  <span className={`h-2 w-2 rounded-full ${row.tone}`} />{row.label}
-                </dt>
-                <dd className="tabular-nums text-sm font-extrabold text-slate-900">{statusCounts[row.value] ?? 0}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-3 border-t border-slate-100 pt-3 text-[11px] leading-relaxed text-slate-400">
-            Approved requests continue in Projects for technician assignment and progress tracking.
-          </p>
-        </aside>
       </div>
     </div>
   )
