@@ -259,7 +259,13 @@ export default function WarehouseRequests() {
           No material requests match the selected filters.
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-3">
+          <div className="hidden rounded-xl border border-slate-200 bg-slate-50 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 lg:grid lg:grid-cols-[minmax(220px,1.5fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] lg:items-center lg:gap-4">
+            <span>Request</span>
+            <span>Requester</span>
+            <span>Created</span>
+            <span className="text-right">Action</span>
+          </div>
           {filteredRequests.map((request) => {
             const isTechnician = request.source === 'TECHNICIAN'
             const isClientOrder = request.source === 'CLIENT_ORDER'
@@ -267,9 +273,9 @@ export default function WarehouseRequests() {
             const canRelease = ['UNDER_REVIEW', 'PARTIALLY_FULFILLED'].includes(request.status)
 
             return (
-              <article key={request.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <article key={request.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md">
                 {/* Header Info */}
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="grid gap-3 border-b border-slate-100 bg-white p-4 lg:grid-cols-[minmax(220px,1.5fr)_minmax(150px,1fr)_minmax(150px,1fr)_auto] lg:items-center lg:gap-4">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="text-base font-black text-slate-900">{request.reference}</h2>
@@ -299,10 +305,18 @@ export default function WarehouseRequests() {
                     </div>
                     <p className="mt-1 text-xs text-slate-500">Requested by {request.requester.name} · {new Date(request.createdAt).toLocaleString()}</p>
                   </div>
+                  <div className="hidden min-w-0 lg:block">
+                    <p className="truncate text-sm font-bold text-slate-800">{request.requester.name}</p>
+                    <p className="mt-0.5 truncate text-[10px] uppercase tracking-wide text-slate-400">{request.requester.role}</p>
+                  </div>
+                  <div className="hidden lg:block">
+                    <p className="text-sm font-bold text-slate-800">{new Date(request.createdAt).toLocaleDateString()}</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400">{new Date(request.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setManagedRequestId((current) => current === request.id ? null : request.id)}
-                    className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white hover:bg-slate-700"
+                    className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-black text-white transition hover:bg-cyan-800 lg:w-auto"
                   >
                     {managedRequestId === request.id ? 'Close' : 'View'}
                   </button>
