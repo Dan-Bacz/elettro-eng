@@ -172,6 +172,12 @@ export default function AdminBookingsPage() {
             <span className="tabular-nums text-xs font-bold text-slate-500">{loading ? '—' : `${visible.length} shown`}</span>
           </div>
 
+          <div className="hidden rounded-xl bg-slate-900 px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-300 sm:grid sm:grid-cols-[minmax(0,1.6fr)_minmax(150px,1fr)_auto] sm:items-center sm:gap-3">
+            <span>Booking / service</span>
+            <span>Client</span>
+            <span className="text-right">Status / action</span>
+          </div>
+
           {loading ? (
             <div className="space-y-3" aria-label="Loading bookings">
               {[...Array(3)].map((_, index) => <div key={index} className="h-40 animate-pulse rounded-xl border border-slate-200 bg-white" />)}
@@ -185,12 +191,12 @@ export default function AdminBookingsPage() {
               message={bookings.length === 0 ? 'Client booking requests will appear here when submitted.' : 'Try another client name or service.'}
             />
           ) : (
-            <div className="space-y-3">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm divide-y divide-slate-100">
               {visible.map((booking) => {
                 const details = readRequestDetails(booking.description)
                 return (
-                  <article key={booking.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_32px_-24px_rgba(15,23,42,0.65)] transition duration-300 hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-[0_22px_40px_-20px_rgba(15,23,42,0.35)]">
-                    <div className="border-l-4 border-yellow-400 px-4 py-5 sm:px-6">
+                  <article key={booking.id} className="group bg-white transition-colors hover:bg-yellow-50/30">
+                    <div className="grid gap-3 border-l-4 border-yellow-400 px-4 py-4 sm:grid-cols-[minmax(0,1.6fr)_minmax(150px,1fr)_auto] sm:items-center sm:px-5">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Service</p>
@@ -204,7 +210,7 @@ export default function AdminBookingsPage() {
                         <span className="text-xs text-slate-400">Booking #{booking.id}</span>
                       </div>
 
-                      <div className="mt-3 grid gap-x-5 gap-y-2 text-xs text-slate-600 sm:grid-cols-2">
+                      <div className="hidden mt-3 grid gap-x-5 gap-y-2 text-xs text-slate-600 sm:grid-cols-2">
                         <div className="flex min-w-0 gap-2">
                           <span className="shrink-0 text-slate-400">Date</span>
                           <span className="font-medium">{details.preferredDate || formatDate(booking.startDate || booking.createdAt)}</span>
@@ -215,9 +221,9 @@ export default function AdminBookingsPage() {
                         {booking.assignedTo && <div className="min-w-0"><span className="mr-2 text-slate-400">Technician</span><span className="font-medium">{booking.assignedTo.name}</span></div>}
                       </div>
 
-                      {details.notes && <p className="mt-3 line-clamp-2 whitespace-pre-line break-words text-xs leading-relaxed text-slate-500">{details.notes}</p>}
+                      {details.notes && <p className="hidden mt-3 line-clamp-2 whitespace-pre-line break-words text-xs leading-relaxed text-slate-500">{details.notes}</p>}
 
-                      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <div className="mt-0 flex items-center justify-between gap-3 border-0 pt-0">
                         <span className="text-[11px] text-slate-400">Submitted {formatDate(booking.createdAt)}</span>
                         <Link href={`/admin/bookings/${booking.id}`} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-yellow-400 px-3.5 py-2 text-xs font-extrabold text-slate-950 transition hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2">
                           View Details <span aria-hidden="true">→</span>
