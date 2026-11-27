@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import SalesAccountSettings from '../../../../components/sales/SalesAccountSettings'
+import StaffAccountSettings from '../../../../components/departments/StaffAccountSettings'
 import { getSessionUser } from '../../../../lib/auth'
 
 export const metadata = { title: 'Account Settings | Elettro Sales' }
@@ -11,7 +11,7 @@ export default async function SalesSettingsPage() {
   if (!user || user.role !== 'SALES' || user.status !== 'ACTIVE') redirect('/sales/login')
 
   return (
-    <SalesAccountSettings initialProfile={{
+    <StaffAccountSettings department="Sales" initialProfile={{
       name: user.name,
       email: user.email,
       phone: user.phone,

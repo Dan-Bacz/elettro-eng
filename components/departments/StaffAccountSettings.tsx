@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
-import { MAX_PROFILE_PHOTO_BYTES, PROFILE_PHOTO_TYPES, type SalesProfile } from '../../lib/sales-profile'
+import { MAX_PROFILE_PHOTO_BYTES, PROFILE_PHOTO_TYPES, type StaffProfile } from '../../lib/staff-profile'
 
 const fieldClass = 'mt-2 block w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200'
 
@@ -15,7 +15,7 @@ function readPhoto(file: File) {
   })
 }
 
-export default function SalesAccountSettings({ initialProfile }: { initialProfile: SalesProfile }) {
+export default function StaffAccountSettings({ department, initialProfile }: { department: 'Sales' | 'Warehouse'; initialProfile: StaffProfile }) {
   const router = useRouter()
   const [saved, setSaved] = useState(initialProfile)
   const [name, setName] = useState(initialProfile.name)
@@ -59,7 +59,7 @@ export default function SalesAccountSettings({ initialProfile }: { initialProfil
     setError('')
     setNotice('')
     try {
-      const response = await fetch('/api/sales/profile', {
+      const response = await fetch(`/api/${department.toLowerCase()}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, phone, address, photo: photo ? await readPhoto(photo) : photo }),
@@ -67,7 +67,7 @@ export default function SalesAccountSettings({ initialProfile }: { initialProfil
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || 'Could not save your account settings.')
 
-      const profile: SalesProfile = payload.profile
+      const profile: StaffProfile = payload.profile
       setSaved(profile)
       setName(profile.name)
       setPhone(profile.phone || '')
@@ -94,7 +94,7 @@ export default function SalesAccountSettings({ initialProfile }: { initialProfil
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <header className="rounded-3xl border border-slate-800 bg-slate-950 px-5 py-6 text-white sm:px-8 sm:py-8">
-        <p className="text-sm font-semibold text-yellow-300">Sales Department</p>
+        <p className="text-sm font-semibold text-yellow-300">{department} Department</p>
         <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Account settings</h1>
         <p className="mt-2 text-sm text-slate-300">Manage your profile photo and contact information.</p>
       </header>
@@ -106,7 +106,7 @@ export default function SalesAccountSettings({ initialProfile }: { initialProfil
             <div className="mt-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-amber-100 text-3xl font-black text-amber-900 ring-4 ring-amber-50">
               {avatar
                 ? <img src={avatar} alt="Profile photo" className="h-full w-full object-cover" />
-                : <span aria-hidden="true">{(name.trim() || 'S').charAt(0).toUpperCase()}</span>}
+                : <span aria-hidden="true">{(name.trim() || department).charAt(0).toUpperCase()}</span>}
             </div>
             <p id="photo-formats" className="mt-5 text-xs text-slate-600">JPG, PNG, or WebP. Up to 2 MB.</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
