@@ -4,6 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
+const printReports = {
+  all: { label: 'All Reports', title: 'Sales Department Report' },
+  pos: { label: 'POS Report', title: 'Point-of-Sale Report' },
+  orders: { label: 'Orders Report', title: 'Client Orders Report' },
+} as const
+
+type PrintReport = keyof typeof printReports
+
 type SalesReport = {
   id: string
   reference: string
@@ -59,6 +67,7 @@ export default function SalesReports() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [query, setQuery] = useState('')
+  const [printReport, setPrintReport] = useState<PrintReport>('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -110,13 +119,13 @@ export default function SalesReports() {
 
   const summary = data?.summary
   const cards = [
-    ['Total income', money(summary?.totalIncome), 'POS gross + successful client orders', 'from-yellow-400 to-orange-500'],
-    ['POS gross income', money(summary?.reportGrossSalesIncome), `${summary?.reportCompletedSalesCount || 0} completed transactions`, 'from-cyan-400 to-blue-500'],
-    ['Successful orders', summary?.successfulOrdersCount || 0, `${money(summary?.successfulOrderIncome)} order income`, 'from-emerald-400 to-teal-500'],
+    ['all', 'Total income', money(summary?.totalIncome), 'POS gross + successful client orders', 'from-yellow-400 to-orange-500'],
+    ['pos', 'POS gross income', money(summary?.reportGrossSalesIncome), `${summary?.reportCompletedSalesCount || 0} completed transactions`, 'from-cyan-400 to-blue-500'],
+    ['orders', 'Successful orders', summary?.successfulOrdersCount || 0, `${money(summary?.successfulOrderIncome)} order income`, 'from-emerald-400 to-teal-500'],
   ] as const
 
   return (
-    <div className="sales-reports-page space-y-6">
+    <div className="sales-reports-page space-y-6" data-print-report={printReport}>
       <style jsx global>{`
         .sales-print-header { display: none; }
         .sales-reports-page .report-table table { width: 100%; border-collapse: collapse; }
@@ -132,6 +141,8 @@ export default function SalesReports() {
           div:has(> div > main > .sales-reports-page) > aside,
           div:has(> main > .sales-reports-page) > :is(header, footer),
           .sales-reports-page .reports-print-hidden,
+          .sales-reports-page[data-print-report="pos"] [data-report-section]:not([data-report-section="pos"]),
+          .sales-reports-page[data-print-report="orders"] [data-report-section]:not([data-report-section="orders"]),
           .sales-reports-page :is(img, svg):not(.sales-print-logo) { display: none !important; }
           div:has(> main > .sales-reports-page) { display: block !important; margin: 0 !important; min-height: 0 !important; }
           main:has(> .sales-reports-page) { padding: 0 !important; }
@@ -149,9 +160,10 @@ export default function SalesReports() {
           .sales-print-filter { margin-top: 2mm; overflow-wrap: anywhere; }
 
           .sales-print-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-block: 1px solid #555; break-inside: avoid; }
+          .sales-reports-page:not([data-print-report="all"]) .sales-print-summary { grid-template-columns: 1fr; }
           .sales-reports-page .reports-print-card { overflow: visible; border: 0; border-radius: 0; box-shadow: none; background: white; }
           .sales-print-summary .reports-print-card { padding: 3mm; }
-          .sales-print-summary .reports-print-card + .reports-print-card { border-left: 1px solid #aaa; }
+          .sales-reports-page[data-print-report="all"] .sales-print-summary .reports-print-card + .reports-print-card { border-left: 1px solid #aaa; }
           .sales-print-summary .reports-print-card > div { display: none; }
           .sales-print-summary p { color: #111; letter-spacing: normal; }
           .sales-print-summary p:nth-of-type(2) { margin-top: 1mm; font-size: 13pt; line-height: 1.25; overflow-wrap: anywhere; }
@@ -177,7 +189,26 @@ export default function SalesReports() {
         <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-yellow-300/20 blur-3xl" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div><div className="mb-3 inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">Sales reporting</div><h1 className="text-3xl font-black tracking-tight">Sales Reports</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">Review POS transactions and successful client orders, then print or export the selected period.</p></div>
-          <div className="reports-print-hidden flex flex-wrap gap-3"><button type="button" onClick={() => window.print()} disabled={loading || !data || Boolean(error)} className="rounded-xl bg-white px-4 py-3 text-xs font-black text-slate-900 hover:bg-cyan-50 disabled:opacity-50">Print / Save PDF</button><button type="button" onClick={exportCsv} className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-black text-white hover:bg-white/20">Export CSV</button></div>
+          <div className="reports-print-hidden flex flex-wrap items-end gap-3">
+            <label className="text-xs font-bold text-white">
+              Report to print
+              <select
+                value={printReport}
+                onChange={event => setPrintReport(event.target.value as PrintReport)}
+                className="mt-1 block rounded-xl border border-white/20 bg-slate-900 px-3 py-2.5 text-sm text-white"
+              >
+                {Object.entries(printReports).map(([value, report]) => (
+                  <option key={value} value={value}>{report.label}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={() => window.print()} disabled={loading || !data || Boolean(error)} className="rounded-xl bg-white px-4 py-3 text-xs font-black text-slate-900 hover:bg-cyan-50 disabled:opacity-50">
+              Print / Save PDF
+            </button>
+            <button type="button" onClick={exportCsv} className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-black text-white hover:bg-white/20">
+              Export CSV
+            </button>
+          </div>
         </div>
       </section>
 
@@ -192,7 +223,7 @@ export default function SalesReports() {
             <Image className="sales-print-logo" src="/logo-elettro.jpg" alt="" width={64} height={64} loading="eager" unoptimized />
             <p className="sales-print-company">ELETTRO Engineering Enterprises</p>
           </div>
-          <h1 className="sales-print-title">Sales Department Report</h1>
+          <h1 className="sales-print-title">{printReports[printReport].title}</h1>
           <dl className="sales-print-meta">
             <div>
               <dt>{data.preparedBy.role === 'SALES' ? 'Sales Department Officer' : 'Prepared by'}</dt>
@@ -205,15 +236,15 @@ export default function SalesReports() {
           </dl>
           {query.trim() && <p className="sales-print-filter">Transaction filter ?{query.trim()}? ? Summary covers the full reporting period.</p>}
         </header>}
-        <div className="sales-print-summary grid gap-4 sm:grid-cols-3">{cards.map(([label, value, note, accent]) => <div key={label} className="reports-print-card relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p><p className="mt-1 text-xs font-medium text-slate-500">{note}</p></div>)}</div>
+        <div className="sales-print-summary grid gap-4 sm:grid-cols-3">{cards.map(([section, label, value, note, accent]) => <div key={label} data-report-section={section} className="reports-print-card relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p><p className="mt-1 text-xs font-medium text-slate-500">{note}</p></div>)}</div>
 
-        <ReportTable title="POS sales transactions" eyebrow="Completed counter sales" count={filtered.sales.length}><table><thead><tr><th>Reference</th><th>Customer</th><th>Items</th><th>Gross amount</th><th>Recorded by</th><th>Date</th></tr></thead><tbody>{filtered.sales.map(sale => <tr key={sale.id}><td className="font-black text-slate-900">{sale.reference}</td><td>{sale.customerName || 'Walk-in customer'}</td><td>{sale.items.map(item => `${item.quantity} × ${item.name}`).join(' · ')}</td><td className="font-black text-emerald-700">{money(sale.total)}</td><td>{sale.createdBy?.name || 'Sales staff'}</td><td>{dateLabel(sale.createdAt)}</td></tr>)}</tbody></table></ReportTable>
-        <ReportTable title="Successful client orders" eyebrow="Orders completed and received" count={filtered.successfulOrders.length}><table><thead><tr><th>Reference</th><th>Client</th><th>Items</th><th>Gross amount</th><th>Status</th><th>Date</th></tr></thead><tbody>{filtered.successfulOrders.map(order => <tr key={order.id}><td className="font-black text-slate-900">ORD-{order.id.slice(0, 8).toUpperCase()}</td><td>{order.clientName}</td><td>{order.items.map(item => `${item.quantity} × ${item.name}`).join(' · ')}</td><td className="font-black text-emerald-700">{money(order.total)}</td><td><span className="rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-700">Successful</span></td><td>{dateLabel(order.createdAt)}</td></tr>)}</tbody></table></ReportTable>
+        <ReportTable section="pos" title="POS sales transactions" eyebrow="Completed counter sales" count={filtered.sales.length}><table><thead><tr><th>Reference</th><th>Customer</th><th>Items</th><th>Gross amount</th><th>Recorded by</th><th>Date</th></tr></thead><tbody>{filtered.sales.map(sale => <tr key={sale.id}><td className="font-black text-slate-900">{sale.reference}</td><td>{sale.customerName || 'Walk-in customer'}</td><td>{sale.items.map(item => `${item.quantity} × ${item.name}`).join(' · ')}</td><td className="font-black text-emerald-700">{money(sale.total)}</td><td>{sale.createdBy?.name || 'Sales staff'}</td><td>{dateLabel(sale.createdAt)}</td></tr>)}</tbody></table></ReportTable>
+        <ReportTable section="orders" title="Successful client orders" eyebrow="Orders completed and received" count={filtered.successfulOrders.length}><table><thead><tr><th>Reference</th><th>Client</th><th>Items</th><th>Gross amount</th><th>Status</th><th>Date</th></tr></thead><tbody>{filtered.successfulOrders.map(order => <tr key={order.id}><td className="font-black text-slate-900">ORD-{order.id.slice(0, 8).toUpperCase()}</td><td>{order.clientName}</td><td>{order.items.map(item => `${item.quantity} × ${item.name}`).join(' · ')}</td><td className="font-black text-emerald-700">{money(order.total)}</td><td><span className="rounded-full bg-emerald-100 px-2 py-1 text-[9px] font-black uppercase text-emerald-700">Successful</span></td><td>{dateLabel(order.createdAt)}</td></tr>)}</tbody></table></ReportTable>
       </>}
     </div>
   )
 }
 
-function ReportTable({ title, eyebrow, count, children }: { title: string; eyebrow: string; count: number; children: React.ReactNode }) {
-  return <section className="reports-print-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="sales-print-table-heading flex items-end justify-between border-b border-slate-100 px-5 py-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">{eyebrow}</p><h2 className="mt-1 text-lg font-black text-slate-950">{title}</h2></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{count} records</span></div><div className="report-table overflow-x-auto">{children}</div></section>
+function ReportTable({ section, title, eyebrow, count, children }: { section: Exclude<PrintReport, 'all'>; title: string; eyebrow: string; count: number; children: React.ReactNode }) {
+  return <section data-report-section={section} className="reports-print-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="sales-print-table-heading flex items-end justify-between border-b border-slate-100 px-5 py-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">{eyebrow}</p><h2 className="mt-1 text-lg font-black text-slate-950">{title}</h2></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{count} records</span></div><div className="report-table overflow-x-auto">{children}</div></section>
 }
