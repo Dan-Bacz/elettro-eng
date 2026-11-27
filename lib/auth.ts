@@ -19,6 +19,9 @@ export type SessionUser = {
   id: string
   name: string
   email: string
+  phone: string | null
+  address: string | null
+  profileImageUrl: string | null
   role: 'ADMIN' | 'SALES' | 'WAREHOUSE' | 'TECH' | 'CLIENT' | 'RIDER'
   approved: boolean
   status: 'PENDING' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED'
@@ -38,6 +41,9 @@ export async function getSessionUser(token?: string | null): Promise<SessionUser
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
+      address: user.address,
+      profileImageUrl: user.profileImageUrl,
       role: user.role,
       approved: user.approved,
       status: user.status,

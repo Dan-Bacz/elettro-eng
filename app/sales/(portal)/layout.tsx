@@ -16,7 +16,7 @@ export default async function SalesPortalLayout({ children }: { children: ReactN
         name: user.name,
         email: user.email,
         role: user.role,
-        profileImageUrl: null,
+        profileImageUrl: user.profileImageUrl,
       }}
     >
       {children}

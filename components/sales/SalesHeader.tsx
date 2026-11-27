@@ -147,18 +147,20 @@ export default function SalesHeader({ user, unreadCount, onRefreshNotifications 
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {user.profileImageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={user.profileImageUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-[#2a3138]" />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f5c400] text-black text-sm font-black">
-              {(user.name || 'S').charAt(0).toUpperCase()}
+          <Link href="/sales/settings" aria-label="Account settings" className="flex items-center gap-2 rounded-full hover:ring-2 hover:ring-yellow-400 md:rounded-lg">
+            {user.profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.profileImageUrl} alt={user.name} className="h-9 w-9 rounded-full object-cover border border-[#2a3138]" />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#f5c400] text-black text-sm font-black">
+                {(user.name || 'S').charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div className="hidden md:block">
+              <div className="text-xs font-black text-[#f5f7fa] leading-tight">{user.name}</div>
+              <div className="text-[10px] text-[#77848f] font-medium">Sales Staff</div>
             </div>
-          )}
-          <div className="hidden md:block">
-            <div className="text-xs font-black text-[#f5f7fa] leading-tight">{user.name}</div>
-            <div className="text-[10px] text-[#77848f] font-medium">Sales Staff</div>
-          </div>
+          </Link>
           <button
             onClick={handleLogout}
             disabled={loggingOut}

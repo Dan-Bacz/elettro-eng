@@ -3,7 +3,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { GridIcon, InboxIcon, CartIcon, DocumentIcon, PackageIcon, LogoutIcon } from '../admin/icons'
+import { GridIcon, InboxIcon, CartIcon, DocumentIcon, PackageIcon, LogoutIcon, GearIcon } from '../admin/icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/sales/dashboard' },
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { key: 'stock', label: 'Sales Stock', icon: PackageIcon, href: '/sales/stock' },
   { key: 'requests', label: 'Warehouse Requests', icon: InboxIcon, href: '/sales/requests' },
   { key: 'receipts', label: 'Release Receipts', icon: DocumentIcon, href: '/sales/receipts' },
+  { key: 'settings', label: 'Account Settings', icon: GearIcon, href: '/sales/settings' },
 ]
 
 export default function SalesSidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
