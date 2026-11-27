@@ -1,3 +1,4 @@
+import { isPendingAdminApproval, PENDING_ADMIN_APPROVAL_MESSAGE } from '../../lib/warehouse-request-approval'
 import { InventoryMovementType, Prisma, PrismaClient, WarehouseRequestStatus } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -215,6 +216,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
 
       if (!request) throw new Error('REQUEST_NOT_FOUND')
+      if (isPendingAdminApproval(request)) throw new Error('PENDING_ADMIN_APPROVAL')
       if (!['APPROVED', 'PARTIALLY_FULFILLED'].includes(request.status)) throw new Error('REQUEST_NOT_RELEASEABLE')
 
       if (request.source === 'CLIENT_ORDER' && (!request.order || !['APPROVED', 'PROCESSING'].includes(request.order.status))) {
@@ -454,7 +456,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (error instanceof Error) {
       const errors: Record<string, { status: number; message: string }> = {
         REQUEST_NOT_FOUND: { status: 404, message: 'Warehouse request not found' },
-        REQUEST_NOT_RELEASEABLE: { status: 409, message: 'Request must be under review or partially fulfilled before release' },
+        PENDING_ADMIN_APPROVAL: { status: 409, message: PENDING_ADMIN_APPROVAL_MESSAGE },
+        REQUEST_NOT_RELEASEABLE: { status: 409, message: 'Request must be approved or partially fulfilled before release' },
         ORDER_NOT_APPROVED: { status: 409, message: 'Client order must be approved before materials can be released' },
         ORDER_PAYMENT_NOT_VERIFIED: { status: 409, message: 'Verify the GCash payment before releasing this order' },
         INVALID_REQUEST_ITEM: { status: 400, message: 'A submitted line does not belong to this request' },

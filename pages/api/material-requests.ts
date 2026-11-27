@@ -145,7 +145,7 @@ export default async function handler(req: any, res: any) {
             userId: worker.id,
             type: 'WAREHOUSE_REQUEST',
             title: 'New Technician Material Request',
-            message: `${user.name} requested ${reqQuantity} ${reqUnit} of "${materialName}" for "${booking.title}".`,
+            message: `${user.name} requested ${reqQuantity} ${reqUnit} of "${materialName}" for "${booking.title}". This request is pending for admin approval.`,
             link: '/warehouse/requests'
           }))
         }).catch(() => {})

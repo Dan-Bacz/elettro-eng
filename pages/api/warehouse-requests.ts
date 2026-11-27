@@ -1,3 +1,4 @@
+import { isPendingAdminApproval, PENDING_ADMIN_APPROVAL_MESSAGE } from '../../lib/warehouse-request-approval'
 import { PrismaClient, WarehouseRequestStatus } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
@@ -211,7 +212,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               userId: worker.id,
               type: 'WAREHOUSE_REQUEST',
               title: 'New Sales Warehouse Request',
-              message: `${user.name} submitted request ${reference}.`,
+              message: `${user.name} submitted request ${reference}. ${PENDING_ADMIN_APPROVAL_MESSAGE}`,
               link: '/warehouse/requests',
             })),
           })
@@ -260,6 +261,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
 
     if (!request) return res.status(404).json({ error: 'Warehouse request not found' })
+
+    if (user.role === 'WAREHOUSE' && isPendingAdminApproval(request)) {
+      return res.status(403).json({ error: PENDING_ADMIN_APPROVAL_MESSAGE })
+    }
 
     let allowed = false
     if ((user.role === 'SALES' || user.role === 'TECH') && request.requesterId === user.id && status === 'CANCELLATION_REQUESTED') {

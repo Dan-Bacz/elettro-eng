@@ -1,5 +1,6 @@
 'use client'
 
+import { isPendingAdminApproval, PENDING_ADMIN_APPROVAL_MESSAGE } from '../../lib/warehouse-request-approval'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -269,7 +270,8 @@ export default function WarehouseRequests() {
           {filteredRequests.map((request) => {
             const isTechnician = request.source === 'TECHNICIAN'
             const isClientOrder = request.source === 'CLIENT_ORDER'
-            const canReview = request.status === 'PENDING'
+            const pendingAdminApproval = isPendingAdminApproval(request)
+            const canReview = request.status === 'PENDING' && !pendingAdminApproval
             const canRelease = ['APPROVED', 'PARTIALLY_FULFILLED'].includes(request.status)
 
             return (
@@ -294,7 +296,7 @@ export default function WarehouseRequests() {
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
-                        {request.status.replace(/_/g, ' ')}
+                        {pendingAdminApproval ? 'Pending admin approval' : request.status.replace(/_/g, ' ')}
                       </span>
 
                       <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase ${
@@ -326,7 +328,7 @@ export default function WarehouseRequests() {
                   <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4">
                     <div className="mx-auto my-6 max-w-7xl space-y-4 rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div><h2 className="text-lg font-black text-slate-900">Request {request.reference}</h2><p className="text-xs text-slate-500">Verify each requested material before release.</p></div>
+                        <div><h2 className="text-lg font-black text-slate-900">Request {request.reference}</h2>{canRelease && <p className="text-xs text-slate-500">Verify each requested material before release.</p>}</div>
                         <button type="button" onClick={() => setManagedRequestId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50">Close</button>
                       </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
@@ -337,6 +339,12 @@ export default function WarehouseRequests() {
                       </div>
                       {request.notes && <span><strong>Notes:</strong> {request.notes}</span>}
                     </div>
+
+                    {pendingAdminApproval && (
+                      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                        {PENDING_ADMIN_APPROVAL_MESSAGE}
+                      </p>
+                    )}
 
                     {/* Actions for Pending */}
                     {canReview && (
