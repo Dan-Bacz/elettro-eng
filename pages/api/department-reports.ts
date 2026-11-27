@@ -110,6 +110,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({
         department: 'WAREHOUSE',
+        preparedBy: { name: user.name, role: user.role },
         summary: {
           totalProducts: inventoryItems.length,
           availableStockItems: inventoryItems.filter((i) => i.quantity > 0).length,
