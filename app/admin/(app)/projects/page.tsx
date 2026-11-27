@@ -251,9 +251,6 @@ export default function AdminProjectsPage() {
               Track delivery health at a glance. Progress is sourced from the latest report submitted by the assigned technician, keeping project analytics grounded in field updates.
             </p>
           </div>
-          <Link href="/admin/reports" className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-xs font-black text-white transition hover:bg-white/20">
-            View technician reports <span aria-hidden>→</span>
-          </Link>
         </div>
         <div className="relative mt-8 flex flex-wrap gap-x-8 gap-y-3 border-t border-white/15 pt-4 text-xs text-slate-300">
           <span><strong className="text-white">{analytics.reported}</strong> of {projects.length} projects reporting</span>
@@ -424,6 +421,9 @@ export default function AdminProjectsPage() {
                             <span className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${p.booking?.reports?.[0]?.progress != null ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                               {p.booking?.reports?.[0]?.progress != null ? 'Technician reported' : 'Status estimate'}
                             </span>
+                            <Link href={detailHref} aria-label={`View technician reports for ${p.title}`} className="mt-1 block w-fit text-[11px] font-bold text-cyan-800 hover:underline">
+                              View technician reports
+                            </Link>
                             {(p.description || p.booking?.title) && (
                               <div className="mt-0.5 line-clamp-1 text-[10px] text-slate-400">
                                 {(p.description || p.booking?.title || '').slice(0, 80)}
