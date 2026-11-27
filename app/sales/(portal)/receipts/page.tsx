@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import EmptyState from '../../../../components/admin/EmptyState'
 import { DocumentIcon } from '../../../../components/admin/icons'
+import SalesLetterhead from '../../../../components/sales/SalesLetterhead'
 
 type ReleaseItem = {
   id: string
@@ -158,7 +159,7 @@ export default function SalesReceiptsPage() {
     <div className="sales-receipts-page space-y-6">
       <style jsx global>{`
         @media print {
-          @page { size: A4 portrait; margin: 14mm; }
+          @page { size: A4 portrait; margin: 15mm; }
           html:has(.sales-receipt-print), body:has(.sales-receipt-print) { height: auto; overflow: visible; background: white; }
           div:has(> div > main > .sales-receipts-page .sales-receipt-print) { background: white; min-height: 0; }
           div:has(> div > main > .sales-receipts-page .sales-receipt-print) > aside,
@@ -167,10 +168,26 @@ export default function SalesReceiptsPage() {
           div:has(> main > .sales-receipts-page .sales-receipt-print) { display: block; margin: 0 !important; min-height: 0; }
           main:has(> .sales-receipts-page .sales-receipt-print) { padding: 0; }
           .sales-receipt-print { position: static; display: block; padding: 0; margin: 0 !important; background: white; backdrop-filter: none; }
-          .sales-receipt-paper { max-height: none; max-width: none; overflow: visible; padding: 0; box-shadow: none; }
-          .sales-receipt-paper .sales-receipt-items { overflow: visible; }
-          .sales-receipt-items table { min-width: 0; }
-          .sales-receipt-items thead { display: table-header-group; }
+          .sales-receipt-paper { display: block; max-height: none; max-width: none; overflow: visible; padding: 0; border: 0; box-shadow: none; color: #111; font: 10pt/1.4 Arial, sans-serif; }
+          .sales-receipt-header { display: block; padding: 0; border: 0; background: white; color: #111; break-inside: avoid; }
+          .sales-receipt-title { margin: 5mm 0 2mm; font-size: 20pt; line-height: 1.15; }
+          .sales-receipt-body { padding: 0; overflow: visible; }
+          .sales-receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 5mm; padding: 0; border: 0; background: white; break-inside: avoid; }
+          .sales-receipt-meta dt { color: #111; font-size: 8pt; font-weight: 700; }
+          .sales-receipt-meta dd { color: #111; font-size: 10pt; overflow-wrap: anywhere; }
+          .sales-receipt-notes { padding: 2mm 0; border: 0; border-block: 1px solid #aaa; font-size: 9pt; }
+          .sales-receipt-signatures { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); break-inside: avoid; }
+          .sales-receipt-signatures > div { border: 0; padding: 0; }
+          .sales-receipt-signatures > div > div { color: #111; }
+          .sales-receipt-signatures > div > div:first-child { height: auto; min-height: 10mm; }
+          .sales-receipt-paper .sales-receipt-items { overflow: visible; border: 0; border-radius: 0; }
+          .sales-receipt-items table { min-width: 0; table-layout: fixed; border-collapse: collapse; }
+          .sales-receipt-items :is(th, td) { padding: 2mm 1.5mm; color: #111; font-size: 8.5pt; overflow-wrap: anywhere; }
+          .sales-receipt-items th { border-block: 1px solid #555; }
+          .sales-receipt-items th:first-child { width: 29%; }
+          .sales-receipt-items th:last-child { width: 25%; }
+          .sales-receipt-items td { border-bottom: 1px solid #bbb; }
+          .sales-receipt-items thead { display: table-header-group; background: white; }
           .sales-receipt-items tr { break-inside: avoid; overflow-wrap: anywhere; }
         }
       `}</style>
@@ -268,50 +285,39 @@ export default function SalesReceiptsPage() {
       {/* Official Receipt Modal */}
       {viewingRelease && (
         <div role="dialog" aria-modal="true" aria-labelledby="receipt-title" className="sales-receipt-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="sales-receipt-paper max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-            <div className="flex items-start justify-between border-b border-slate-200 pb-4">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-600">
-                  ELETTRO ENGINEERING ENTERPRISES
-                </div>
-                <h2 id="receipt-title" className="text-xl font-black text-slate-900">Warehouse Material Release Receipt</h2>
-                <div className="mt-1 font-mono text-xs font-bold text-slate-500">
-                  Receipt Ref: {viewingRelease.receipt?.reference || viewingRelease.receiptNumber}
-                </div>
+          <div className="sales-receipt-paper flex max-h-[90dvh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <header className="sales-receipt-header shrink-0 bg-slate-950 px-5 py-5 text-white sm:px-7">
+              <div className="flex items-start justify-between gap-4">
+                <SalesLetterhead />
+                <button type="button" onClick={closeReceipt} disabled={acknowledging} className="sales-receipt-screen-only rounded-lg border border-white/25 px-3 py-2 text-xs font-bold hover:bg-white/10 disabled:opacity-50">
+                  Close
+                </button>
               </div>
-              <button type="button" onClick={closeReceipt} disabled={acknowledging} className="sales-receipt-screen-only rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
-                Close
-              </button>
-            </div>
+              <h2 id="receipt-title" className="sales-receipt-title mt-4 text-xl font-black tracking-tight sm:text-2xl">Warehouse Material Release Receipt</h2>
+            </header>
 
-            {/* Printable Receipt Card */}
-            <div id="printable-receipt" className="mt-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4 text-xs sm:grid-cols-4">
-                <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Request Ref</span>
-                  <span className="font-bold text-slate-800">{viewingRelease.request.reference}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Request Source</span>
-                  <span className="font-bold text-slate-800">{viewingRelease.request.source}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Release Date</span>
-                  <span className="font-bold text-slate-800">{formatDate(viewingRelease.createdAt)}</span>
-                </div>
-                <div>
-                  <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Warehouse Officer</span>
-                  <span className="font-bold text-slate-800">{viewingRelease.releasedBy.name}</span>
-                </div>
-              </div>
+            <div className="sales-receipt-body min-h-0 space-y-5 overflow-y-auto px-5 py-5 sm:px-7">
+              <dl className="sales-receipt-meta grid grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-3">
+                {[
+                  ['Receipt reference', viewingRelease.receipt?.reference || viewingRelease.receiptNumber],
+                  ['Request reference', viewingRelease.request.reference],
+                  ['Request source', viewingRelease.request.source.toLowerCase().replace(/_/g, ' ')],
+                  ['Released on', formatDate(viewingRelease.createdAt)],
+                  ['Warehouse Officer', viewingRelease.releasedBy.name],
+                  ['Sales Department Officer', viewingRelease.salesRecipient?.name || 'Awaiting handover'],
+                  ['Handover status', viewingRelease.receivedBySalesId ? `Received on ${formatDate(viewingRelease.receivedBySalesAt)}` : 'Awaiting handover'],
+                ].map(([label, value]) => (
+                  <div key={label} className="min-w-0">
+                    <dt className="text-xs font-semibold text-slate-600">{label}</dt>
+                    <dd className="mt-1 break-words font-semibold text-slate-900">{value}</dd>
+                  </div>
+                ))}
+              </dl>
 
-              {(viewingRelease.notes || viewingRelease.receivedBySalesId) && (
-                <div className="space-y-2 rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
-                  {viewingRelease.notes && <p className="break-words"><strong>Warehouse notes</strong> {viewingRelease.notes}</p>}
-                  {viewingRelease.receivedBySalesId && (
-                    <p><strong>Received by</strong> {viewingRelease.salesRecipient?.name || 'Sales Officer'} ? {formatDate(viewingRelease.receivedBySalesAt)}</p>
-                  )}
-                  {viewingRelease.salesReceivedNotes && <p className="break-words"><strong>Handover remarks</strong> {viewingRelease.salesReceivedNotes}</p>}
+              {(viewingRelease.notes || viewingRelease.salesReceivedNotes) && (
+                <div className="sales-receipt-notes space-y-2 rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
+                  {viewingRelease.notes && <p className="break-words"><strong>Warehouse notes </strong> {viewingRelease.notes}</p>}
+                  {viewingRelease.salesReceivedNotes && <p className="break-words"><strong>Handover remarks </strong> {viewingRelease.salesReceivedNotes}</p>}
                 </div>
               )}
 
@@ -352,7 +358,7 @@ export default function SalesReceiptsPage() {
               </div>
 
               {/* Signatures block */}
-              <div className="mt-8 grid grid-cols-1 gap-6 pt-6 sm:grid-cols-3">
+              <div className="sales-receipt-signatures mt-6 grid grid-cols-1 gap-5 pt-2 sm:grid-cols-3">
                 <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center">
                   <div className="h-10 text-xs font-semibold text-slate-800">{viewingRelease.releasedBy.name}</div>
                   <div className="border-t border-slate-300 pt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
@@ -370,42 +376,42 @@ export default function SalesReceiptsPage() {
                 </div>
 
                 <div className="rounded-xl border border-dashed border-slate-300 p-4 text-center">
-                  <div className="h-10 text-xs font-semibold text-slate-400">ELETTRO AUTH SIG</div>
+                  <div className="h-10 text-xs font-semibold text-slate-400"></div>
                   <div className="border-t border-slate-300 pt-1 text-[10px] font-black uppercase tracking-wider text-slate-400">
                     Authorized Verification
                   </div>
                 </div>
               </div>
+
+              {confirmingHandover && !viewingRelease.receivedBySalesId && (
+                <form
+                  className="sales-receipt-screen-only mt-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4"
+                  onSubmit={(event) => { event.preventDefault(); void handleAcknowledge() }}
+                >
+                  <h3 className="text-sm font-bold text-slate-900">Confirm physical handover</h3>
+                  <p className="text-xs text-slate-700">Verify the released quantities above against the materials Sales received.</p>
+                  {acknowledgeError && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{acknowledgeError}</p>}
+                  <label className="block text-xs font-semibold text-slate-700">
+                    Handover notes (optional)
+                    <textarea
+                      value={handoverNotes}
+                      onChange={(event) => setHandoverNotes(event.target.value)}
+                      disabled={acknowledging}
+                      rows={3}
+                      className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"
+                    />
+                  </label>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button type="button" onClick={() => setConfirmingHandover(false)} disabled={acknowledging} className="rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-amber-100">Cancel</button>
+                    <button type="submit" disabled={acknowledging} className="rounded-lg bg-yellow-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-yellow-300 disabled:opacity-50">
+                      {acknowledging ? 'Confirming...' : 'Confirm receipt'}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
-            {confirmingHandover && !viewingRelease.receivedBySalesId && (
-              <form
-                className="sales-receipt-screen-only mt-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4"
-                onSubmit={(event) => { event.preventDefault(); void handleAcknowledge() }}
-              >
-                <h3 className="text-sm font-bold text-slate-900">Confirm physical handover</h3>
-                <p className="text-xs text-slate-700">Verify the released quantities above against the materials Sales received.</p>
-                {acknowledgeError && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{acknowledgeError}</p>}
-                <label className="block text-xs font-semibold text-slate-700">
-                  Handover notes (optional)
-                  <textarea
-                    value={handoverNotes}
-                    onChange={(event) => setHandoverNotes(event.target.value)}
-                    disabled={acknowledging}
-                    rows={3}
-                    className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"
-                  />
-                </label>
-                <div className="flex flex-wrap justify-end gap-2">
-                  <button type="button" onClick={() => setConfirmingHandover(false)} disabled={acknowledging} className="rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-amber-100">Cancel</button>
-                  <button type="submit" disabled={acknowledging} className="rounded-lg bg-yellow-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-yellow-300 disabled:opacity-50">
-                    {acknowledging ? 'Confirming...' : 'Confirm receipt'}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            <div className="sales-receipt-screen-only mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4">
+            <footer className="sales-receipt-screen-only flex shrink-0 flex-wrap justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-7">
               {!viewingRelease.receivedBySalesId && !confirmingHandover && (
                 <button
                   type="button"
@@ -425,7 +431,7 @@ export default function SalesReceiptsPage() {
               >
                 Print receipt
               </button>
-            </div>
+            </footer>
           </div>
         </div>
       )}

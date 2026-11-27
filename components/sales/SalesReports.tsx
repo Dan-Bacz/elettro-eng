@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import SalesLetterhead from './SalesLetterhead'
 
 const printReports = {
   all: { label: 'All Reports', title: 'Sales Department Report' },
@@ -143,16 +143,13 @@ export default function SalesReports() {
           .sales-reports-page .reports-print-hidden,
           .sales-reports-page[data-print-report="pos"] [data-report-section]:not([data-report-section="pos"]),
           .sales-reports-page[data-print-report="orders"] [data-report-section]:not([data-report-section="orders"]),
-          .sales-reports-page :is(img, svg):not(.sales-print-logo) { display: none !important; }
+          .sales-reports-page :is(img, svg):not(.sales-letterhead-logo) { display: none !important; }
           div:has(> main > .sales-reports-page) { display: block !important; margin: 0 !important; min-height: 0 !important; }
           main:has(> .sales-reports-page) { padding: 0 !important; }
           .sales-reports-page { color: #111; font: 10pt/1.4 Arial, sans-serif; }
           .sales-reports-page > * + * { margin-top: 6mm !important; }
 
           .sales-print-header { display: block; margin-top: 0 !important; break-inside: avoid; }
-          .sales-print-brand { display: flex; align-items: center; gap: 4mm; border-bottom: 1.5pt solid #222; padding-bottom: 3mm; }
-          .sales-print-logo { width: 15mm; height: 15mm; object-fit: contain; }
-          .sales-print-company { font-size: 14pt; font-weight: 700; }
           .sales-print-title { margin: 5mm 0 2mm; font-size: 20pt; line-height: 1.15; font-weight: 700; }
           .sales-print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 5mm; }
           .sales-print-meta dt { font-size: 8pt; font-weight: 700; }
@@ -219,10 +216,7 @@ export default function SalesReports() {
 
       {!loading && data && filtered && <>
         {!error && <header className="sales-print-header">
-          <div className="sales-print-brand">
-            <Image className="sales-print-logo" src="/logo-elettro.jpg" alt="" width={64} height={64} loading="eager" unoptimized />
-            <p className="sales-print-company">ELETTRO Engineering Enterprises</p>
-          </div>
+          <SalesLetterhead />
           <h1 className="sales-print-title">{printReports[printReport].title}</h1>
           <dl className="sales-print-meta">
             <div>
