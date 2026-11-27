@@ -1,7 +1,7 @@
 'use client'
 
 import { isPendingAdminApproval, PENDING_ADMIN_APPROVAL_MESSAGE } from '../../lib/warehouse-request-approval'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -45,6 +45,7 @@ export default function WarehouseRequests() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const requestDialog = useRef<HTMLDialogElement>(null)
   const [managedRequestId, setManagedRequestId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sourceTab, setSourceTab] = useState<SourceTab>('ALL')
@@ -71,6 +72,11 @@ export default function WarehouseRequests() {
   useEffect(() => {
     void load()
   }, [load])
+
+  useEffect(() => {
+    const dialog = requestDialog.current
+    if (managedRequestId && dialog && !dialog.open) dialog.showModal()
+  }, [managedRequestId])
 
   async function changeStatus(request: WarehouseRequest, status: 'UNDER_REVIEW' | 'REJECTED' | 'CANCELLED') {
     setBusyId(request.id)
@@ -317,213 +323,250 @@ export default function WarehouseRequests() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setManagedRequestId((current) => current === request.id ? null : request.id)}
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setError('')
+                      setNotice('')
+                      setManagedRequestId(request.id)
+                    }}
                     className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-black text-white transition hover:bg-cyan-800 lg:w-auto"
                   >
-                    {managedRequestId === request.id ? 'Close' : 'View'}
+                    View request
                   </button>
                 </div>
 
                 {managedRequestId === request.id && (
-                  <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4">
-                    <div className="mx-auto my-6 max-w-7xl space-y-4 rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
-                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                        <div><h2 className="text-lg font-black text-slate-900">Request {request.reference}</h2>{canRelease && <p className="text-xs text-slate-500">Verify each requested material before release.</p>}</div>
-                        <button type="button" onClick={() => setManagedRequestId(null)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50">Close</button>
+                  <dialog
+                    ref={requestDialog}
+                    aria-labelledby="warehouse-request-title"
+                    onClose={() => setManagedRequestId(null)}
+                    onCancel={(event) => { if (busyId === request.id) event.preventDefault() }}
+                    className="m-auto w-[calc(100%_-_1rem)] max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/65 sm:w-[calc(100%_-_3rem)]"
+                  >
+                    <div className="flex max-h-[90dvh] flex-col">
+                      <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-800 bg-slate-950 px-5 py-5 text-white sm:px-7">
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-300">Warehouse material request</p>
+                          <h2 id="warehouse-request-title" className="mt-1 break-words text-xl font-black tracking-tight sm:text-2xl">{request.reference}</h2>
+                          <p className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${pendingAdminApproval ? 'bg-amber-100 text-amber-900' : 'bg-white/10 capitalize text-slate-100'}`}>
+                            {pendingAdminApproval ? 'Pending admin approval' : request.status.toLowerCase().replace(/_/g, ' ')}
+                          </p>
+                        </div>
+                        <button type="button" disabled={busyId === request.id} onClick={() => requestDialog.current?.close()} className="rounded-lg border border-white/25 px-3 py-2 text-xs font-bold hover:bg-white/10 disabled:opacity-50">Close</button>
+                      </header>
+                      <div className="min-h-0 space-y-5 overflow-y-auto px-5 py-5 sm:px-7">
+                        {error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+                        {notice && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{notice}</p>}
+                        <dl className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                          <div className="min-w-0">
+                            <dt className="text-xs font-semibold text-slate-600">Requested by</dt>
+                            <dd className="mt-1 break-words font-bold text-slate-900">{request.requester.name}</dd>
+                            <dd className="text-xs text-slate-600">{isTechnician ? 'Technician' : isClientOrder ? 'Client order' : 'Sales Department'}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-xs font-semibold text-slate-600">Submitted</dt>
+                            <dd className="mt-1 font-semibold text-slate-900"><time dateTime={request.createdAt}>{new Date(request.createdAt).toLocaleString()}</time></dd>
+                          </div>
+                          {request.projectReference && <div className="min-w-0"><dt className="text-xs font-semibold text-slate-600">Project</dt><dd className="mt-1 break-words font-semibold text-slate-900">{request.projectReference}</dd></div>}
+                          {request.customerReference && <div className="min-w-0"><dt className="text-xs font-semibold text-slate-600">Customer</dt><dd className="mt-1 break-words font-semibold text-slate-900">{request.customerReference}</dd></div>}
+                          {request.notes && <div className="min-w-0 sm:col-span-2 lg:col-span-3"><dt className="text-xs font-semibold text-slate-600">Request notes</dt><dd className="mt-1 whitespace-pre-wrap break-words text-slate-800">{request.notes}</dd></div>}
+                        </dl>
+
+                        {pendingAdminApproval && (
+                          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                            {PENDING_ADMIN_APPROVAL_MESSAGE}
+                          </p>
+                        )}
+
+                        {/* Actions for Pending */}
+                        {canReview && (
+                          <div className="flex gap-2">
+                            <button
+                              disabled={busyId === request.id}
+                              onClick={() => void changeStatus(request, 'UNDER_REVIEW')}
+                              className="rounded-xl bg-yellow-400 px-3.5 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300 disabled:opacity-50"
+                            >
+                              Accept for review
+                            </button>
+                            <button
+                              disabled={busyId === request.id}
+                              onClick={() => void changeStatus(request, 'REJECTED')}
+                              className="rounded-xl border border-red-200 px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+
+                        {request.status === 'CANCELLATION_REQUESTED' && (
+                          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
+                            <p className="flex-1 text-xs font-semibold text-orange-900">Sales requested cancellation. Approve it only after confirming that no materials were released.</p>
+                            <button disabled={busyId === request.id} onClick={() => void changeStatus(request, 'CANCELLED')} className="rounded-xl bg-orange-500 px-3.5 py-2 text-xs font-black text-white hover:bg-orange-600 disabled:opacity-50">{busyId === request.id ? 'Approving...' : 'Approve cancellation'}</button>
+                          </div>
+                        )}
+
+                        <section aria-labelledby="warehouse-request-materials">
+                          <h3 id="warehouse-request-materials" className="text-base font-bold text-slate-950">Requested materials ({request.items.length})</h3>
+                          {canRelease && <p className="mt-1 text-xs text-slate-600">Verify each material and record any shortages before release.</p>}
+                        <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+                          <table className={`w-full text-left text-xs ${canRelease ? 'min-w-[790px]' : 'min-w-[420px]'}`}>
+                            <thead className="bg-slate-100 text-[11px] font-bold text-slate-700">
+                              <tr>
+                                <th scope="col" className="px-3 py-2.5">Material / SKU</th>
+                                <th scope="col" className="px-3 py-2.5">Requested</th>
+                                <th scope="col" className="px-3 py-2.5">Released</th>
+                                <th scope="col" className="px-3 py-2.5">Available Stock</th>
+                                {canRelease && <>
+                                  <th scope="col" className="px-3 py-2.5">Release quantity</th>
+                                  <th scope="col" className="px-3 py-2.5">Shortage</th>
+                                  <th scope="col" className="px-3 py-2.5">Physical verification</th>
+                                </>}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {request.items.map((item) => {
+                                const val = getVerification(item)
+                                const remaining = item.requestedQuantity - item.releasedQuantity
+                                const stock = item.inventoryItem.quantity
+                                const hasEnoughStock = stock >= remaining
+
+                                return (
+                                  <tr key={item.id} className={canRelease && val.verified ? 'bg-emerald-50/60' : 'even:bg-slate-50/70'}>
+                                    <td className="px-3 py-2.5">
+                                      <span className="font-bold text-slate-900">{item.inventoryItem.name}</span>
+                                      <span className="block text-[10px] text-slate-400">{item.inventoryItem.sku || 'No SKU'}</span>
+                                    </td>
+                                    <td className="px-3 py-2.5 font-semibold text-slate-700">
+                                      {item.requestedQuantity} {item.unit || item.inventoryItem.unit || 'pcs'}
+                                    </td>
+                                    <td className="px-3 py-2.5 font-semibold text-slate-700">
+                                      {item.releasedQuantity} {item.unit || item.inventoryItem.unit || 'pcs'}
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <span className={`font-black ${hasEnoughStock ? 'text-emerald-700' : 'text-amber-700'}`}>
+                                        {stock} {item.inventoryItem.unit || 'pcs'}
+                                      </span>
+                                    </td>
+                                    {canRelease && <>
+                                    <td className="px-3 py-2.5">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={remaining}
+                                        step={1}
+                                        value={val.quantity}
+                                        disabled={busyId === request.id}
+                                        onChange={(e) =>
+                                          setVerification((state) => ({
+                                            ...state,
+                                            [item.id]: { ...val, quantity: e.target.value },
+                                          }))
+                                        }
+                                        aria-label={`Release quantity for ${item.inventoryItem.name}`}
+                                        className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs font-bold disabled:bg-slate-100 focus:outline-none focus:border-yellow-400"
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <input
+                                        type="number"
+                                        min={0}
+                                        max={remaining}
+                                        step={1}
+                                        value={val.unavailableQuantity}
+                                        disabled={busyId === request.id}
+                                        onChange={(e) =>
+                                          setVerification((state) => ({
+                                            ...state,
+                                            [item.id]: { ...val, unavailableQuantity: e.target.value },
+                                          }))
+                                        }
+                                        aria-label={`Unavailable quantity for ${item.inventoryItem.name}`}
+                                        className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs font-bold disabled:bg-slate-100 focus:outline-none focus:border-yellow-400"
+                                      />
+                                    </td>
+                                    <td className="px-3 py-2.5">
+                                      <label className="flex items-center gap-2 font-bold text-slate-800">
+                                        <input
+                                          type="checkbox"
+                                          checked={val.verified}
+                                          disabled={busyId === request.id}
+                                          onChange={(e) =>
+                                            setVerification((state) => ({
+                                              ...state,
+                                              [item.id]: { ...val, verified: e.target.checked },
+                                            }))
+                                          }
+                                          className="rounded border-slate-300 text-yellow-500 focus:ring-yellow-400"
+                                        />
+                                        Physically checked
+                                      </label>
+                                      <input
+                                        value={val.discrepancyNotes}
+                                        disabled={busyId === request.id}
+                                        onChange={(e) =>
+                                          setVerification((state) => ({
+                                            ...state,
+                                            [item.id]: { ...val, discrepancyNotes: e.target.value },
+                                          }))
+                                        }
+                                        maxLength={500}
+                                        aria-label={`Discrepancy note for ${item.inventoryItem.name}`}
+                                        placeholder="Required for shortage or partial release"
+                                        className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1 text-[11px] disabled:bg-slate-100 focus:outline-none focus:border-yellow-400"
+                                      />
+                                    </td>
+                                    </>}
+                                  </tr>
+                                )
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                        </section>
+
+                        {/* Release Receipts History */}
+                        {request.releases.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs">
+                            <span className="font-bold text-slate-500">Generated Receipts:</span>
+                            {request.releases.map(
+                              (rel) =>
+                                rel.receipt && (
+                                  <Link
+                                    key={rel.receipt.reference}
+                                    href={`/warehouse/receipts?reference=${encodeURIComponent(rel.receipt.reference)}`}
+                                    className="rounded-lg bg-yellow-50 px-2.5 py-1 text-xs font-bold text-yellow-800 hover:underline border border-yellow-200"
+                                  >
+                                    Receipt {rel.receipt.reference}
+                                  </Link>
+                                )
+                            )}
+                          </div>
+                        )}
                       </div>
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
-                      <div className="flex flex-wrap gap-x-4 gap-y-1">
-                        <span><strong>Requester:</strong> {request.requester.name} ({request.requester.role})</span>
-                        {request.projectReference && <span><strong>Project:</strong> {request.projectReference}</span>}
-                        {request.customerReference && <span><strong>Client/Customer:</strong> {request.customerReference}</span>}
-                      </div>
-                      {request.notes && <span><strong>Notes:</strong> {request.notes}</span>}
-                    </div>
-
-                    {pendingAdminApproval && (
-                      <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-                        {PENDING_ADMIN_APPROVAL_MESSAGE}
-                      </p>
-                    )}
-
-                    {/* Actions for Pending */}
-                    {canReview && (
-                      <div className="flex gap-2">
-                        <button
-                          disabled={busyId === request.id}
-                          onClick={() => void changeStatus(request, 'UNDER_REVIEW')}
-                          className="rounded-xl bg-yellow-400 px-3.5 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300 disabled:opacity-50"
-                        >
-                          Accept for review
-                        </button>
-                        <button
-                          disabled={busyId === request.id}
-                          onClick={() => void changeStatus(request, 'REJECTED')}
-                          className="rounded-xl border border-red-200 px-3.5 py-2 text-xs font-bold text-red-600 hover:bg-red-50 disabled:opacity-50"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
-
-                    {request.status === 'CANCELLATION_REQUESTED' && (
-                      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 p-3">
-                        <p className="flex-1 text-xs font-semibold text-orange-900">Sales requested cancellation. Approve it only after confirming that no materials were released.</p>
-                        <button disabled={busyId === request.id} onClick={() => void changeStatus(request, 'CANCELLED')} className="rounded-xl bg-orange-500 px-3.5 py-2 text-xs font-black text-white hover:bg-orange-600 disabled:opacity-50">{busyId === request.id ? 'Approving...' : 'Approve cancellation'}</button>
-                      </div>
-                    )}
-
-                {/* Items Verification Table */}
-                <div className="overflow-x-auto rounded-xl border border-slate-200">
-                  <table className="w-full min-w-[780px] text-left text-xs">
-                    <thead className="bg-slate-50 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                      <tr>
-                        <th className="px-3 py-2.5">Material / SKU</th>
-                        <th className="px-3 py-2.5">Requested</th>
-                        <th className="px-3 py-2.5">Released</th>
-                        <th className="px-3 py-2.5">Available Stock</th>
-                        <th className="px-3 py-2.5">Release Quantity</th>
-                        <th className="px-3 py-2.5">Shortage / Unavailable</th>
-                        <th className="px-3 py-2.5">Physical Verification & Discrepancy Note</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {request.items.map((item) => {
-                        const val = getVerification(item)
-                        const remaining = item.requestedQuantity - item.releasedQuantity
-                        const stock = item.inventoryItem.quantity
-                        const hasEnoughStock = stock >= remaining
-
-                        return (
-                          <tr key={item.id} className={val.verified ? 'bg-amber-50/40' : undefined}>
-                            <td className="px-3 py-2.5">
-                              <span className="font-bold text-slate-900">{item.inventoryItem.name}</span>
-                              <span className="block text-[10px] text-slate-400">{item.inventoryItem.sku || 'No SKU'}</span>
-                            </td>
-                            <td className="px-3 py-2.5 font-semibold text-slate-700">
-                              {item.requestedQuantity} {item.unit || item.inventoryItem.unit || 'pcs'}
-                            </td>
-                            <td className="px-3 py-2.5 font-semibold text-slate-700">
-                              {item.releasedQuantity} {item.unit || item.inventoryItem.unit || 'pcs'}
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <span className={`font-black ${hasEnoughStock ? 'text-emerald-700' : 'text-amber-700'}`}>
-                                {stock} {item.inventoryItem.unit || 'pcs'}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <input
-                                type="number"
-                                min={0}
-                                max={remaining}
-                                step={1}
-                                value={val.quantity}
-                                disabled={!canRelease}
-                                onChange={(e) =>
-                                  setVerification((state) => ({
-                                    ...state,
-                                    [item.id]: { ...val, quantity: e.target.value },
-                                  }))
-                                }
-                                aria-label={`Release quantity for ${item.inventoryItem.name}`}
-                                className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs font-bold disabled:bg-slate-100 focus:outline-none focus:border-yellow-400"
-                              />
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <input
-                                type="number"
-                                min={0}
-                                max={remaining}
-                                step={1}
-                                value={val.unavailableQuantity}
-                                disabled={!canRelease}
-                                onChange={(e) =>
-                                  setVerification((state) => ({
-                                    ...state,
-                                    [item.id]: { ...val, unavailableQuantity: e.target.value },
-                                  }))
-                                }
-                                aria-label={`Unavailable quantity for ${item.inventoryItem.name}`}
-                                className="w-20 rounded-lg border border-slate-300 px-2 py-1 text-xs font-bold disabled:bg-slate-100 focus:outline-none focus:border-yellow-400"
-                              />
-                            </td>
-                            <td className="px-3 py-2.5">
-                              <label className="flex items-center gap-2 font-bold text-slate-800">
-                                <input
-                                  type="checkbox"
-                                  checked={val.verified}
-                                  disabled={!canRelease}
-                                  onChange={(e) =>
-                                    setVerification((state) => ({
-                                      ...state,
-                                      [item.id]: { ...val, verified: e.target.checked },
-                                    }))
-                                  }
-                                  className="rounded border-slate-300 text-yellow-500 focus:ring-yellow-400"
-                                />
-                                Physically checked
-                              </label>
-                              <input
-                                value={val.discrepancyNotes}
-                                disabled={!canRelease}
-                                onChange={(e) =>
-                                  setVerification((state) => ({
-                                    ...state,
-                                    [item.id]: { ...val, discrepancyNotes: e.target.value },
-                                  }))
-                                }
-                                maxLength={500}
-                                placeholder="Required for shortage or partial release"
-                                className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1 text-[11px] disabled:bg-slate-100 focus:outline-none focus:border-yellow-400"
-                              />
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Release Action Row */}
-                {canRelease && (
-                  <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center">
-                    <input
-                      value={releaseNotes[request.id] || ''}
-                      onChange={(e) => setReleaseNotes((c) => ({ ...c, [request.id]: e.target.value }))}
-                      maxLength={500}
-                      placeholder="Warehouse release notes or remarks (optional)"
-                      className="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-xs focus:border-yellow-400 focus:outline-none"
-                    />
-                    <button
-                      onClick={() => void release(request)}
-                      disabled={busyId === request.id}
-                      className="rounded-xl bg-emerald-600 px-5 py-2 text-xs font-black text-white hover:bg-emerald-700 shadow-sm disabled:opacity-50"
-                    >
-                      {busyId === request.id ? 'Recording Release…' : 'Verify & Release Materials'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Release Receipts History */}
-                {request.releases.length > 0 && (
-                  <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs">
-                    <span className="font-bold text-slate-500">Generated Receipts:</span>
-                    {request.releases.map(
-                      (rel) =>
-                        rel.receipt && (
-                          <Link
-                            key={rel.receipt.reference}
-                            href={`/warehouse/receipts?reference=${encodeURIComponent(rel.receipt.reference)}`}
-                            className="rounded-lg bg-yellow-50 px-2.5 py-1 text-xs font-bold text-yellow-800 hover:underline border border-yellow-200"
+                      {canRelease && (
+                        <footer className="flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-end sm:px-7">
+                          <label className="min-w-0 flex-1 text-xs font-semibold text-slate-700">
+                            Release notes (optional)
+                            <input
+                              value={releaseNotes[request.id] || ''}
+                              onChange={(event) => setReleaseNotes((current) => ({ ...current, [request.id]: event.target.value }))}
+                              maxLength={500}
+                              disabled={busyId === request.id}
+                              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-yellow-400 focus:outline-none"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => void release(request)}
+                            disabled={busyId === request.id}
+                            className="rounded-xl bg-yellow-400 px-5 py-2.5 text-sm font-black text-slate-950 hover:bg-yellow-300 disabled:opacity-50"
                           >
-                            Receipt {rel.receipt.reference}
-                          </Link>
-                        )
-                    )}
-                  </div>
-                )}
+                            {busyId === request.id ? 'Recording release...' : 'Verify & release materials'}
+                          </button>
+                        </footer>
+                      )}
                     </div>
-                  </div>
+                  </dialog>
                 )}
               </article>
             )
