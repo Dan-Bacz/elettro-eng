@@ -44,6 +44,8 @@ export default function SalesRequests() {
   const [submitError, setSubmitError] = useState('')
   const [reviewing, setReviewing] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const historyRef = useRef<HTMLDialogElement>(null)
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'pending' | 'closed'>('all')
   const submissionKey = useRef<string | null>(null)
 
   const inventoryById = useMemo(() => new Map(inventory.map((item) => [item.id, item])), [inventory])
@@ -153,28 +155,12 @@ export default function SalesRequests() {
   const fulfilledRequests = requests.filter(isFulfilled)
   const totalRequested = requests.reduce((total, request) => total + request.items.length, 0)
 
-  function requestCard(request: Request) {
-    const releasedCount = request.items.reduce((total, item) => total + item.releasedQuantity, 0)
-    const requestedCount = request.items.reduce((total, item) => total + item.requestedQuantity, 0)
-    const progress = requestedCount ? Math.min(100, Math.round((releasedCount / requestedCount) * 100)) : 0
-
-    return <article key={request.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-yellow-300 hover:shadow-lg">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
-        <div><div className="flex items-center gap-2"><span className="font-mono text-xs font-black text-slate-900">{request.reference}</span><span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${statusStyle(request.status)}`}>{request.status.replace(/_/g, ' ')}</span></div><p className="mt-1 text-xs text-slate-400">Requested {new Date(request.createdAt).toLocaleString()}</p></div>
-        <div className="rounded-xl bg-slate-50 px-3 py-2 text-right"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Fulfillment</div><div className="text-sm font-black text-slate-800">{releasedCount}/{requestedCount} units</div></div>
-      </div>
-      <div className="space-y-4 px-5 py-4">
-        <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${progress === 100 ? 'bg-emerald-500' : 'bg-yellow-400'}`} style={{ width: `${progress}%` }} /></div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {request.items.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5"><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white ring-1 ring-slate-100">{item.inventoryItem.imageUrl ? <Image src={item.inventoryItem.imageUrl} alt={item.inventoryItem.name} width={44} height={44} className="h-full w-full object-contain" /> : <PackageIcon className="h-5 w-5 text-slate-300" />}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-black text-slate-800">{item.inventoryItem.name}</div><div className="mt-0.5 text-[10px] font-semibold text-slate-500">{item.releasedQuantity}/{item.requestedQuantity} {item.unit || 'pcs'} released</div></div></div>)}
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-3">{request.releases.map((release) => release.receipt && <a key={release.receipt.reference} href={`/sales/receipts?reference=${encodeURIComponent(release.receipt.reference)}`} className="inline-flex items-center text-xs font-black text-blue-700 hover:underline">View warehouse receipt {release.receipt.reference} →</a>)}{['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0 && <button type="button" onClick={() => void requestCancellation(request)} disabled={cancellingId === request.id} className="rounded-lg border border-red-200 px-3 py-2 text-[11px] font-black text-red-600 transition hover:bg-red-50 disabled:opacity-50">{cancellingId === request.id ? 'Requesting...' : 'Request cancellation'}</button>}</div>
-      </div>
-    </article>
-  }
+  const visibleRequests = historyFilter === 'pending'
+    ? pendingRequests
+    : historyFilter === 'closed' ? fulfilledRequests : requests
 
   return <div className="space-y-8">
-    <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-7 text-white shadow-xl sm:px-8"><div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-yellow-400/20 blur-3xl" /><div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"><div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-yellow-300"><span className="h-1.5 w-1.5 rounded-full bg-yellow-300" /> Sales supply desk</div><h1 className="text-3xl font-black tracking-tight sm:text-4xl">Warehouse requests</h1><p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">Request the materials your counter needs, then track every handoff from warehouse release to fulfillment.</p></div><div className="grid grid-cols-2 gap-2 sm:grid-cols-3"><div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur"><div className="text-2xl font-black text-yellow-300">{pendingRequests.length}</div><div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Pending</div></div><div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur"><div className="text-2xl font-black text-emerald-300">{fulfilledRequests.length}</div><div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Fulfilled</div></div><div className="hidden rounded-2xl bg-white/10 px-4 py-3 backdrop-blur sm:block"><div className="text-2xl font-black text-white">{totalRequested}</div><div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Line items</div></div></div></div></section>
+    <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-7 text-white shadow-xl sm:px-8"><div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-yellow-400/20 blur-3xl" /><div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"><div><div className="mb-3 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-yellow-300"><span className="h-1.5 w-1.5 rounded-full bg-yellow-300" /> Sales supply desk</div><h1 className="text-3xl font-black tracking-tight sm:text-4xl">Warehouse requests</h1><p className="mt-2 max-w-xl text-sm leading-6 text-slate-300">Request the materials your counter needs, then track every handoff from warehouse release to fulfillment.</p></div><div className="grid grid-cols-2 gap-2 sm:grid-cols-3"><div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur"><div className="text-2xl font-black text-yellow-300">{pendingRequests.length}</div><div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Pending</div></div><div className="rounded-2xl bg-white/10 px-4 py-3 backdrop-blur"><div className="text-2xl font-black text-emerald-300">{fulfilledRequests.length}</div><div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Closed</div></div><div className="hidden rounded-2xl bg-white/10 px-4 py-3 backdrop-blur sm:block"><div className="text-2xl font-black text-white">{totalRequested}</div><div className="text-[10px] font-bold uppercase tracking-wider text-slate-300">Line items</div></div></div></div></section>
     {error && <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>}
     {notice && <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{notice}</div>}
 
@@ -184,9 +170,19 @@ export default function SalesRequests() {
           <p className="text-sm font-bold text-slate-900">Request cart</p>
           <p role="status" className="mt-0.5 text-xs text-slate-600">{cartNotice || `Add up to ${MAX_REQUEST_LINES} different materials per request.`}</p>
         </div>
-        <button type="button" onClick={openCart} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
-          <CartIcon className="h-4 w-4" /> View cart ({lines.length})
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={openCart} className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
+            <CartIcon className="h-4 w-4" /> View cart ({lines.length})
+          </button>
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            onClick={() => historyRef.current?.showModal()}
+            className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-800 hover:bg-slate-50"
+          >
+            Materials Requests
+          </button>
+        </div>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-yellow-700">Build a request</p><h2 className="mt-1 text-xl font-black text-slate-900">Warehouse materials</h2><p className="mt-1 text-sm text-slate-500">Browse available products and add them to your next request.</p></div><div className="relative"><SearchIcon className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search materials or SKU" className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-xs font-semibold shadow-sm outline-none transition focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 sm:w-72" /></div></div>{loading ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{[1, 2, 3, 4].map((item) => <div key={item} className="h-64 animate-pulse rounded-2xl bg-slate-200" />)}</div> : <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{visibleInventory.map((item) => <article key={item.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-1 hover:border-yellow-300 hover:shadow-lg"><div className="flex h-36 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 to-slate-100">{item.imageUrl ? <Image src={item.imageUrl} alt={item.name} width={160} height={160} className="h-full w-full object-contain transition duration-300 group-hover:scale-110" /> : <PackageIcon className="h-10 w-10 text-slate-300" />}</div><div className="px-1 pt-3"><div className="flex items-center justify-between gap-2"><span className="truncate text-[10px] font-black uppercase tracking-wider text-slate-400">{item.category || 'Material'}</span><span className={`shrink-0 text-[10px] font-black ${item.quantity > 0 ? 'text-emerald-600' : 'text-red-500'}`}>{item.quantity > 0 ? 'In stock' : 'Out'}</span></div><h3 className="mt-1 truncate text-sm font-black text-slate-900">{item.name}</h3><p className="mt-1 truncate font-mono text-[10px] text-slate-400">{item.sku || 'No SKU'} · {item.quantity} {item.unit || 'pcs'}</p><button type="button" onClick={() => addProduct(item)} disabled={item.quantity < 1 || (!cartById.has(item.id) && lines.length >= MAX_REQUEST_LINES) || Number(cartById.get(item.id)?.quantity) >= MAX_QUANTITY} className="mt-3 w-full rounded-xl bg-yellow-400 px-2 py-2.5 text-[11px] font-black text-slate-900 transition hover:bg-yellow-300 disabled:cursor-not-allowed disabled:opacity-40">Add to request{cartById.has(item.id) && ` ? ${cartById.get(item.id)?.quantity || 0} in cart`}</button></div></article>)}</div>}{!loading && !visibleInventory.length && <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No warehouse materials match your search.</div>}</section>
 
@@ -267,7 +263,103 @@ export default function SalesRequests() {
       </form>
     </dialog>
 
-    <section className="space-y-5"><div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Request history</p><h2 className="mt-1 text-xl font-black text-slate-900">Track your materials</h2><p className="mt-1 text-sm text-slate-500">Pending requests stay visible until Warehouse completes them.</p></div><a href="/sales/receipts" className="text-xs font-black text-blue-700 hover:underline">Open warehouse receipts →</a></div>{loading ? <div className="h-48 animate-pulse rounded-2xl bg-slate-200" /> : requests.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500">No requests yet. Your submitted requests will appear here.</div> : <div className="space-y-8"><div><div className="mb-3 flex items-center justify-between"><h3 className="flex items-center gap-2 text-sm font-black text-slate-900"><span className="h-2 w-2 rounded-full bg-amber-400" /> Pending requests</h3><span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black text-amber-700">{pendingRequests.length}</span></div>{pendingRequests.length ? <div className="grid gap-4 lg:grid-cols-2">{pendingRequests.map(requestCard)}</div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-xs font-semibold text-slate-500">No pending requests. Everything is up to date.</div>}</div><div><div className="mb-3 flex items-center justify-between"><h3 className="flex items-center gap-2 text-sm font-black text-slate-900"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Fulfilled and closed</h3><span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black text-emerald-700">{fulfilledRequests.length}</span></div>{fulfilledRequests.length ? <div className="grid gap-4 lg:grid-cols-2">{fulfilledRequests.map(requestCard)}</div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-8 text-center text-xs font-semibold text-slate-500">Completed requests will appear here.</div>}</div></div>}</section>
+    <dialog
+      ref={historyRef}
+      aria-labelledby="request-history-title"
+      className="m-auto w-[calc(100%_-_2rem)] max-w-6xl overflow-hidden rounded-3xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/60"
+    >
+      <div className="flex max-h-[85dvh] flex-col">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
+          <div>
+            <h2 id="request-history-title" className="text-xl font-black text-slate-900">Materials Requests</h2>
+            <p className="mt-1 text-sm text-slate-600">Track submitted requests and Warehouse releases.</p>
+          </div>
+          <button type="button" onClick={() => historyRef.current?.close()} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Close</button>
+        </div>
+
+        <div className="flex flex-wrap items-end justify-between gap-3 px-5 py-4 sm:px-6">
+          <label className="text-xs font-semibold text-slate-700">
+            Request status
+            <select
+              value={historyFilter}
+              onChange={(event) => setHistoryFilter(event.target.value as typeof historyFilter)}
+              className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium"
+            >
+              <option value="all">All requests ({requests.length})</option>
+              <option value="pending">Open ({pendingRequests.length})</option>
+              <option value="closed">Closed ({fulfilledRequests.length})</option>
+            </select>
+          </label>
+          <a href="/sales/receipts" className="text-sm font-bold text-blue-700 hover:underline">Warehouse receipts</a>
+        </div>
+
+        {error && <p role="alert" className="mx-5 mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+        {notice && <p role="status" className="mx-5 mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{notice}</p>}
+
+        <div className="min-h-0 overflow-auto border-t border-slate-200" aria-busy={loading}>
+          <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left text-sm">
+            <caption className="sr-only">Submitted materials requests</caption>
+            <thead className="sticky top-0 bg-slate-100 text-xs font-bold text-slate-700">
+              <tr>
+                <th scope="col" className="px-4 py-3 sm:pl-6">Request</th>
+                <th scope="col" className="px-4 py-3">Status</th>
+                <th scope="col" className="px-4 py-3">Materials and quantities</th>
+                <th scope="col" className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="align-top text-slate-700">
+              {visibleRequests.map((request) => (
+                <tr key={request.id} className="odd:bg-white even:bg-slate-50/60">
+                  <th scope="row" className="border-t border-slate-100 px-4 py-3 sm:pl-6">
+                    <span className="whitespace-nowrap font-mono text-xs font-bold text-slate-950">{request.reference}</span>
+                    <time dateTime={request.createdAt} className="mt-1 block text-xs font-normal text-slate-600">{new Date(request.createdAt).toLocaleString()}</time>
+                  </th>
+                  <td className="border-t border-slate-100 px-4 py-3">
+                    <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold capitalize ${statusStyle(request.status)}`}>{request.status.toLowerCase().replace(/_/g, ' ')}</span>
+                  </td>
+                  <td className="min-w-[14rem] border-t border-slate-100 px-4 py-3">
+                    <ul className="space-y-2">
+                      {request.items.map((item) => (
+                        <li key={item.id}>
+                          <div className="font-semibold text-slate-800">{item.inventoryItem.name}</div>
+                          <div className="text-xs text-slate-600">{item.releasedQuantity} of {item.requestedQuantity} {item.unit || 'pcs'} released</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td className="border-t border-slate-100 px-4 py-3">
+                    <div className="flex flex-col items-start gap-2">
+                      {request.releases.map(({ receipt }) => receipt && (
+                        <a key={receipt.reference} href={`/sales/receipts?reference=${encodeURIComponent(receipt.reference)}`} className="text-xs font-bold text-blue-700 hover:underline">
+                          Receipt {receipt.reference}
+                        </a>
+                      ))}
+                      {['PENDING', 'UNDER_REVIEW'].includes(request.status) && request.releases.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={() => void requestCancellation(request)}
+                          disabled={cancellingId === request.id}
+                          className="rounded-lg border border-red-200 px-2.5 py-1.5 text-left text-xs font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {cancellingId === request.id ? 'Requesting?' : 'Request cancellation'}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {visibleRequests.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-10 text-center text-slate-600">
+                    {loading ? 'Loading requests?' : historyFilter === 'all' ? 'No materials requests have been submitted yet.' : 'No requests match this status.'}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </dialog>
   </div>
 }
 
