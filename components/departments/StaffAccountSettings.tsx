@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { MAX_PROFILE_PHOTO_BYTES, PROFILE_PHOTO_TYPES, type StaffProfile } from '../../lib/staff-profile'
 
@@ -17,6 +17,7 @@ function readPhoto(file: File) {
 
 export default function StaffAccountSettings({ department, initialProfile }: { department: 'Sales' | 'Warehouse'; initialProfile: StaffProfile }) {
   const router = useRouter()
+  const photoDialog = useRef<HTMLDialogElement>(null)
   const [saved, setSaved] = useState(initialProfile)
   const [name, setName] = useState(initialProfile.name)
   const [phone, setPhone] = useState(initialProfile.phone || '')
@@ -103,11 +104,21 @@ export default function StaffAccountSettings({ department, initialProfile }: { d
         <fieldset disabled={saving} className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] disabled:opacity-70">
           <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6" aria-labelledby="photo-heading">
             <h2 id="photo-heading" className="text-base font-bold text-slate-950">Profile photo</h2>
-            <div className="mt-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-amber-100 text-3xl font-black text-amber-900 ring-4 ring-amber-50">
-              {avatar
-                ? <img src={avatar} alt="Profile photo" className="h-full w-full object-cover" />
-                : <span aria-hidden="true">{(name.trim() || department).charAt(0).toUpperCase()}</span>}
-            </div>
+            {avatar ? (
+              <button
+                type="button"
+                aria-label="Enlarge profile photo"
+                aria-haspopup="dialog"
+                onClick={() => photoDialog.current?.showModal()}
+                className="mt-5 block h-28 w-28 cursor-zoom-in overflow-hidden rounded-full bg-slate-100 ring-4 ring-amber-50 transition hover:ring-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-amber-500"
+              >
+                <img src={avatar} alt="" className="h-full w-full object-cover" />
+              </button>
+            ) : (
+              <div aria-hidden="true" className="mt-5 flex h-28 w-28 items-center justify-center rounded-full bg-amber-100 text-3xl font-black text-amber-900 ring-4 ring-amber-50">
+                {(name.trim() || department).charAt(0).toUpperCase()}
+              </div>
+            )}
             <p id="photo-formats" className="mt-5 text-xs text-slate-600">JPG, PNG, or WebP. Up to 2 MB.</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <label className="cursor-pointer rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-50 focus-within:ring-2 focus-within:ring-amber-400">
@@ -164,6 +175,21 @@ export default function StaffAccountSettings({ department, initialProfile }: { d
           </button>
         </div>
       </form>
+      {avatar && (
+        <dialog
+          ref={photoDialog}
+          aria-labelledby="profile-photo-preview-title"
+          className="m-auto max-h-[calc(100dvh_-_2rem)] max-w-[calc(100vw_-_2rem)] overflow-auto rounded-2xl bg-slate-950 p-0 text-white shadow-2xl backdrop:bg-slate-950/75"
+        >
+          <div className="flex items-center justify-between gap-4 px-4 py-3">
+            <h2 id="profile-photo-preview-title" className="text-sm font-bold">Profile photo</h2>
+            <button type="button" onClick={() => photoDialog.current?.close()} className="rounded-lg border border-white/25 px-3 py-1.5 text-xs font-bold hover:bg-white/10">
+              Close
+            </button>
+          </div>
+          <img src={avatar} alt={`Profile photo of ${name.trim() || department}`} className="mx-auto block h-auto max-h-[calc(100dvh_-_5rem)] w-auto max-w-full object-contain" />
+        </dialog>
+      )}
     </div>
   )
 }
