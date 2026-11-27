@@ -65,13 +65,22 @@ export default function SalesReceiptsPage() {
   const [search, setSearch] = useState('')
 
   // Handover confirmation modal state
-  const [handoverTarget, setHandoverTarget] = useState<Release | null>(null)
+  const [confirmingHandover, setConfirmingHandover] = useState(false)
   const [handoverNotes, setHandoverNotes] = useState('')
   const [acknowledging, setAcknowledging] = useState(false)
   const [acknowledgeError, setAcknowledgeError] = useState('')
 
   // Receipt modal state
-  const [viewingRelease, setViewingRelease] = useState<Release | null>(null)
+  const [viewingReleaseId, setViewingReleaseId] = useState<string | null>(null)
+  const viewingRelease = releases.find((release) => release.id === viewingReleaseId)
+
+  function closeReceipt() {
+    if (acknowledging) return
+    setViewingReleaseId(null)
+    setConfirmingHandover(false)
+    setHandoverNotes('')
+    setAcknowledgeError('')
+  }
 
   const load = useCallback(async () => {
     try {
@@ -93,11 +102,12 @@ export default function SalesReceiptsPage() {
   }, [router])
 
   useEffect(() => {
+    setSearch(new URLSearchParams(window.location.search).get('reference') || '')
     void load()
   }, [load])
 
   async function handleAcknowledge() {
-    if (!handoverTarget) return
+    if (!viewingRelease || viewingRelease.receivedBySalesId || acknowledging) return
     setAcknowledging(true)
     setAcknowledgeError('')
     try {
@@ -105,15 +115,15 @@ export default function SalesReceiptsPage() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          releaseId: handoverTarget.id,
+          releaseId: viewingRelease.id,
           notes: handoverNotes.trim() || undefined,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to acknowledge receipt')
-      setHandoverTarget(null)
-      setHandoverNotes('')
       await load()
+      setConfirmingHandover(false)
+      setHandoverNotes('')
     } catch (err: any) {
       setAcknowledgeError(err.message || 'Failed to acknowledge physical handover')
     } finally {
@@ -121,13 +131,21 @@ export default function SalesReceiptsPage() {
     }
   }
 
+  const pendingCount = releases.filter((release) => !release.receivedBySalesId).length
+  const filters = [
+    { value: 'ALL', label: 'All', count: releases.length },
+    { value: 'PENDING', label: 'Awaiting handover', count: pendingCount },
+    { value: 'ACKNOWLEDGED', label: 'Received', count: releases.length - pendingCount },
+  ] as const
+
   const filteredReleases = releases.filter((r) => {
     if (filter === 'PENDING' && r.receivedBySalesId) return false
     if (filter === 'ACKNOWLEDGED' && !r.receivedBySalesId) return false
     if (!search.trim()) return true
-    const q = search.toLowerCase()
+    const q = search.trim().toLowerCase()
     return (
       r.receiptNumber.toLowerCase().includes(q) ||
+      (r.receipt?.reference || '').toLowerCase().includes(q) ||
       r.request.reference.toLowerCase().includes(q) ||
       (r.request.order?.clientName || '').toLowerCase().includes(q) ||
       (r.request.customerReference || '').toLowerCase().includes(q) ||
@@ -137,324 +155,132 @@ export default function SalesReceiptsPage() {
   })
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Materials Received & Warehouse Receipts</h1>
-          <p className="mt-0.5 text-xs font-medium text-slate-500">
-            View warehouse releases, verify physically released quantities, and acknowledge physical handover. A release is not added to Sales Stock until Sales accepts custody.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
-            {releases.length} Releases
-          </span>
-          <span className="rounded-xl bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
-            {releases.filter((r) => !r.receivedBySalesId).length} Pending Handover
-          </span>
-        </div>
-      </div>
+    <div className="sales-receipts-page space-y-6">
+      <style jsx global>{`
+        @media print {
+          @page { size: A4 portrait; margin: 14mm; }
+          html:has(.sales-receipt-print), body:has(.sales-receipt-print) { height: auto; overflow: visible; background: white; }
+          div:has(> div > main > .sales-receipts-page .sales-receipt-print) { background: white; min-height: 0; }
+          div:has(> div > main > .sales-receipts-page .sales-receipt-print) > aside,
+          div:has(> main > .sales-receipts-page .sales-receipt-print) > :is(header, footer),
+          .sales-receipts-page:has(.sales-receipt-print) .sales-receipt-screen-only { display: none !important; }
+          div:has(> main > .sales-receipts-page .sales-receipt-print) { display: block; margin: 0 !important; min-height: 0; }
+          main:has(> .sales-receipts-page .sales-receipt-print) { padding: 0; }
+          .sales-receipt-print { position: static; display: block; padding: 0; margin: 0 !important; background: white; backdrop-filter: none; }
+          .sales-receipt-paper { max-height: none; max-width: none; overflow: visible; padding: 0; box-shadow: none; }
+          .sales-receipt-paper .sales-receipt-items { overflow: visible; }
+          .sales-receipt-items table { min-width: 0; }
+          .sales-receipt-items thead { display: table-header-group; }
+          .sales-receipt-items tr { break-inside: avoid; overflow-wrap: anywhere; }
+        }
+      `}</style>
+
+      <header className="sales-receipt-screen-only rounded-3xl bg-slate-950 px-5 py-6 text-white sm:px-7">
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Warehouse Receipts</h1>
+        <p className="mt-2 max-w-2xl text-sm text-slate-300">Review Warehouse releases and acknowledge handover after receiving the materials.</p>
+      </header>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">
+        <p role="alert" className="sales-receipt-screen-only rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
           {error}
-        </div>
+        </p>
       )}
 
-      {/* Filters and search */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex rounded-xl bg-slate-200/70 p-1">
-          <button
-            onClick={() => setFilter('ALL')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-              filter === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            All Releases ({releases.length})
-          </button>
-          <button
-            onClick={() => setFilter('PENDING')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-              filter === 'PENDING' ? 'bg-white text-amber-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Pending Handover ({releases.filter((r) => !r.receivedBySalesId).length})
-          </button>
-          <button
-            onClick={() => setFilter('ACKNOWLEDGED')}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
-              filter === 'ACKNOWLEDGED' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            Received / Acknowledged ({releases.filter((r) => r.receivedBySalesId).length})
-          </button>
-        </div>
-
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search receipt, request, client…"
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 sm:w-64"
-        />
-      </div>
-
-      {loading ? (
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-2xl bg-slate-200/70" />
-          ))}
-        </div>
-      ) : filteredReleases.length === 0 ? (
-        <EmptyState
-          icon={<DocumentIcon className="h-6 w-6" />}
-          title={releases.length === 0 ? 'No releases yet' : 'No releases match your filter'}
-          message={
-            releases.length === 0
-              ? 'When the Warehouse department verifies and releases materials for sales requests, the release records and receipts will appear here.'
-              : 'Try clearing the search or changing the filter tab.'
-          }
-        />
-      ) : (
-        <div className="space-y-4">
-          {filteredReleases.map((release) => {
-            const isHandedOver = Boolean(release.receivedBySalesId)
-            const totalItemsReleased = release.items.reduce((s, it) => s + Number(it.quantity || 0), 0)
-
-            return (
-              <div
-                key={release.id}
-                className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
-              >
-                {/* Header row */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-5 py-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-black text-slate-900">{release.receiptNumber}</span>
-                    <span className="rounded-lg bg-yellow-400/20 px-2 py-0.5 text-[10px] font-black text-yellow-900">
-                      Req: {release.request.reference}
-                    </span>
-                    {release.request.order && (
-                      <span className="rounded-lg bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                        Client: {release.request.order.clientName}
-                      </span>
-                    )}
-                    {release.request.customerReference && (
-                      <span className="rounded-lg bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                        Ref: {release.request.customerReference}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {isHandedOver ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-black text-emerald-800">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                        Handover Confirmed
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[10px] font-black text-amber-800">
-                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
-                        Awaiting Sales Handover
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Body info */}
-                <div className="p-5">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Release Details</div>
-                      <div className="mt-1 text-xs font-semibold text-slate-800">
-                        Released by: <span className="font-bold">{release.releasedBy.name}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-500">Date: {formatDate(release.createdAt)}</div>
-                      {release.notes && (
-                        <div className="mt-1 text-[11px] italic text-slate-600">Note: {release.notes}</div>
-                      )}
-                    </div>
-
-                    <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Sales Physical Handover
-                      </div>
-                      {isHandedOver ? (
-                        <div className="mt-1 space-y-0.5">
-                          <div className="text-xs font-semibold text-emerald-900">
-                            Received by: <span className="font-bold">{release.salesRecipient?.name || 'Sales Officer'}</span>
-                          </div>
-                          <div className="text-[11px] text-emerald-700">At: {formatDate(release.receivedBySalesAt)}</div>
-                          {release.salesReceivedNotes && (
-                            <div className="text-[11px] italic text-emerald-600">
-                              Remarks: {release.salesReceivedNotes}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="mt-1">
-                          <p className="text-[11px] text-amber-800 font-medium">
-                            Physical items released by Warehouse. Sales must confirm physical custody upon receiving goods.
-                          </p>
-                          <button
-                            onClick={() => {
-                              setHandoverTarget(release)
-                              setHandoverNotes('')
-                              setAcknowledgeError('')
-                            }}
-                            className="mt-2 rounded-xl bg-yellow-400 px-3 py-1.5 text-xs font-black text-black shadow-sm transition hover:bg-yellow-300"
-                          >
-                            Acknowledge Physical Handover
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col justify-between items-start md:items-end">
-                      <div className="text-right">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Summary</div>
-                        <div className="mt-1 text-sm font-black text-slate-900">
-                          {release.items.length} materials · {totalItemsReleased} total units
-                        </div>
-                      </div>
-
-                      <div className="mt-3 flex gap-2">
-                        <button
-                          onClick={() => setViewingRelease(release)}
-                          className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                        >
-                          View Official Receipt
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Items released table */}
-                  <div className="mt-4 overflow-x-auto rounded-xl border border-slate-100 bg-slate-50/50">
-                    <table className="w-full text-left text-xs">
-                      <thead>
-                        <tr className="border-b border-slate-200/60 text-[10px] font-black uppercase tracking-wider text-slate-400">
-                          <th className="py-2 px-3">Item / Material</th>
-                          <th className="py-2 px-3 text-center">Requested</th>
-                          <th className="py-2 px-3 text-center">Released Now</th>
-                          <th className="py-2 px-3 text-center">Unavailable / Shortage</th>
-                          <th className="py-2 px-3">Discrepancy Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {release.items.map((it) => (
-                          <tr key={it.id} className="text-slate-700">
-                            <td className="py-2 px-3 font-semibold">
-                              <div>{it.requestItem.inventoryItem.name}</div>
-                              {it.requestItem.inventoryItem.sku && (
-                                <div className="font-mono text-[10px] text-slate-400">{it.requestItem.inventoryItem.sku}</div>
-                              )}
-                            </td>
-                            <td className="py-2 px-3 text-center font-bold">
-                              {it.requestItem.requestedQuantity} {it.requestItem.unit || 'pcs'}
-                            </td>
-                            <td className="py-2 px-3 text-center font-black text-emerald-700">
-                              {it.quantity} {it.requestItem.unit || 'pcs'}
-                            </td>
-                            <td className="py-2 px-3 text-center font-bold text-amber-700">
-                              {it.unavailableQuantity > 0 ? `${it.unavailableQuantity} ${it.requestItem.unit || 'pcs'}` : '0'}
-                            </td>
-                            <td className="py-2 px-3 text-[11px] text-slate-500">
-                              {it.discrepancyNotes || '—'}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Acknowledge Handover Modal */}
-      {handoverTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
-            <h2 className="text-lg font-black text-slate-900">Acknowledge Physical Handover</h2>
-            <p className="mt-1 text-xs text-slate-500">
-              Confirm that the physical goods for release{' '}
-              <span className="font-mono font-bold text-slate-800">{handoverTarget.receiptNumber}</span> have been received
-              in good condition by Sales.
-            </p>
-
-            {acknowledgeError && (
-              <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
-                {acknowledgeError}
-              </div>
-            )}
-
-            <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs">
-              <div className="font-semibold text-slate-700">Items being received:</div>
-              <ul className="mt-1 list-disc pl-4 space-y-0.5 text-slate-600">
-                {handoverTarget.items.map((it) => (
-                  <li key={it.id}>
-                    {it.quantity} {it.requestItem.unit || 'pcs'} — {it.requestItem.inventoryItem.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="mt-4">
-              <label className="block text-xs font-bold text-slate-700">
-                Handover Notes / Verification Remarks (Optional)
-              </label>
-              <textarea
-                value={handoverNotes}
-                onChange={(e) => setHandoverNotes(e.target.value)}
-                placeholder="e.g. Received at sales dispatch desk, cartons inspected and intact..."
-                rows={3}
-                className="mt-1 w-full rounded-xl border border-slate-200 p-2.5 text-xs text-slate-800 focus:border-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              />
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
+      <section className="sales-receipt-screen-only overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="Warehouse receipts" aria-busy={loading}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4">
+          <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100 p-1" aria-label="Filter by handover status">
+            {filters.map(({ value, label, count }) => (
               <button
+                key={value}
                 type="button"
-                onClick={() => setHandoverTarget(null)}
-                disabled={acknowledging}
-                className="rounded-xl px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
+                aria-pressed={filter === value}
+                onClick={() => setFilter(value)}
+                className={`rounded-lg px-3 py-2 text-xs font-bold ${filter === value ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-600 hover:bg-slate-200'}`}
               >
-                Cancel
+                {label} ({count})
               </button>
-              <button
-                type="button"
-                onClick={handleAcknowledge}
-                disabled={acknowledging}
-                className="rounded-xl bg-yellow-400 px-5 py-2 text-xs font-black text-black shadow-sm transition hover:bg-yellow-300 disabled:opacity-50"
-              >
-                {acknowledging ? 'Confirming...' : 'Confirm Custody Received'}
-              </button>
-            </div>
+            ))}
           </div>
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            aria-label="Search receipts"
+            placeholder="Search receipt, request, or client"
+            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-800 focus:border-yellow-500 sm:w-64"
+          />
         </div>
-      )}
+
+        {loading ? (
+          <p role="status" className="px-5 py-10 text-center text-sm text-slate-600">Loading receipts...</p>
+        ) : filteredReleases.length === 0 ? (
+          <EmptyState
+            icon={<DocumentIcon className="h-6 w-6" />}
+            title={releases.length === 0 ? 'No receipts yet' : 'No receipts match your filters'}
+            message={releases.length === 0 ? 'Warehouse releases will appear here.' : 'Change the status filter or search for another reference.'}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <caption className="sr-only">Warehouse release receipts</caption>
+              <thead className="bg-slate-100 text-xs font-bold text-slate-700">
+                <tr>
+                  <th scope="col" className="px-4 py-3">Receipt</th>
+                  <th scope="col" className="px-4 py-3">Request</th>
+                  <th scope="col" className="px-4 py-3">Handover status</th>
+                  <th scope="col" className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredReleases.map((release) => {
+                  const reference = release.receipt?.reference || release.receiptNumber
+                  const customer = release.request.order?.clientName || release.request.customerReference
+                  const received = Boolean(release.receivedBySalesId)
+                  return (
+                    <tr key={release.id} className="even:bg-slate-50 hover:bg-yellow-50/60">
+                      <th scope="row" className="px-4 py-3">
+                        <span className="font-mono text-xs font-bold text-slate-950">{reference}</span>
+                        <time dateTime={release.createdAt} className="mt-1 block text-xs font-normal text-slate-600">{formatDate(release.createdAt)}</time>
+                      </th>
+                      <td className="px-4 py-3">
+                        <span className="font-mono text-xs font-semibold text-slate-800">{release.request.reference}</span>
+                        {customer && <span className="mt-1 block text-xs text-slate-600">{customer}</span>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-bold ${received ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900'}`}>
+                          {received ? 'Received' : 'Awaiting handover'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button type="button" onClick={() => setViewingReleaseId(release.id)} aria-label={`View details for ${reference}`} className="whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:border-yellow-400 hover:bg-yellow-50">
+                          View details
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       {/* Official Receipt Modal */}
       {viewingRelease && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+        <div role="dialog" aria-modal="true" aria-labelledby="receipt-title" className="sales-receipt-print fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="sales-receipt-paper max-h-[90dvh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
             <div className="flex items-start justify-between border-b border-slate-200 pb-4">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow-600">
                   ELETTRO ENGINEERING ENTERPRISES
                 </div>
-                <h2 className="text-xl font-black text-slate-900">WAREHOUSE MATERIAL RELEASE RECEIPT</h2>
+                <h2 id="receipt-title" className="text-xl font-black text-slate-900">Warehouse Material Release Receipt</h2>
                 <div className="mt-1 font-mono text-xs font-bold text-slate-500">
                   Receipt Ref: {viewingRelease.receipt?.reference || viewingRelease.receiptNumber}
                 </div>
               </div>
-              <button
-                onClick={() => setViewingRelease(null)}
-                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-              >
-                ✕
+              <button type="button" onClick={closeReceipt} disabled={acknowledging} className="sales-receipt-screen-only rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">
+                Close
               </button>
             </div>
 
@@ -479,9 +305,18 @@ export default function SalesReceiptsPage() {
                 </div>
               </div>
 
-              {/* Items Released Breakdown */}
-              <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <table className="w-full text-left text-xs">
+              {(viewingRelease.notes || viewingRelease.receivedBySalesId) && (
+                <div className="space-y-2 rounded-xl border border-slate-200 p-4 text-sm text-slate-700">
+                  {viewingRelease.notes && <p className="break-words"><strong>Warehouse notes</strong> {viewingRelease.notes}</p>}
+                  {viewingRelease.receivedBySalesId && (
+                    <p><strong>Received by</strong> {viewingRelease.salesRecipient?.name || 'Sales Officer'} ? {formatDate(viewingRelease.receivedBySalesAt)}</p>
+                  )}
+                  {viewingRelease.salesReceivedNotes && <p className="break-words"><strong>Handover remarks</strong> {viewingRelease.salesReceivedNotes}</p>}
+                </div>
+              )}
+
+              <div className="sales-receipt-items overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="w-full min-w-[500px] text-left text-xs">
                   <thead className="bg-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-500">
                     <tr>
                       <th className="py-2.5 px-4">Material / Code</th>
@@ -543,18 +378,52 @@ export default function SalesReceiptsPage() {
               </div>
             </div>
 
-            <div className="mt-8 flex justify-end gap-3 border-t border-slate-200 pt-4">
+            {confirmingHandover && !viewingRelease.receivedBySalesId && (
+              <form
+                className="sales-receipt-screen-only mt-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4"
+                onSubmit={(event) => { event.preventDefault(); void handleAcknowledge() }}
+              >
+                <h3 className="text-sm font-bold text-slate-900">Confirm physical handover</h3>
+                <p className="text-xs text-slate-700">Verify the released quantities above against the materials Sales received.</p>
+                {acknowledgeError && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{acknowledgeError}</p>}
+                <label className="block text-xs font-semibold text-slate-700">
+                  Handover notes (optional)
+                  <textarea
+                    value={handoverNotes}
+                    onChange={(event) => setHandoverNotes(event.target.value)}
+                    disabled={acknowledging}
+                    rows={3}
+                    className="mt-1 block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm"
+                  />
+                </label>
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button type="button" onClick={() => setConfirmingHandover(false)} disabled={acknowledging} className="rounded-lg px-3 py-2 text-xs font-bold text-slate-700 hover:bg-amber-100">Cancel</button>
+                  <button type="submit" disabled={acknowledging} className="rounded-lg bg-yellow-400 px-3 py-2 text-xs font-black text-slate-950 hover:bg-yellow-300 disabled:opacity-50">
+                    {acknowledging ? 'Confirming...' : 'Confirm receipt'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            <div className="sales-receipt-screen-only mt-6 flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4">
+              {!viewingRelease.receivedBySalesId && !confirmingHandover && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAcknowledgeError('')
+                    setConfirmingHandover(true)
+                  }}
+                  className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-slate-950 hover:bg-yellow-300"
+                >
+                  Acknowledge handover
+                </button>
+              )}
               <button
+                type="button"
                 onClick={() => window.print()}
                 className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-black text-white hover:bg-slate-800"
               >
-                Print Hard Copy
-              </button>
-              <button
-                onClick={() => setViewingRelease(null)}
-                className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100"
-              >
-                Close
+                Print receipt
               </button>
             </div>
           </div>
