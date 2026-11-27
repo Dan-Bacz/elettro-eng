@@ -1,6 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
+import SalesLetterhead from '../sales/SalesLetterhead'
 
 type Receipt = {
   id: string
@@ -43,12 +45,63 @@ type Receipt = {
   }
 }
 
-export default function WarehouseReceipts() {
+type ReceiptRegister = {
+  preparedBy: { name: string; role: string }
+  receipts: {
+    id: string
+    reference: string
+    createdAt: string
+    release: { request: { reference: string; source: string } }
+  }[]
+}
+
+function sourceLabel(source?: string) {
+  if (source === 'TECHNICIAN') return 'Technician'
+  if (source === 'CLIENT_ORDER') return 'Client Sales Order'
+  return 'Sales Department'
+}
+
+export default function WarehouseReceipts({ canPrintRegister = false }: { canPrintRegister?: boolean }) {
   const [receipts, setReceipts] = useState<Receipt[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [searchFilter, setSearchFilter] = useState('')
   const [managedReceiptId, setManagedReceiptId] = useState<string | null>(null)
+  const [register, setRegister] = useState<ReceiptRegister | null>(null)
+  const [printingRegister, setPrintingRegister] = useState(false)
+  const [registerError, setRegisterError] = useState('')
+  const pageRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const resetRegister = () => setRegister(null)
+    window.addEventListener('afterprint', resetRegister)
+    return () => window.removeEventListener('afterprint', resetRegister)
+  }, [])
+
+  async function printDocument() {
+    const page = pageRef.current
+    const section = page?.dataset.printMode === 'register' ? '.warehouse-receipt-register' : '.warehouse-receipt-paper'
+    const logo = page?.querySelector<HTMLImageElement>(`${section} .sales-letterhead-logo`)
+    await logo?.decode().catch(() => {})
+    window.print()
+  }
+
+  async function printRegister() {
+    setPrintingRegister(true)
+    setRegisterError('')
+    try {
+      const response = await fetch('/api/warehouse-receipts?register=1', { cache: 'no-store' })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Could not load the receipt register.')
+      flushSync(() => setRegister(data))
+      await printDocument()
+    } catch (error) {
+      setRegister(null)
+      setRegisterError(error instanceof Error ? error.message : 'Could not print the receipt register.')
+    } finally {
+      setPrintingRegister(false)
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -83,7 +136,7 @@ export default function WarehouseReceipts() {
   })
 
   return (
-    <div className="space-y-6">
+    <div ref={pageRef} data-print-mode={register ? 'register' : managedReceiptId ? 'receipt' : undefined} className="warehouse-receipts-page space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-black text-slate-900">Warehouse Release Receipts</h1>
@@ -99,16 +152,20 @@ export default function WarehouseReceipts() {
             placeholder="Search receipt #, request #, user…"
             className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium focus:border-yellow-400 focus:outline-none"
           />
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300 shadow-sm transition-colors"
-          >
-            Print / Save PDF
-          </button>
+          {canPrintRegister && (
+            <button
+              type="button"
+              onClick={() => void printRegister()}
+              disabled={printingRegister}
+              className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-slate-900 shadow-sm hover:bg-yellow-300 disabled:opacity-50"
+            >
+              {printingRegister ? 'Preparing register...' : 'Print all receipts'}
+            </button>
+          )}
         </div>
       </div>
 
+      {registerError && <p role="alert" className="rounded-xl bg-red-50 p-4 text-sm text-red-700 print:hidden">{registerError}</p>}
       {error && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700 print:hidden">{error}</div>}
 
       {loading ? (
@@ -122,7 +179,7 @@ export default function WarehouseReceipts() {
           No warehouse release receipts found.
         </div>
       ) : (
-        <div className="space-y-8">
+        <div className="warehouse-receipt-list space-y-8">
           {filteredReceipts.map((receipt) => {
             const snap = receipt.snapshot
             const isTech = snap.requestSource === 'TECHNICIAN'
@@ -131,9 +188,9 @@ export default function WarehouseReceipts() {
             return (
               <article
                 key={receipt.id}
-                className={`receipt-card ${managedReceiptId === receipt.id ? 'receipt-open' : ''} break-inside-avoid rounded-2xl border border-slate-300 bg-white p-5 shadow-sm sm:p-6`}
+                className={`receipt-card ${managedReceiptId === receipt.id ? 'receipt-open' : ''} rounded-2xl border border-slate-300 bg-white p-5 shadow-sm sm:p-6`}
               >
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <h2 className="font-mono text-base font-black text-slate-900">{snap.requestReference || receipt.reference}</h2>
@@ -154,33 +211,26 @@ export default function WarehouseReceipts() {
                 </div>
 
                 {managedReceiptId === receipt.id && (
-                  <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4">
-                    <div className="mx-auto my-6 max-w-6xl rounded-2xl bg-white p-5 shadow-2xl sm:p-8">
+                  <div role="dialog" aria-modal="true" aria-labelledby="warehouse-receipt-title" className="warehouse-receipt-overlay fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4">
+                    <div className="warehouse-receipt-paper mx-auto my-6 max-w-6xl rounded-2xl bg-white p-5 shadow-2xl sm:p-8">
                       <div className="mb-4 flex justify-end gap-2 print:hidden">
-                        <button type="button" onClick={() => window.print()} className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300">Print / Save PDF</button>
+                        <button type="button" onClick={() => void printDocument()} className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-slate-900 hover:bg-yellow-300">Print / Save PDF</button>
                         <button type="button" onClick={() => setManagedReceiptId(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Close</button>
                       </div>
-                {/* Official Receipt Header */}
-                <div className="border-b-2 border-slate-900 pb-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                      <div className="text-xl font-black tracking-wide text-slate-900">
-                        ELETTRO ENGINEERING ENTERPRISES
-                      </div>
-                      <div className="text-xs font-black uppercase tracking-widest text-yellow-600">
-                        Warehouse Material Release Receipt
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono text-base font-black text-slate-900">
-                        {snap.receiptNumber || receipt.reference}
-                      </div>
-                      <div className="text-[11px] text-slate-500 font-medium">Release Date: {formattedDate}</div>
-                    </div>
-                  </div>
+                <div className="warehouse-receipt-heading">
+                  <SalesLetterhead />
+                  <h2 id="warehouse-receipt-title" className="warehouse-receipt-title mt-4 text-xl font-black text-slate-900">Warehouse Material Release Receipt</h2>
 
                   {/* Metadata Grid */}
-                  <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-4">
+                  <div className="warehouse-receipt-meta mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-4">
+                    <div>
+                      <span className="block font-bold text-slate-600">Receipt reference</span>
+                      <span className="font-bold text-slate-900">{snap.receiptNumber || receipt.reference}</span>
+                    </div>
+                    <div>
+                      <span className="block font-bold text-slate-600">Release date</span>
+                      <span className="font-bold text-slate-900">{formattedDate}</span>
+                    </div>
                     <div>
                       <span className="block font-bold text-slate-400 uppercase text-[9px]">Warehouse Request</span>
                       <span className="font-bold text-slate-800">{snap.requestReference || '—'}</span>
@@ -188,7 +238,7 @@ export default function WarehouseReceipts() {
                     <div>
                       <span className="block font-bold text-slate-400 uppercase text-[9px]">Request Source</span>
                       <span className="font-bold text-slate-800">
-                        {isTech ? 'Technician Account' : snap.requestSource === 'CLIENT_ORDER' ? 'Client Sales Order' : 'Sales Department'}
+                        {sourceLabel(snap.requestSource)}
                       </span>
                     </div>
                     <div>
@@ -215,7 +265,7 @@ export default function WarehouseReceipts() {
                 </div>
 
                 {/* Items Table */}
-                <div className="mt-5 overflow-x-auto">
+                <div className="warehouse-receipt-table mt-5 overflow-x-auto">
                   <table className="w-full min-w-[700px] text-left text-xs">
                     <thead className="border-b border-slate-200 bg-slate-100/70 text-[10px] font-bold uppercase tracking-wider text-slate-600">
                       <tr>
@@ -265,7 +315,7 @@ export default function WarehouseReceipts() {
                 )}
 
                 {/* Formal Signature Blocks */}
-                <div className="mt-10 grid grid-cols-3 gap-8 border-t border-slate-200 pt-8 text-xs">
+                <div className="warehouse-receipt-signatures mt-10 grid grid-cols-3 gap-8 border-t border-slate-200 pt-8 text-xs">
                   <div>
                     <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-6">Released By:</div>
                     <div className="border-b border-slate-400 pb-1 font-bold text-slate-800">
@@ -299,36 +349,72 @@ export default function WarehouseReceipts() {
         </div>
       )}
 
-      {/* Print CSS styling */}
+      {register && (
+        <section className="warehouse-receipt-register hidden">
+          <header className="warehouse-receipt-heading">
+            <SalesLetterhead />
+            <h2 className="warehouse-receipt-title">Warehouse Receipt Register</h2>
+            <div className="warehouse-receipt-meta">
+              <div><strong>{register.preparedBy.role === 'WAREHOUSE' ? 'Warehouse Department Officer' : 'Prepared by'}</strong><div>{register.preparedBy.name}</div></div>
+              <div><strong>Receipts on record</strong><div>{register.receipts.length.toLocaleString()}</div></div>
+            </div>
+          </header>
+          <div className="warehouse-receipt-table mt-5">
+            <table className="w-full text-left">
+              <thead><tr><th scope="col">Receipt reference</th><th scope="col">Warehouse request</th><th scope="col">Request source</th><th scope="col">Issued on</th></tr></thead>
+              <tbody>
+                {register.receipts.map((receipt) => (
+                  <tr key={receipt.id}>
+                    <th scope="row">{receipt.reference}</th>
+                    <td>{receipt.release.request.reference}</td>
+                    <td>{sourceLabel(receipt.release.request.source)}</td>
+                    <td>{new Date(receipt.createdAt).toLocaleString()}</td>
+                  </tr>
+                ))}
+                {register.receipts.length === 0 && <tr><td colSpan={4}>No receipts on record.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <style jsx global>{`
         @media print {
-          body {
-            background: white !important;
-            color: black !important;
+          @page { size: A4 portrait; margin: 15mm; }
+          html:has(.warehouse-receipts-page[data-print-mode]),
+          body:has(.warehouse-receipts-page[data-print-mode]) { height: auto; overflow: visible; background: white; }
+          div:has(> div > main > .warehouse-receipts-page[data-print-mode]) { background: white !important; min-height: 0; }
+          div:has(> div > main > .warehouse-receipts-page[data-print-mode]) > aside,
+          div:has(> main > .warehouse-receipts-page[data-print-mode]) > :is(header, footer),
+          .warehouse-receipts-page[data-print-mode="register"] .warehouse-receipt-list,
+          .warehouse-receipts-page[data-print-mode="receipt"] .receipt-card:not(.receipt-open) { display: none !important; }
+          div:has(> main > .warehouse-receipts-page[data-print-mode]) { display: block; margin: 0 !important; min-height: 0; }
+          main:has(> .warehouse-receipts-page[data-print-mode]) { padding: 0; }
+          .warehouse-receipts-page[data-print-mode] { color: #111; font: 10pt/1.4 Arial, sans-serif; }
+          .warehouse-receipts-page[data-print-mode] > * { margin: 0 !important; }
+          .warehouse-receipts-page[data-print-mode="register"] .warehouse-receipt-register { display: block; }
+          .warehouse-receipts-page .receipt-open,
+          .warehouse-receipt-overlay,
+          .warehouse-receipt-paper {
+            position: static; max-width: none; max-height: none; overflow: visible;
+            margin: 0; padding: 0; border: 0; border-radius: 0; background: white; box-shadow: none;
           }
-          header,
-          aside,
-          nav,
-          footer,
-          button,
-          input {
-            display: none !important;
-          }
-          main {
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-          }
-          .receipt-card {
-            box-shadow: none !important;
-            border: 1px solid #111 !important;
-            page-break-after: always;
-            padding: 24px !important;
-            margin: 0 0 20px 0 !important;
-          }
-          .receipt-card:not(.receipt-open) {
-            display: none !important;
-          }
+          .warehouse-receipt-heading, .warehouse-receipt-signatures { break-inside: avoid; }
+          .warehouse-receipt-title { margin: 5mm 0 2mm; font-size: 20pt; line-height: 1.15; font-weight: 700; }
+          .warehouse-receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 5mm; margin: 0; padding: 0; background: white; }
+          .warehouse-receipt-meta > div { overflow-wrap: anywhere; }
+          .warehouse-receipt-meta > div > :first-child { display: block; color: #111; font-size: 8pt; font-weight: 700; }
+          .warehouse-receipt-meta > div > :nth-child(2) { color: #111; font-size: 10pt; font-weight: normal; }
+          .warehouse-receipt-table { overflow: visible; }
+          .warehouse-receipt-table table { min-width: 0; table-layout: fixed; border-collapse: collapse; }
+          .warehouse-receipt-table thead { display: table-header-group; background: white; }
+          .warehouse-receipt-table tr { break-inside: avoid; }
+          .warehouse-receipt-table :is(th, td) { padding: 2mm 1mm; color: #111; background: white; font-size: 8pt; white-space: normal; overflow-wrap: anywhere; }
+          .warehouse-receipt-table thead th { border-block: 1px solid #555; }
+          .warehouse-receipt-table tbody :is(th, td) { border-bottom: 1px solid #bbb; }
+          .warehouse-receipt-table td span { color: inherit; background: none; padding: 0; }
+          .warehouse-receipt-paper thead th:first-child { width: 17%; }
+          .warehouse-receipt-paper thead th:last-child { width: 18%; }
         }
       `}</style>
     </div>
