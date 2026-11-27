@@ -219,6 +219,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({
         department: 'SALES',
+        preparedBy: { name: user.name, role: user.role },
         summary: {
           totalOrders: orders.length,
           receivedOrders: receivedSalesOrders.length,
