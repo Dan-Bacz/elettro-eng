@@ -114,5 +114,6 @@ export type CartItem = {
   model?: string | null
   unit?: string | null
   unitPrice: number
+  availableQuantity?: number
   quantity: number
 }

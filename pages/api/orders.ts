@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import jwt from 'jsonwebtoken'
 import { getJwtSecret } from '../../lib/auth'
+import { getSalesStock } from '../../lib/sales-stock'
 import { isFullyReceivedSale } from '../../lib/sales-metrics'
 
 const prisma = new PrismaClient()
@@ -45,28 +46,6 @@ function withReference(order: any): any {
   }
 }
 
-async function getSalesStockAvailability(db: any) {
-  const [released, sold] = await Promise.all([
-    db.warehouseRelease.findMany({
-      where: { receivedBySalesId: { not: null }, request: { source: 'INTERNAL_SALES' } },
-      select: { items: { select: { quantity: true, requestItem: { select: { inventoryItemId: true } } } } },
-    }),
-    db.salesSaleItem.groupBy({ by: ['inventoryItemId'], _sum: { quantity: true } }),
-  ])
-  const soldByItem = new Map(sold.map((row: any) => [row.inventoryItemId, row._sum.quantity || 0]))
-  const releasedByItem = new Map<string, number>()
-  for (const release of released) {
-    for (const line of release.items) {
-      const id = line.requestItem.inventoryItemId
-      releasedByItem.set(id, (releasedByItem.get(id) || 0) + line.quantity)
-    }
-  }
-  return new Map([...releasedByItem.entries()].map(([id, releasedQuantity]) => [
-    id,
-    Math.max(0, Number(releasedQuantity) - Number(soldByItem.get(id) || 0)),
-  ]))
-}
-
 function addStockAvailability(order: any, salesStock: Map<string, number>) {
   return {
     ...order,
@@ -75,7 +54,7 @@ function addStockAvailability(order: any, salesStock: Map<string, number>) {
       return {
         ...item,
         salesStockAvailable: available,
-        stockSource: available >= item.quantity ? 'SALES_STOCK' : 'WAREHOUSE_REQUIRED',
+        stockSource: order.usesSalesStock || available >= item.quantity ? 'SALES_STOCK' : 'WAREHOUSE_REQUIRED',
       }
     }),
   }
@@ -105,7 +84,7 @@ export default async function handler(req: any, res: any) {
           },
         },
       })
-      const salesStock = await getSalesStockAvailability(prisma)
+      const salesStock = new Map((await getSalesStock(prisma)).map((item) => [item.id, item.availableQuantity]))
       return res.json({ orders: orders.map((order) => withReference(addStockAvailability(order, salesStock))) })
     }
 
@@ -227,7 +206,7 @@ export default async function handler(req: any, res: any) {
 
       const isApproval = status === 'APPROVED'
       const isCancellation = status === 'CANCELLED'
-      const restoreLegacyStock = isCancellation && !order.warehouseRequest && ['APPROVED', 'PROCESSING'].includes(order.status)
+      const restoreLegacyStock = isCancellation && !order.usesSalesStock && !order.warehouseRequest && ['APPROVED', 'PROCESSING'].includes(order.status)
 
       const result = await prisma.$transaction(async (tx) => {
         const updateData: any = {
@@ -291,7 +270,7 @@ export default async function handler(req: any, res: any) {
           include: { items: true, proofOfDelivery: true, deliveryHistories: true },
         })
 
-        if (isApproval && !order.warehouseRequest) {
+        if (isApproval && !order.usesSalesStock && !order.warehouseRequest) {
           const requestId = randomUUID()
           const requestReference = `WHR-${new Date().getFullYear()}-${requestId.slice(0, 8).toUpperCase()}`
 

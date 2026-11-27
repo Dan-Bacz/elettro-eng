@@ -1,70 +1,17 @@
 import { Prisma, PrismaClient } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import type { NextApiRequest, NextApiResponse } from 'next'
+import { getSalesStock } from '../../lib/sales-stock'
 import { requireActiveRole } from '../../lib/department-auth'
 
 const prisma = new PrismaClient()
-
-type StockLine = { inventoryItemId: string; quantity: number }
-
-async function getSalesStock(tx: PrismaClient | Prisma.TransactionClient) {
-  const [released, sold] = await Promise.all([
-    tx.warehouseRelease.findMany({
-      where: {
-        receivedBySalesId: { not: null },
-        request: { source: 'INTERNAL_SALES' },
-      },
-      select: {
-        items: {
-          select: {
-            quantity: true,
-            requestItem: {
-              select: {
-                inventoryItemId: true,
-                inventoryItem: {
-                  select: { id: true, name: true, sku: true, unit: true, sellPrice: true, imageUrl: true, category: true, deletedAt: true },
-                },
-              },
-            },
-          },
-        },
-      },
-    }),
-    tx.salesSaleItem.groupBy({
-      by: ['inventoryItemId'],
-      _sum: { quantity: true },
-    }),
-  ])
-
-  const soldByItem = new Map(sold.map((row) => [row.inventoryItemId, row._sum.quantity || 0]))
-  const stock = new Map<string, { item: any; released: number; sold: number }>()
-
-  for (const release of released) {
-    for (const line of release.items) {
-      if (!line.requestItem.inventoryItem || line.requestItem.inventoryItem.deletedAt) continue
-      const id = line.requestItem.inventoryItemId
-      const current = stock.get(id) || { item: line.requestItem.inventoryItem, released: 0, sold: soldByItem.get(id) || 0 }
-      current.released += line.quantity
-      stock.set(id, current)
-    }
-  }
-
-  return [...stock.values()]
-    .map(({ item, released: releasedQuantity, sold: soldQuantity }) => ({
-      ...item,
-      releasedQuantity,
-      soldQuantity,
-      availableQuantity: Math.max(0, releasedQuantity - soldQuantity),
-    }))
-    .filter((item) => item.availableQuantity > 0)
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const user = await requireActiveRole(req, res, ['SALES', 'ADMIN'])
   if (!user) return
 
   if (req.method === 'GET') {
-    const stock = await getSalesStock(prisma)
+    const stock = (await getSalesStock(prisma)).filter((item) => item.availableQuantity > 0)
     const preset = String(req.query.preset || 'all')
     const from = String(req.query.from || '')
     const to = String(req.query.to || '')
@@ -172,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (message.startsWith('INSUFFICIENT_SALES_STOCK:')) return res.status(409).json({ error: `Not enough Sales stock for ${message.slice('INSUFFICIENT_SALES_STOCK:'.length)}.` })
     if (message.startsWith('PRICE_NOT_SET:')) return res.status(409).json({ error: `Selling price is not set for ${message.slice('PRICE_NOT_SET:'.length)}.` })
     if (message === 'INSUFFICIENT_PAYMENT') return res.status(400).json({ error: 'Customer payment is less than the sale total.' })
-    if (message.includes('Serializable')) return res.status(409).json({ error: 'Sales stock changed while saving. Refresh and try again.' })
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') return res.status(409).json({ error: 'Sales stock changed while saving. Refresh and try again.' })
     console.error('Sales POS sale failed', error)
     return res.status(500).json({ error: 'Could not save the sale.' })
   }

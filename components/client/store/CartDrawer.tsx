@@ -9,7 +9,7 @@ import { formatPeso } from "./storeUtils"
 
 export default function CartDrawer() {
   const router = useRouter()
-  const { items, count, subtotal, drawerOpen, closeCart, removeItem, setQuantity, openCheckout } = useCart()
+  const { items, count, subtotal, drawerOpen, closeCart, removeItem, setQuantity, refreshStock, openCheckout } = useCart()
   const [checkingSession, setCheckingSession] = useState(false)
 
   useEffect(() => {
@@ -19,8 +19,27 @@ export default function CartDrawer() {
     }
   }, [drawerOpen])
 
+  const [checkingStock, setCheckingStock] = useState(false)
+  const [stockError, setStockError] = useState("")
+  const exceedsStock = items.some((item) => item.quantity > (item.availableQuantity ?? 0))
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    const controller = new AbortController()
+    setCheckingStock(true)
+    setStockError("")
+    refreshStock(controller.signal)
+      .catch(() => {
+        if (!controller.signal.aborted) setStockError("Could not check Sales Stock. Reopen your cart to try again.")
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCheckingStock(false)
+      })
+    return () => controller.abort()
+  }, [drawerOpen, refreshStock])
+
   async function proceedToCheckout() {
-    if (checkingSession) return
+    if (checkingSession || checkingStock || stockError || exceedsStock) return
     setCheckingSession(true)
     try {
       const response = await fetch("/api/auth/me", { cache: "no-store" })
@@ -127,7 +146,8 @@ export default function CartDrawer() {
                           type="button"
                           onClick={() => setQuantity(item.id, item.quantity + 1)}
                           aria-label="Increase quantity"
-                          className="flex h-8 w-8 items-center justify-center text-gray-600 transition-colors hover:bg-gray-50"
+                          disabled={checkingStock || item.quantity >= (item.availableQuantity ?? 0)}
+                          className="flex h-8 w-8 items-center justify-center text-gray-600 transition-colors hover:bg-gray-50 disabled:text-gray-300"
                         >
                           <PlusIcon className="w-3.5 h-3.5" />
                         </button>
@@ -136,6 +156,11 @@ export default function CartDrawer() {
                         {formatPeso(Number(item.unitPrice) * item.quantity, 2)}
                       </span>
                     </div>
+                    {!checkingStock && !stockError && item.quantity > (item.availableQuantity ?? 0) && (
+                      <p className="mt-1 text-xs font-semibold text-red-700">
+                        {item.availableQuantity ? `Only ${item.availableQuantity} available. Reduce the quantity to continue.` : "Unavailable in Sales Stock. Remove this item to continue."}
+                      </p>
+                    )}
                   </div>
                 </li>
               ))}
@@ -157,13 +182,14 @@ export default function CartDrawer() {
                 </div>
               </dl>
 
+              {stockError && <p role="alert" className="mt-3 text-xs font-semibold text-red-700">{stockError}</p>}
               <button
                 type="button"
                 onClick={() => void proceedToCheckout()}
-                disabled={checkingSession}
+                disabled={checkingSession || checkingStock || Boolean(stockError) || exceedsStock}
                 className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:cursor-wait disabled:opacity-70"
               >
-                {checkingSession ? "Checking client account..." : "Proceed to Checkout"}
+                {checkingSession ? "Checking client account..." : checkingStock ? "Checking Sales Stock..." : "Proceed to Checkout"}
               </button>
               <p className="mt-2 text-center text-[10px] text-gray-400">
                 Shipping fee and payment confirmation handled by our team after you place the order.

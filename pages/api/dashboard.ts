@@ -1,3 +1,4 @@
+import { getSalesStock } from '../../lib/sales-stock'
 import { PrismaClient } from '@prisma/client'
 import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 
@@ -226,18 +227,6 @@ export default async function handler(req, res) {
       { status: 'Out of Stock', value: stockOut.length },
     ]
 
-    // Warehouse stock is the physical inventory balance. Sales stock is the
-    // stock received by Sales from Warehouse, less completed POS quantities.
-    const salesReleasedByItem = new Map<string, number>()
-    const salesReleaseRows = await prisma.warehouseRelease.findMany({
-      where: { receivedBySalesId: { not: null }, request: { source: 'INTERNAL_SALES' } },
-      select: { items: { select: { quantity: true, requestItem: { select: { inventoryItemId: true } } } } },
-    })
-    for (const release of salesReleaseRows) {
-      for (const line of release.items) salesReleasedByItem.set(line.requestItem.inventoryItemId, (salesReleasedByItem.get(line.requestItem.inventoryItemId) || 0) + line.quantity)
-    }
-    const salesSoldRows = await prisma.salesSaleItem.groupBy({ by: ['inventoryItemId'], _sum: { quantity: true } })
-    const salesSoldByItem = new Map(salesSoldRows.map((row) => [row.inventoryItemId, row._sum.quantity || 0]))
     const warehouseStock = inventory.filter((item) => !item.deletedAt).map((item) => ({
       id: item.id,
       name: item.name,
@@ -250,11 +239,16 @@ export default async function handler(req, res) {
       sellPrice: item.sellPrice,
       status: stockStatus(item),
     })).sort((a, b) => a.quantity - b.quantity)
-    const salesStock = inventory.filter((item) => !item.deletedAt && salesReleasedByItem.has(item.id)).map((item) => {
-      const releasedQuantity = salesReleasedByItem.get(item.id) || 0
-      const soldQuantity = salesSoldByItem.get(item.id) || 0
-      return { id: item.id, name: item.name, sku: item.sku, unit: item.unit, sellPrice: item.sellPrice, releasedQuantity, soldQuantity, availableQuantity: Math.max(0, releasedQuantity - soldQuantity) }
-    }).sort((a, b) => a.availableQuantity - b.availableQuantity)
+    const salesStock = (await getSalesStock(prisma)).map((item) => ({
+      id: item.id,
+      name: item.name,
+      sku: item.sku,
+      unit: item.unit,
+      sellPrice: item.sellPrice,
+      releasedQuantity: item.releasedQuantity,
+      soldQuantity: item.soldQuantity,
+      availableQuantity: item.availableQuantity,
+    })).sort((a, b) => a.availableQuantity - b.availableQuantity)
 
     const eventTimeline = [
       ...allNotifications.map((item) => ({ id: `notification-${item.id}`, type: item.type || 'INFO', title: item.title, description: item.message || 'System notification', createdAt: item.createdAt, actor: item.user?.name || 'System', href: item.link || '/admin/notifications' })),

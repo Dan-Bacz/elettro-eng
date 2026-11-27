@@ -324,6 +324,7 @@ model Order {
   fulfillmentMethod String            @default("DELIVERY")
   shipping          Float             @default(0)
   shippingConfirmed Boolean           @default(false)
+  usesSalesStock    Boolean           @default(false)
   status            OrderStatus       @default(PENDING)
   total             Float             @default(0)
   // Rider assignment (managed by sales department)

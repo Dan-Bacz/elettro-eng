@@ -12,6 +12,7 @@ type CartContextValue = {
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void
   removeItem: (id: string) => void
   setQuantity: (id: string, quantity: number) => void
+  refreshStock: (signal: AbortSignal) => Promise<void>
   clear: () => void
   drawerOpen: boolean
   openCart: () => void
@@ -63,10 +64,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const qty = Math.max(1, Math.floor(Number(quantity) || 1))
     setItems((prev) => {
       const existing = prev.find((it) => it.id === item.id)
+      const nextQuantity = (existing?.quantity || 0) + qty
+      if (nextQuantity > (item.availableQuantity ?? 0)) return prev
       if (existing) {
-        return prev.map((it) => (it.id === item.id ? { ...it, quantity: it.quantity + qty } : it))
+        return prev.map((it) => (it.id === item.id ? { ...item, quantity: nextQuantity } : it))
       }
-      return [...prev, { ...item, quantity: qty }]
+      return [...prev, { ...item, quantity: nextQuantity }]
     })
   }, [])
 
@@ -76,7 +79,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const setQuantity = useCallback((id: string, quantity: number) => {
     const qty = Math.max(1, Math.floor(Number(quantity) || 1))
-    setItems((prev) => prev.map((it) => (it.id === id && qty >= 1 ? { ...it, quantity: qty } : it)))
+    setItems((prev) => prev.map((it) => (it.id === id && (qty < it.quantity || qty <= (it.availableQuantity ?? 0)) ? { ...it, quantity: qty } : it)))
+  }, [])
+
+  const refreshStock = useCallback(async (signal: AbortSignal) => {
+    const response = await fetch("/api/public/products?availability=1", { signal })
+    if (!response.ok) throw new Error("Could not check Sales Stock.")
+    const { products }: { products: { id: string; quantity: number }[] } = await response.json()
+    if (signal.aborted) return
+    const stock = new Map(products.map((product) => [product.id, product.quantity]))
+    setItems((prev) => prev.map((item) => ({
+      ...item,
+      availableQuantity: Math.min(999, stock.get(item.id) ?? 0),
+    })))
   }, [])
 
   const clear = useCallback(() => setItems([]), [])
@@ -100,6 +115,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       addItem,
       removeItem,
       setQuantity,
+      refreshStock,
       clear,
       drawerOpen,
       openCart,
@@ -108,7 +124,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       openCheckout,
       closeCheckout,
     }),
-    [items, count, subtotal, addItem, removeItem, setQuantity, clear, drawerOpen, openCart, closeCart, checkoutOpen, openCheckout, closeCheckout]
+    [items, count, subtotal, addItem, removeItem, setQuantity, refreshStock, clear, drawerOpen, openCart, closeCart, checkoutOpen, openCheckout, closeCheckout]
   )
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

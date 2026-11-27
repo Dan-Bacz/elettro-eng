@@ -1,0 +1,1 @@
+ALTER TABLE "Order" ADD COLUMN "usesSalesStock" BOOLEAN NOT NULL DEFAULT false;

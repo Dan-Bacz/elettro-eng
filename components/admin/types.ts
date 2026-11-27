@@ -112,6 +112,7 @@ export type OrderItemObj = {
 }
 
 export type OrderObj = {
+  usesSalesStock?: boolean
   id: string
   clientId?: string
   reference: string

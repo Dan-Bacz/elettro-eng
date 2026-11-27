@@ -10,11 +10,14 @@ import { CartIcon, CheckIcon } from "./storeIcons"
 import { BADGE_TONE_CLASSES, formatPeso, isDiscounted, productBadges, type StoreProduct } from "./storeUtils"
 
 export default function StoreProductCard({ product, showCartAction = true }: { product: StoreProduct; showCartAction?: boolean }) {
-  const { addItem } = useCart()
+  const { addItem, items } = useCart()
   const pathname = usePathname()
   const detailsHref = pathname?.startsWith("/client/") ? `/client/products/${product.id}` : `/products/${product.id}`
   const [added, setAdded] = useState(false)
   const outOfStock = Number(product.quantity || 0) <= 0
+  const availableQuantity = Math.min(999, Number(product.quantity || 0))
+  const cartQuantity = items.find((item) => item.id === product.id)?.quantity || 0
+  const atStockLimit = cartQuantity >= availableQuantity
   const hasPrice = product.sellPrice != null && Number(product.sellPrice) > 0
   const badges = productBadges(product)
   const imageSrc = product.imageUrl || product.imageData
@@ -27,6 +30,7 @@ export default function StoreProductCard({ product, showCartAction = true }: { p
         image: imageSrc,
         model: product.model,
         unit: product.unit,
+        availableQuantity,
         unitPrice: Number(product.sellPrice || 0),
       },
       1
@@ -108,7 +112,7 @@ export default function StoreProductCard({ product, showCartAction = true }: { p
             <button
               type="button"
               onClick={handleAdd}
-              disabled={outOfStock || !hasPrice}
+              disabled={atStockLimit || !hasPrice}
               className={`mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200 ${
                 added
                   ? "bg-emerald-500 text-white"
@@ -116,7 +120,7 @@ export default function StoreProductCard({ product, showCartAction = true }: { p
               } disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400`}
             >
               {added ? <CheckIcon className="w-4 h-4" /> : <CartIcon className="w-4 h-4" />}
-              {added ? "Added" : outOfStock ? "Out of Stock" : "Add to Cart"}
+              {added ? "Added" : outOfStock ? "Out of Stock" : atStockLimit ? "Stock limit reached" : "Add to Cart"}
             </button>
           ) : (
             <Link href={detailsHref} className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#0b5360]">

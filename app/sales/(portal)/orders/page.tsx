@@ -7,13 +7,14 @@ import EmptyState from '../../../../components/admin/EmptyState'
 import { CartIcon, SearchIcon } from '../../../../components/admin/icons'
 import type { OrderObj } from '../../../../components/admin/types'
 
-type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
+type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
 
 const FILTERS: { value: Filter; label: string }[] = [
   { value: 'ALL', label: 'All Orders' },
   { value: 'PENDING', label: 'New / Pending' },
   { value: 'APPROVED', label: 'Confirmed' },
   { value: 'PROCESSING', label: 'Preparing' },
+  { value: 'READY_FOR_PICKUP', label: 'Ready for pickup' },
   { value: 'SHIPPED', label: 'Dispatched / In Delivery' },
   { value: 'DELIVERED', label: 'Delivered (Awaiting Receipt)' },
   { value: 'COMPLETED', label: 'Completed' },
@@ -146,36 +147,32 @@ export default function SalesOrdersPage() {
     }
   }
 
-  async function handleConfirmOrder() {
-    if (!confirmingOrder) return
+  async function updateOrder(order: OrderObj, status: 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED') {
+    const body: { id: string; status: string; shipping?: number } = { id: order.id, status }
+    if (status === 'APPROVED' && order.fulfillmentMethod === 'DELIVERY' && !order.shippingConfirmed) {
+      const fee = Number(shippingFee)
+      if (!Number.isFinite(fee) || fee < 0) {
+        setError('Please provide a valid delivery fee')
+        return
+      }
+      body.shipping = fee
+    }
+
     setUpdatingOrder(true)
     try {
-      const fee = Number(shippingFee)
-      const body: any = {
-        id: confirmingOrder.id,
-        status: 'APPROVED',
-      }
-      if (confirmingOrder.fulfillmentMethod === 'DELIVERY' && !confirmingOrder.shippingConfirmed) {
-        if (!Number.isFinite(fee) || fee < 0) {
-          setError('Please provide a valid delivery fee')
-          setUpdatingOrder(false)
-          return
-        }
-        body.shipping = fee
-      }
-
       const res = await fetch('/api/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to confirm order')
+      if (!res.ok) throw new Error(data.error || 'Failed to update order')
       setConfirmingOrder(null)
+      setViewingOrder(null)
       setShippingFee('')
       await load()
     } catch (e: any) {
-      setError(e.message || 'Failed to confirm order')
+      setError(e.message || 'Failed to update order')
     } finally {
       setUpdatingOrder(false)
     }
@@ -351,7 +348,7 @@ export default function SalesOrdersPage() {
                 <div className="rounded-2xl border border-slate-200 p-4 md:col-span-2">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Items and total</h3>
                   <div className="mt-3 divide-y divide-slate-100">
-                    {(order.items || []).map((item) => <div key={item.id} className="flex flex-col gap-2 py-3 text-xs sm:flex-row sm:items-center sm:justify-between"><div><span className="font-semibold text-slate-700">{item.name}</span><div className="mt-1 flex flex-wrap items-center gap-2"><span className="text-slate-500">Requested: {item.quantity} {item.unit || 'pcs'}</span><span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${item.stockSource === 'SALES_STOCK' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{item.stockSource === 'SALES_STOCK' ? 'Available in Sales Stock' : 'Warehouse fulfillment required'}</span></div></div><div className="text-left font-bold text-slate-500 sm:text-right"><div>{item.salesStockAvailable ?? 0} {item.unit || 'pcs'} in Sales Stock</div>{item.unitPrice > 0 && <div className="mt-1">· ₱{(Number(item.unitPrice) * item.quantity).toLocaleString()}</div>}</div></div>)}
+                    {(order.items || []).map((item) => <div key={item.id} className="flex flex-col gap-2 py-3 text-xs sm:flex-row sm:items-center sm:justify-between"><div><span className="font-semibold text-slate-700">{item.name}</span><div className="mt-1 flex flex-wrap items-center gap-2"><span className="text-slate-500">Requested: {item.quantity} {item.unit || 'pcs'}</span><span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wide ${item.stockSource === 'SALES_STOCK' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>{item.stockSource === 'SALES_STOCK' ? (order.usesSalesStock ? 'Allocated from Sales Stock' : 'Available in Sales Stock') : 'Warehouse fulfillment required'}</span></div></div><div className="text-left font-bold text-slate-500 sm:text-right"><div>{item.salesStockAvailable ?? 0} {item.unit || 'pcs'} in Sales Stock</div>{item.unitPrice > 0 && <div className="mt-1">· ₱{(Number(item.unitPrice) * item.quantity).toLocaleString()}</div>}</div></div>)}
                   </div>
                   <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-xs">
                     <div className="flex justify-between text-slate-600"><span>Items subtotal</span><span>₱{Number(order.total || 0).toLocaleString()}</span></div>
@@ -366,6 +363,12 @@ export default function SalesOrdersPage() {
 
               <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-6 py-4">
                 {order.status === 'PENDING' && <button onClick={() => { setConfirmingOrder(order); setShippingFee(order.shipping ? String(order.shipping) : ''); setViewingOrder(null) }} className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-black hover:bg-yellow-300">Confirm order</button>}
+                {order.usesSalesStock && order.status === 'APPROVED' && (
+                  <button onClick={() => void updateOrder(order, 'PROCESSING')} disabled={updatingOrder || (order.paymentMethod === 'GCASH' && order.paymentStatus !== 'PAID')} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Start preparing</button>
+                )}
+                {order.usesSalesStock && order.status === 'PROCESSING' && (
+                  <button onClick={() => void updateOrder(order, isDelivery ? 'SHIPPED' : 'READY_FOR_PICKUP')} disabled={updatingOrder || (isDelivery && !order.riderId)} className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{isDelivery ? 'Mark shipped' : 'Mark ready for pickup'}</button>
+                )}
                 {isDelivery && order.status !== 'CANCELLED' && <button onClick={() => { setAssigningOrder(order); setSelectedRiderId(order.riderId || ''); setAssignError(''); setViewingOrder(null) }} className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">{order.riderId ? 'Reassign rider' : 'Assign rider'}</button>}
                 {order.proofOfDelivery && <button onClick={() => { setViewingProof(order); setViewingOrder(null) }} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white hover:bg-emerald-500">View delivery proof</button>}
                 {order.deliveryHistories && order.deliveryHistories.length > 0 && <button onClick={() => { setViewingHistory(order); setViewingOrder(null) }} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Delivery timeline</button>}
@@ -473,7 +476,7 @@ export default function SalesOrdersPage() {
               </button>
               <button
                 type="button"
-                onClick={handleConfirmOrder}
+                onClick={() => void updateOrder(confirmingOrder, 'APPROVED')}
                 disabled={updatingOrder}
                 className="rounded-xl bg-yellow-400 px-5 py-2 text-xs font-black text-black shadow-sm transition hover:bg-yellow-300 disabled:opacity-50"
               >

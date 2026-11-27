@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 
+import { getSalesStock } from '../../../lib/sales-stock'
+
 const prisma = new PrismaClient()
 
 function mapCategory(raw: string | null | undefined): string {
@@ -22,8 +24,16 @@ export default async function handler(req: any, res: any) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
   try {
+    res.setHeader('Cache-Control', 'no-store')
+    const stock = await getSalesStock(prisma)
+    const available = new Map(stock
+      .filter((item) => item.availableQuantity > 0 && Number(item.sellPrice) > 0)
+      .map((item) => [item.id, item.availableQuantity]))
+    if (req.query.availability === '1') {
+      return res.status(200).json({ products: [...available].map(([id, quantity]) => ({ id, quantity })) })
+    }
     const items = await prisma.inventoryItem.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, id: { in: [...available.keys()] }, sellPrice: { gt: 0 } },
       orderBy: { createdAt: 'desc' }
     })
 
@@ -38,7 +48,7 @@ export default async function handler(req: any, res: any) {
         brand: item.brand,
         model: item.model,
         description: item.description,
-        quantity: Number(item.quantity || 0),
+        quantity: available.get(item.id) || 0,
         unit: item.unit,
         sellPrice: price,
         originalPrice: item.originalPrice != null && Number(item.originalPrice) > 0 ? Number(item.originalPrice) : null,

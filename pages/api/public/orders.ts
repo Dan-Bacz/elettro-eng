@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client'
-import { randomUUID } from 'crypto'
+import { Prisma, PrismaClient } from '@prisma/client'
+import { getSalesStock } from '../../../lib/sales-stock'
 import { sendOrderSubmittedNotification } from '../../../lib/email'
 import { requireVerifiedClient } from '../../../lib/client-auth'
 import { calculateShipping } from '../../../lib/shipping'
@@ -135,57 +135,40 @@ export default async function handler(req: any, res: any) {
       const qty = it?.quantity
       // Reject negative / zero / non-integer quantities instead of silently fixing them.
       const num = Number(qty)
-      if (!id || !Number.isFinite(num)) continue
-      if (Math.floor(num) !== num || num < 1 || num > MAX_LINE_QTY) {
+      if (!id || !Number.isInteger(num) || num < 1 || num > MAX_LINE_QTY) {
         return res.status(400).json({ error: 'Quantity must be a whole number between 1 and 999' })
       }
-      grouped.set(id, { inventoryItemId: id, quantity: (grouped.get(id)?.quantity || 0) + num })
-    }
-
-    if (grouped.size === 0) {
-      return res.status(400).json({ error: 'Please select at least one product to order' })
-    }
-
-    const productIds = [...grouped.keys()]
-    const products = await prisma.inventoryItem.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true, name: true, unit: true, sellPrice: true, quantity: true },
-    })
-
-    if (products.length !== productIds.length) {
-      return res.status(400).json({ error: 'One of the selected products is no longer available' })
-    }
-
-    const productById = new Map(products.map((p) => [p.id, p]))
-
-    // Validate stock availability before persisting anything.
-    for (const id of productIds) {
-      const p = productById.get(id)!
-      const qty = grouped.get(id)!.quantity
-      if (Number(p.quantity) < qty) {
-        return res.status(400).json({ error: `Insufficient stock for ${p.name}` })
+      const quantity = (grouped.get(id)?.quantity || 0) + num
+      if (quantity > MAX_LINE_QTY) {
+        return res.status(400).json({ error: 'Quantity must be a whole number between 1 and 999 per product' })
       }
+      grouped.set(id, { inventoryItemId: id, quantity })
     }
 
-    // Recalculate everything from the database. Reject items that have no
-    // configured selling price (card UI disables carting those).
-    let total = 0
-    const orderItems = productIds.map((id) => {
-      const p = productById.get(id)!
-      const qty = grouped.get(id)!.quantity
-      const price = p.sellPrice != null && Number(p.sellPrice) > 0 ? Number(p.sellPrice) : null
-      if (price == null) throw new Error(`Selling price is not set for ${p.name}`)
-      total += price * qty
-      return {
-        inventoryItemId: p.id,
-        name: p.name,
-        quantity: qty,
-        unit: p.unit || 'pcs',
-        unitPrice: round2(price),
+    const result = await prisma.$transaction(async (tx) => {
+      const stock = await getSalesStock(tx)
+      const stockById = new Map(stock.map((item) => [item.id, item]))
+      let total = 0
+      const orderItems: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = []
+      for (const { inventoryItemId, quantity } of grouped.values()) {
+        const item = stockById.get(inventoryItemId)
+        if (!item || item.availableQuantity <= 0 || Number(item.sellPrice) <= 0) {
+          return { error: 'A selected product is no longer available in Sales Stock.' }
+        }
+        if (quantity > item.availableQuantity) {
+          return { error: `Only ${item.availableQuantity} ${item.unit || 'pcs'} of ${item.name} are available in Sales Stock.` }
+        }
+        const price = Number(item.sellPrice)
+        total += price * quantity
+        orderItems.push({
+          inventoryItemId,
+          name: item.name,
+          quantity,
+          unit: item.unit || 'pcs',
+          unitPrice: round2(price),
+        })
       }
-    })
 
-    const order = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({
         data: {
           clientId: client.id,
@@ -202,44 +185,16 @@ export default async function handler(req: any, res: any) {
           paymentMethod,
           paymentStatus,
           fulfillmentMethod,
-           shippingConfirmed: true,
+          shippingConfirmed: true,
+          usesSalesStock: true,
           shipping,
           status: 'PENDING',
           total: round2(total),
           items: { create: orderItems },
         },
-        include: { items: true },
       })
 
       const reference = `ORD-${created.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
-
-      const requestItems = created.items.map((item) => {
-        if (!item.inventoryItemId) throw new Error('ORDER_ITEM_MISSING_INVENTORY')
-        return {
-          inventoryItemId: item.inventoryItemId,
-          orderItemId: item.id,
-          requestedQuantity: item.quantity,
-          unit: item.unit || 'pcs',
-        }
-      })
-
-      const requestId = randomUUID()
-      const warehouseReference = `WHR-${new Date().getFullYear()}-${requestId.slice(0, 8).toUpperCase()}`
-
-      await tx.warehouseRequest.create({
-        data: {
-          id: requestId,
-          reference: warehouseReference,
-          source: 'CLIENT_ORDER',
-          requesterId: client.id,
-          orderId: created.id,
-          customerReference: cleanName,
-          idempotencyKey: `CLIENT-ORDER-${created.id}`,
-          items: {
-            create: requestItems,
-          },
-        },
-      })
 
       await tx.notification.create({
         data: {
@@ -251,44 +206,30 @@ export default async function handler(req: any, res: any) {
         },
       })
 
-      const warehouseWorkers = await tx.user.findMany({
-        where: { role: 'WAREHOUSE', status: 'ACTIVE' },
-        select: { id: true },
-      })
+      return { order: created, total, orderItems }
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
 
-      if (warehouseWorkers.length) {
-        await tx.notification.createMany({
-          data: warehouseWorkers.map((worker) => ({
-            userId: worker.id,
-            type: 'WAREHOUSE_REQUEST',
-            title: 'New Client Order Request',
-            message: `Order ${reference} is waiting for review.`,
-            link: '/warehouse/requests',
-          })),
-        })
-      }
+    if ('error' in result) return res.status(409).json({ error: result.error })
 
-      return created
-    })
-
+    const { order, total, orderItems } = result
     const reference = `ORD-${order.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
 
-    // Notify admins in-app so it shows up in the notifications center.
+    // Notify the staff who handle Sales Stock orders.
     try {
-      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
-      if (admins.length) {
+      const staff = await prisma.user.findMany({ where: { role: { in: ['ADMIN', 'SALES'] }, status: 'ACTIVE' }, select: { id: true, role: true } })
+      if (staff.length) {
         await prisma.notification.createMany({
-          data: admins.map((admin) => ({
-            userId: admin.id,
+          data: staff.map((recipient) => ({
+            userId: recipient.id,
             type: 'ORDER',
             title: 'New Product Order',
             message: `${cleanName} (${cleanEmail}) placed a ${fulfillmentMethod.toLowerCase()} order for ${orderItems.length} item(s) worth ₱${round2(total).toLocaleString()} via ${paymentMethod}.`,
-            link: '/admin/orders',
+            link: recipient.role === 'SALES' ? '/sales/orders' : '/admin/orders',
           })),
         })
       }
     } catch (error) {
-      console.error('Failed to notify admins about a new product order:', error)
+      console.error('Failed to notify staff about a new product order:', error)
     }
 
     // Notify the client by email (non-blocking failure)
@@ -296,8 +237,8 @@ export default async function handler(req: any, res: any) {
       name: cleanName,
       email: cleanEmail,
       reference,
-      items: orderItems.map((it) => ({ name: it.name, quantity: it.quantity, unit: it.unit, unitPrice: it.unitPrice })),
-       total: total + shipping,
+      items: orderItems.map((it) => ({ name: it.name, quantity: it.quantity, unit: it.unit || 'pcs', unitPrice: it.unitPrice })),
+      total: total + shipping,
     })
 
     return res.status(201).json({
@@ -308,17 +249,17 @@ export default async function handler(req: any, res: any) {
       paymentStatus,
       fulfillmentMethod,
       status: 'PENDING',
-       total: round2(total + shipping),
-       subtotal: round2(total),
-       shipping,
-       distanceKm: shippingEstimate.distanceKm,
+      total: round2(total + shipping),
+      subtotal: round2(total),
+      shipping,
+      distanceKm: shippingEstimate.distanceKm,
       message: `Order submitted successfully. Your reference number is ${reference}.`,
     })
-  } catch (error: any) {
-    console.error('Public order API error', error)
-    if (error?.message === 'ORDER_ITEM_MISSING_INVENTORY') {
-      return res.status(409).json({ error: 'The order contains an item without an inventory record and could not be submitted.' })
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2034') {
+      return res.status(409).json({ error: 'Sales Stock changed during checkout. Review your cart and try again.' })
     }
-    return res.status(500).json({ error: error?.message || 'Failed to submit order' })
+    console.error('Public order API error', error)
+    return res.status(500).json({ error: 'Failed to submit order' })
   }
 }
