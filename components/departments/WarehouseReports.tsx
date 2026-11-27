@@ -4,6 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DepartmentReportPrint, { DepartmentReportStyles, type ReportPeriod, type ReportPreparer } from '../sales/DepartmentReportPrint'
 
+const printReports = {
+  all: { label: 'All Reports', title: 'Warehouse Department Report' },
+  inventory: { label: 'Inventory Stock Report', title: 'Warehouse Inventory Stock Report' },
+  lowStock: { label: 'Low Stock Report', title: 'Warehouse Low Stock Report' },
+  movements: { label: 'Stock Movement Report', title: 'Warehouse Stock Movement Report' },
+  requests: { label: 'Materials Requests Report', title: 'Warehouse Materials Requests Report' },
+  releases: { label: 'Materials Release Report', title: 'Warehouse Materials Release Report' },
+  receipts: { label: 'Receipt Report', title: 'Warehouse Receipt Report' },
+} as const
+
+type PrintReport = keyof typeof printReports
+
 type ReportData = {
   summary: Record<string, number>
   inventory: any[]
@@ -31,6 +43,7 @@ export default function WarehouseReports() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [query, setQuery] = useState('')
+  const [printReport, setPrintReport] = useState<PrintReport>('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -87,6 +100,7 @@ export default function WarehouseReports() {
     URL.revokeObjectURL(url)
   }
 
+  const prints = (section: Exclude<PrintReport, 'all'>) => printReport === 'all' || printReport === section
   const summary = data?.summary || {}
   const cards = [
     ['Inventory items', summary.totalProducts || 0, `${summary.availableStockItems || 0} with stock`, 'from-emerald-400 to-teal-500'],
@@ -103,7 +117,26 @@ export default function WarehouseReports() {
         <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div><div className="mb-3 inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-100">Warehouse reporting</div><h1 className="text-3xl font-black tracking-tight">Warehouse Reports</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">Print or export the complete warehouse record: inventory, low stock, requests, releases, receipts, and stock movement history.</p></div>
-          <div className="reports-print-hidden flex flex-wrap gap-3"><button type="button" onClick={() => window.print()} disabled={loading || !data || Boolean(error)} className="rounded-xl bg-white px-4 py-3 text-xs font-black text-slate-900 hover:bg-cyan-50 disabled:opacity-50">Print / Save PDF</button><button type="button" onClick={exportCsv} className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-black text-white hover:bg-white/20">Export CSV</button></div>
+          <div className="reports-print-hidden flex flex-wrap items-end gap-3">
+            <label className="text-xs font-bold text-white">
+              Report to print
+              <select
+                value={printReport}
+                onChange={(event) => setPrintReport(event.target.value as PrintReport)}
+                className="mt-1 block rounded-xl border border-white/20 bg-slate-900 px-3 py-2.5 text-sm text-white"
+              >
+                {Object.entries(printReports).map(([value, report]) => (
+                  <option key={value} value={value}>{report.label}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" onClick={() => window.print()} disabled={loading || !data || Boolean(error)} className="rounded-xl bg-white px-4 py-3 text-xs font-black text-slate-900 hover:bg-cyan-50 disabled:opacity-50">
+              Print / Save PDF
+            </button>
+            <button type="button" onClick={exportCsv} className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-xs font-black text-white hover:bg-white/20">
+              Export CSV
+            </button>
+          </div>
         </div>
       </section>
 
@@ -115,19 +148,23 @@ export default function WarehouseReports() {
       {!loading && data && <>
         {!error && (
           <DepartmentReportPrint
-            title="Warehouse Department Report"
+            title={printReports[printReport].title}
             officerLabel={data.preparedBy.role === 'WAREHOUSE' ? 'Warehouse Department Officer' : 'Prepared by'}
             preparedBy={data.preparedBy}
             period={data.period}
-            filterNote={query.trim() ? `Search filter ?${query.trim()}? ? Summary covers the full report.` : undefined}
+            filterNote={query.trim() ? (
+              printReport === 'all'
+                ? `Search filter: "${query.trim()}". Summary covers the full report.`
+                : `Search filter: "${query.trim()}".`
+            ) : undefined}
           />
         )}
-        <div className="department-print-summary [--report-summary-columns:4] grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([label, value, note, accent]) => <div key={label} className="reports-print-card relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p><p className="mt-1 text-xs font-medium text-slate-500">{note}</p></div>)}</div>
+        <div className={`department-print-summary [--report-summary-columns:4] grid gap-4 sm:grid-cols-2 xl:grid-cols-4 ${printReport !== 'all' ? 'reports-print-hidden' : ''}`}>{cards.map(([label, value, note, accent]) => <div key={label} className="reports-print-card relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p><p className="mt-1 text-xs font-medium text-slate-500">{note}</p></div>)}</div>
 
-        <ReportTable title="Inventory stock report" eyebrow="Current warehouse stock" count={filtered.inventory.length}><table><thead><tr><th>Material</th><th>SKU</th><th>Category</th><th>Stock</th><th>Reorder level</th><th>Stock value</th></tr></thead><tbody>{filtered.inventory.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.name}</td><td>{item.sku || '—'}</td><td>{item.category || 'General'}</td><td className={item.quantity <= item.reorderLevel ? 'font-black text-red-600' : 'font-black text-emerald-700'}>{item.quantity} {item.unit || 'units'}</td><td>{item.reorderLevel}</td><td className="font-black text-slate-900">{money(item.quantity * Number(item.buyPrice || 0))}</td></tr>)}</tbody></table></ReportTable>
-        <div className="department-print-table-group grid gap-6 xl:grid-cols-2"><ReportTable title="Low-stock report" eyebrow="Replenishment monitoring" count={filtered.lowStockItems.length}><table><thead><tr><th>Material</th><th>Current stock</th><th>Reorder level</th><th>Unit</th></tr></thead><tbody>{filtered.lowStockItems.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.name}</td><td className="font-black text-red-600">{item.quantity}</td><td>{item.reorderLevel}</td><td>{item.unit || 'units'}</td></tr>)}</tbody></table></ReportTable><ReportTable title="Requests report" eyebrow="Incoming material requests" count={filtered.requests.length}><table><thead><tr><th>Reference</th><th>Source</th><th>Status</th><th>Requester</th><th>Date</th></tr></thead><tbody>{filtered.requests.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.reference}</td><td>{item.source}</td><td><Status value={item.status} /></td><td>{item.requester?.name || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable></div>
-        <div className="department-print-table-group grid gap-6 xl:grid-cols-2"><ReportTable title="Release report" eyebrow="Materials handed over" count={filtered.releases.length}><table><thead><tr><th>Receipt</th><th>Request</th><th>Quantity</th><th>Released by</th><th>Date</th></tr></thead><tbody>{filtered.releases.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.receiptNumber}</td><td>{item.request?.reference || '—'}</td><td className="font-black text-emerald-700">{item.items?.reduce((sum: number, line: any) => sum + line.quantity, 0) || 0}</td><td>{item.releasedBy?.name || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable><ReportTable title="Receipt report" eyebrow="Printable release records" count={filtered.receipts.length}><table><thead><tr><th>Receipt reference</th><th>Request</th><th>Warehouse staff</th><th>Date</th></tr></thead><tbody>{filtered.receipts.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.reference}</td><td>{item.snapshot?.requestReference || '—'}</td><td>{item.snapshot?.warehouseWorker || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable></div>
-        <ReportTable title="Stock movement audit" eyebrow="Receipts, releases, and adjustments" count={filtered.movements.length}><table><thead><tr><th>Material</th><th>Movement</th><th>Change</th><th>Stock before → after</th><th>Worker</th><th>Date</th></tr></thead><tbody>{filtered.movements.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.inventoryItem?.name || '—'}</td><td><Status value={item.type} /><span className="mt-1 block max-w-[220px] text-[10px]">{item.reason || '—'}</span></td><td className={`font-black ${item.quantity < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{item.quantity > 0 ? '+' : ''}{item.quantity}</td><td>{item.stockBefore} → {item.stockAfter}</td><td>{item.worker?.name || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable>
+        <ReportTable print={prints('inventory')} title="Inventory stock report" eyebrow="Current warehouse stock" count={filtered.inventory.length}><table><thead><tr><th>Material</th><th>SKU</th><th>Category</th><th>Stock</th><th>Reorder level</th><th>Stock value</th></tr></thead><tbody>{filtered.inventory.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.name}</td><td>{item.sku || '—'}</td><td>{item.category || 'General'}</td><td className={item.quantity <= item.reorderLevel ? 'font-black text-red-600' : 'font-black text-emerald-700'}>{item.quantity} {item.unit || 'units'}</td><td>{item.reorderLevel}</td><td className="font-black text-slate-900">{money(item.quantity * Number(item.buyPrice || 0))}</td></tr>)}</tbody></table></ReportTable>
+        <div className={`department-print-table-group grid gap-6 xl:grid-cols-2 ${prints('lowStock') || prints('requests') ? '' : 'reports-print-hidden'}`}><ReportTable print={prints('lowStock')} title="Low-stock report" eyebrow="Replenishment monitoring" count={filtered.lowStockItems.length}><table><thead><tr><th>Material</th><th>Current stock</th><th>Reorder level</th><th>Unit</th></tr></thead><tbody>{filtered.lowStockItems.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.name}</td><td className="font-black text-red-600">{item.quantity}</td><td>{item.reorderLevel}</td><td>{item.unit || 'units'}</td></tr>)}</tbody></table></ReportTable><ReportTable print={prints('requests')} title="Requests report" eyebrow="Incoming material requests" count={filtered.requests.length}><table><thead><tr><th>Reference</th><th>Source</th><th>Status</th><th>Requester</th><th>Date</th></tr></thead><tbody>{filtered.requests.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.reference}</td><td>{item.source}</td><td><Status value={item.status} /></td><td>{item.requester?.name || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable></div>
+        <div className={`department-print-table-group grid gap-6 xl:grid-cols-2 ${prints('releases') || prints('receipts') ? '' : 'reports-print-hidden'}`}><ReportTable print={prints('releases')} title="Release report" eyebrow="Materials handed over" count={filtered.releases.length}><table><thead><tr><th>Receipt</th><th>Request</th><th>Quantity</th><th>Released by</th><th>Date</th></tr></thead><tbody>{filtered.releases.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.receiptNumber}</td><td>{item.request?.reference || '—'}</td><td className="font-black text-emerald-700">{item.items?.reduce((sum: number, line: any) => sum + line.quantity, 0) || 0}</td><td>{item.releasedBy?.name || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable><ReportTable print={prints('receipts')} title="Receipt report" eyebrow="Printable release records" count={filtered.receipts.length}><table><thead><tr><th>Receipt reference</th><th>Request</th><th>Warehouse staff</th><th>Date</th></tr></thead><tbody>{filtered.receipts.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.reference}</td><td>{item.snapshot?.requestReference || '—'}</td><td>{item.snapshot?.warehouseWorker || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable></div>
+        <ReportTable print={prints('movements')} title="Stock movement audit" eyebrow="Receipts, releases, and adjustments" count={filtered.movements.length}><table><thead><tr><th>Material</th><th>Movement</th><th>Change</th><th>Stock before → after</th><th>Worker</th><th>Date</th></tr></thead><tbody>{filtered.movements.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.inventoryItem?.name || '—'}</td><td><Status value={item.type} /><span className="mt-1 block max-w-[220px] text-[10px]">{item.reason || '—'}</span></td><td className={`font-black ${item.quantity < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{item.quantity > 0 ? '+' : ''}{item.quantity}</td><td>{item.stockBefore} → {item.stockAfter}</td><td>{item.worker?.name || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable>
       </>}
     </div>
   )
@@ -137,6 +174,6 @@ function Status({ value }: { value?: string }) {
   return <span className={`inline-flex rounded-full px-2 py-1 text-[9px] font-black uppercase tracking-wide ${statusTone(value)}`}>{String(value || '—').replaceAll('_', ' ')}</span>
 }
 
-function ReportTable({ title, eyebrow, count, children }: { title: string; eyebrow: string; count: number; children: React.ReactNode }) {
-  return <section className="reports-print-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="department-print-table-heading flex items-end justify-between border-b border-slate-100 px-5 py-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">{eyebrow}</p><h2 className="mt-1 text-lg font-black text-slate-950">{title}</h2></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{count} records</span></div><div className="report-table overflow-x-auto">{children}</div></section>
+function ReportTable({ print, title, eyebrow, count, children }: { print: boolean; title: string; eyebrow: string; count: number; children: React.ReactNode }) {
+  return <section className={`reports-print-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${print ? '' : 'reports-print-hidden'}`}><div className="department-print-table-heading flex items-end justify-between border-b border-slate-100 px-5 py-4"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">{eyebrow}</p><h2 className="mt-1 text-lg font-black text-slate-950">{title}</h2></div><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600">{count} records</span></div><div className="report-table overflow-x-auto">{children}</div></section>
 }
