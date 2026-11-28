@@ -246,7 +246,12 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 return true;
             }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
-            if (id == R.id.nav_materials) { showSection("materials"); return true; }
+            if (id == R.id.nav_materials) {
+                Intent intent = new Intent(this, WebViewActivity.class);
+                intent.putExtra(WebViewActivity.EXTRA_ROUTE, "/technician/dashboard#materials");
+                startActivity(intent);
+                return true;
+            }
             if (id == R.id.nav_profile) { showSection("profile"); return true; }
             if (id == R.id.nav_logout) { logout(); return true; }
             return false;

@@ -1,4 +1,5 @@
 import { PrismaClient, WarehouseRequestStatus } from '@prisma/client'
+import { randomUUID } from 'node:crypto'
 import jwt from 'jsonwebtoken'
 import { getJwtSecret } from '../../lib/auth'
 
@@ -63,106 +64,114 @@ export default async function handler(req: any, res: any) {
 
   // POST: create material request (techs for their assigned booking; admin can too)
   if (req.method === 'POST') {
-    const { bookingId, material, quantity, unit, reason, priority } = req.body || {}
-    if (!bookingId || !material) {
-      return res.status(400).json({ error: 'bookingId and material are required' })
+    const { bookingId, material, quantity, unit, reason, priority, items } = req.body || {}
+    const batch = items !== undefined
+    const lines: { inventoryItemId: string; quantity: number }[] = batch && Array.isArray(items)
+      ? items.map(item => ({
+          inventoryItemId: typeof item?.inventoryItemId === 'string' ? item.inventoryItemId.trim() : '',
+          quantity: Number(item?.quantity),
+        }))
+      : []
+    const legacyName = typeof material === 'string' ? material.trim() : ''
+    const legacyQuantity = Number(quantity ?? 1)
+    const validQuantity = (value: number) => Number.isInteger(value) && value >= 1 && value <= 1_000_000
+    if (!bookingId || (batch
+      ? !lines.length || lines.length > 100 || lines.some(item => !item.inventoryItemId || !validQuantity(item.quantity))
+      : !legacyName || !validQuantity(legacyQuantity))) {
+      return res.status(400).json({ error: 'Select a project and enter a valid whole-number quantity for each material.' })
+    }
+    if (new Set(lines.map(item => item.inventoryItemId)).size !== lines.length) {
+      return res.status(400).json({ error: 'Add each material once and set its total quantity.' })
     }
 
     try {
-      const booking = await prisma.booking.findUnique({ where: { id: String(bookingId) }, select: { id: true, assignedToId: true, title: true } })
+      const booking = await prisma.booking.findUnique({
+        where: { id: String(bookingId) },
+        select: { id: true, assignedToId: true, title: true, project: { select: { assignments: { where: { techId: user.id }, select: { techId: true } } } } },
+      })
       if (!booking) return res.status(404).json({ error: 'Booking not found' })
-      if (user.role === 'TECH' && booking.assignedToId !== user.id) {
+      if (user.role === 'TECH' && booking.assignedToId !== user.id && !booking.project?.assignments.length) {
         return res.status(403).json({ error: 'You can only request materials for your assigned projects' })
       }
 
-      const materialName = String(material).trim()
-      const reqQuantity = quantity != null ? Math.max(1, Math.round(Number(quantity))) : 1
-      const reqUnit = unit ? String(unit).trim() : 'pcs'
-
-      // Check or find matching inventory item
-      let inventoryItem = await prisma.inventoryItem.findFirst({
-        where: { name: { equals: materialName, mode: 'insensitive' } }
-      })
-      if (!inventoryItem) {
-        inventoryItem = await prisma.inventoryItem.findFirst({
-          where: { name: { contains: materialName, mode: 'insensitive' } }
-        })
-      }
-      if (!inventoryItem) {
-        inventoryItem = await prisma.inventoryItem.create({
-          data: {
-            name: materialName,
-            quantity: 0,
-            unit: reqUnit,
-            category: 'Materials'
-          }
-        })
-      }
-
-      const request = await prisma.materialRequest.create({
-        data: {
-          techId: user.id,
-          bookingId: booking.id,
-          material: materialName,
-          quantity: reqQuantity,
-          unit: reqUnit,
-          reason: reason ? String(reason).trim() : null,
-          priority: priority && String(priority).toUpperCase() === 'URGENT' ? 'URGENT' : 'NORMAL'
-        }
-      })
-
-      // Automatically create the linked WarehouseRequest
-      const reqUid = (await import('crypto')).randomUUID()
+      const requestReason = typeof reason === 'string' ? reason.trim() || null : null
+      const requestPriority = String(priority).toUpperCase() === 'URGENT' ? 'URGENT' : 'NORMAL'
+      const reqUid = randomUUID()
       const whrReference = `WHR-TECH-${new Date().getFullYear()}-${reqUid.slice(0, 8).toUpperCase()}`
 
-      await prisma.warehouseRequest.create({
-        data: {
-          id: reqUid,
-          reference: whrReference,
-          source: 'TECHNICIAN',
-          status: 'PENDING',
-          requesterId: user.id,
-          bookingId: booking.id,
-          projectReference: booking.title,
-          materialRequestId: request.id,
-          notes: reason ? String(reason).trim() : (priority ? `Priority: ${priority}` : null),
-          items: {
-            create: [{
-              inventoryItemId: inventoryItem.id,
-              requestedQuantity: reqQuantity,
-              unit: reqUnit,
-              notes: priority ? `Priority: ${priority}` : null
-            }]
-          }
+      const request = await prisma.$transaction(async tx => {
+        let selected: { id: string; name: string; unit: string | null; quantity: number }[]
+        if (batch) {
+          const inventory = await tx.inventoryItem.findMany({
+            where: { id: { in: lines.map(item => item.inventoryItemId) }, deletedAt: null },
+            select: { id: true, name: true, unit: true },
+          })
+          if (inventory.length !== lines.length) return null
+          const byId = new Map(inventory.map(item => [item.id, item]))
+          selected = lines.map(line => ({ ...byId.get(line.inventoryItemId)!, quantity: line.quantity }))
+        } else {
+          const legacyUnit = typeof unit === 'string' && unit.trim() ? unit.trim() : 'pcs'
+          const inventoryItem = await tx.inventoryItem.findFirst({
+            where: { name: { equals: legacyName, mode: 'insensitive' }, deletedAt: null },
+          }) ?? await tx.inventoryItem.findFirst({
+            where: { name: { contains: legacyName, mode: 'insensitive' }, deletedAt: null },
+          }) ?? await tx.inventoryItem.create({
+            data: { name: legacyName, quantity: 0, unit: legacyUnit, category: 'Materials' },
+          })
+          selected = [{ id: inventoryItem.id, name: legacyName, unit: legacyUnit, quantity: legacyQuantity }]
         }
-      }).catch((e) => console.error('Failed to create linked warehouse request:', e))
 
-      // Notify warehouse workers about the new technician material request
-      const warehouseWorkers = await prisma.user.findMany({ where: { role: 'WAREHOUSE', status: 'ACTIVE' }, select: { id: true } })
-      if (warehouseWorkers.length) {
-        await prisma.notification.createMany({
-          data: warehouseWorkers.map((worker) => ({
-            userId: worker.id,
-            type: 'WAREHOUSE_REQUEST',
-            title: 'New Technician Material Request',
-            message: `${user.name} requested ${reqQuantity} ${reqUnit} of "${materialName}" for "${booking.title}". This request is pending for admin approval.`,
-            link: '/warehouse/requests'
-          }))
-        }).catch(() => {})
-      }
-
-      // Notify admins about the new request
-      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { id: true } })
-      if (admins.length) {
-        await prisma.notification.createMany({
-          data: admins.map((admin) => ({
-            userId: admin.id,
-            type: 'MATERIAL_REQUEST',
-            title: 'New Material Request',
-            message: `${user.name} requested materials for "${booking.title}".`,
-            link: '/admin/materials-requests'
-          }))
+        const first = selected[0]
+        const created = await tx.materialRequest.create({
+          data: {
+            techId: user.id,
+            bookingId: booking.id,
+            material: selected.length === 1 ? first.name : `${first.name} + ${selected.length - 1} more`,
+            quantity: selected.reduce((sum, item) => sum + item.quantity, 0),
+            unit: selected.length === 1 ? first.unit || 'pcs' : null,
+            reason: requestReason,
+            priority: requestPriority,
+          },
         })
+        await tx.warehouseRequest.create({
+          data: {
+            id: reqUid,
+            reference: whrReference,
+            source: 'TECHNICIAN',
+            requesterId: user.id,
+            bookingId: booking.id,
+            projectReference: booking.title,
+            materialRequestId: created.id,
+            notes: requestReason || `Priority: ${requestPriority}`,
+            items: { create: selected.map(item => ({
+              inventoryItemId: item.id,
+              requestedQuantity: item.quantity,
+              unit: item.unit || 'pcs',
+            })) },
+          },
+        })
+        return created
+      })
+      if (!request) return res.status(400).json({ error: 'One or more selected materials are unavailable. Refresh the warehouse list and try again.' })
+
+      try {
+        const recipients = await prisma.user.findMany({
+          where: { OR: [{ role: 'ADMIN' }, { role: 'WAREHOUSE', status: 'ACTIVE' }] },
+          select: { id: true, role: true },
+        })
+        if (recipients.length) {
+          await prisma.notification.createMany({
+            data: recipients.map(recipient => ({
+              userId: recipient.id,
+              type: recipient.role === 'WAREHOUSE' ? 'WAREHOUSE_REQUEST' : 'MATERIAL_REQUEST',
+              title: 'New Technician Material Request',
+              message: `${user.name} requested ${request.material} for "${booking.title}". This request is pending admin approval.`,
+              link: recipient.role === 'WAREHOUSE' ? '/warehouse/requests' : '/admin/materials-requests',
+            })),
+          })
+        }
+      } catch (error) {
+        console.error('Failed to send material request notifications', error)
       }
 
       return res.status(201).json({ ok: true, request, warehouseReference: whrReference })
