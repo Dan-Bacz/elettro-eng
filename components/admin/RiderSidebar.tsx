@@ -8,7 +8,7 @@ import { GearIcon, GridIcon, LogoutIcon, PackageIcon, UserIcon } from './icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/rider/dashboard' },
-  { key: 'deliveries', label: 'My Deliveries', icon: PackageIcon, href: '/rider/dashboard#deliveries' },
+  { key: 'deliveries', label: 'My Deliveries', icon: PackageIcon, href: '/rider/deliveries' },
   { key: 'profile', label: 'Profile', icon: UserIcon, href: '/rider/dashboard#profile' },
   { key: 'settings', label: 'Settings', icon: GearIcon, href: '/rider/dashboard#settings' },
 ]

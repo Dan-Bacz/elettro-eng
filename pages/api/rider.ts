@@ -2,6 +2,8 @@ import { PrismaClient, DeliveryStatus, OrderStatus } from '@prisma/client'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 import { uploadToCloudinary } from '../../lib/cloudinary'
+import { isProfilePhotoDataUrl } from '../../lib/profile-photo-data'
+import { riderDeliveryNeedsReason, riderDeliveryTransitions } from '../../lib/rider-delivery-status'
 
 const prisma = new PrismaClient()
 
@@ -126,13 +128,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       })
     }
 
-    const allowedTransitions: Record<string, DeliveryStatus[]> = {
-      ASSIGNED: [DeliveryStatus.PREPARING_DISPATCH, DeliveryStatus.IN_TRANSIT, DeliveryStatus.DELIVERY_FAILED, DeliveryStatus.CANCELLATION_REQUESTED],
-      PREPARING_DISPATCH: [DeliveryStatus.IN_TRANSIT, DeliveryStatus.DELIVERY_FAILED, DeliveryStatus.CANCELLATION_REQUESTED],
-      IN_TRANSIT: [DeliveryStatus.DELIVERY_FAILED, DeliveryStatus.CANCELLATION_REQUESTED, DeliveryStatus.RETURN_REQUESTED],
-      DELIVERY_FAILED: [DeliveryStatus.IN_TRANSIT, DeliveryStatus.RETURN_REQUESTED],
-    }
-
     try {
       const order = await prisma.order.findUnique({
         where: { id: String(orderId) },
@@ -146,7 +141,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const currentDeliveryStatus = order.deliveryStatus || DeliveryStatus.ASSIGNED
-      const allowedNext = allowedTransitions[currentDeliveryStatus] || []
+      const allowedNext = riderDeliveryTransitions[currentDeliveryStatus] || []
 
       if (!allowedNext.includes(status as DeliveryStatus)) {
         return res.status(409).json({
@@ -154,7 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       }
 
-      if (['DELIVERY_FAILED', 'CANCELLATION_REQUESTED', 'RETURN_REQUESTED'].includes(status) && (!reason || !String(reason).trim())) {
+      if (riderDeliveryNeedsReason(String(status)) && (!reason || !String(reason).trim())) {
         return res.status(400).json({ error: 'A specific reason is required for failed delivery, cancellation, or return.' })
       }
 
@@ -162,7 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const updated = await prisma.$transaction(async (tx) => {
         const ord = await tx.order.update({
-          where: { id: order.id },
+          where: { id: order.id, riderId: user.id, deliveryStatus: currentDeliveryStatus },
           data: {
             deliveryStatus: status as DeliveryStatus,
             trackingNumber,
@@ -206,6 +201,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({ ok: true, order: withOrderDetails(updated) })
     } catch (error: any) {
+      if (error.code === 'P2025') return res.status(409).json({ error: 'This delivery changed. Refresh and try again.' })
       console.error('Rider PATCH error:', error)
       return res.status(500).json({ error: error.message || 'Failed to update delivery status' })
     }
@@ -213,10 +209,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // POST: Photo Proof of Delivery submission and completion
   if (req.method === 'POST') {
-    const { orderId, imageData, recipientName, notes } = req.body || {}
+    const { orderId, imageData, arrivalDateTime, recipientName, notes } = req.body || {}
 
-    if (!orderId || !imageData) {
-      return res.status(400).json({ error: 'Order ID and photo proof image are required' })
+    if (!orderId || !isProfilePhotoDataUrl(imageData)) {
+      return res.status(400).json({ error: 'Capture a valid proof of delivery photo.' })
+    }
+    const arrivedAt = typeof arrivalDateTime === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(arrivalDateTime) ? new Date(arrivalDateTime) : null
+    if (!arrivedAt || !Number.isFinite(arrivedAt.getTime()) || arrivedAt.toISOString() !== arrivalDateTime || arrivedAt.getTime() > Date.now()) {
+      return res.status(400).json({ error: 'Enter a valid parcel arrival date and time that has already occurred.' })
     }
 
     try {
@@ -231,8 +231,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ error: 'Forbidden: You are not assigned to this delivery' })
       }
 
-      if (order.deliveryStatus === DeliveryStatus.DELIVERED && order.proofOfDelivery) {
-        return res.status(409).json({ error: 'This delivery has already been marked as DELIVERED with proof.' })
+      if (order.deliveryStatus !== DeliveryStatus.IN_TRANSIT) {
+        return res.status(409).json({ error: 'Only an in-transit delivery can be completed.' })
       }
 
       // Upload photo proof to Cloudinary
@@ -246,6 +246,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const trackingNumber = order.trackingNumber || `ELE-DLV-${new Date(order.createdAt).getFullYear()}-${order.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
 
       const result = await prisma.$transaction(async (tx) => {
+        const updatedOrder = await tx.order.update({
+          where: { id: order.id, riderId: user.id, deliveryStatus: DeliveryStatus.IN_TRANSIT },
+          data: {
+            deliveryStatus: DeliveryStatus.DELIVERED,
+            status: OrderStatus.DELIVERED,
+            trackingNumber,
+          },
+        })
         // Create or update ProofOfDelivery
         const proof = await tx.proofOfDelivery.upsert({
           where: { orderId: order.id },
@@ -257,14 +265,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             imagePublicId: uploadResult.public_id,
             notes: notes ? String(notes).trim() : null,
             recipientName: recipientName ? String(recipientName).trim() : order.clientName,
-            deliveredAt: new Date(),
+            deliveredAt: arrivedAt,
           },
           update: {
             imageUrl: uploadResult.secure_url,
             imagePublicId: uploadResult.public_id,
+            riderId: user.id,
+            trackingNumber,
             notes: notes ? String(notes).trim() : null,
             recipientName: recipientName ? String(recipientName).trim() : order.clientName,
-            deliveredAt: new Date(),
+            deliveredAt: arrivedAt,
           },
         })
 
@@ -277,17 +287,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             actorId: user.id,
             actorRole: 'RIDER',
             notes: notes ? `Delivered with photo proof. Notes: ${notes}` : 'Delivered with photo proof.',
-          },
-        })
-
-        // Update Order to DELIVERED
-        const updatedOrder = await tx.order.update({
-          where: { id: order.id },
-          data: {
-            deliveryStatus: DeliveryStatus.DELIVERED,
-            status: OrderStatus.DELIVERED,
-            trackingNumber,
-            updatedAt: new Date(),
           },
         })
 
@@ -329,6 +328,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         proof: result.proof,
       })
     } catch (error: any) {
+      if (error.code === 'P2025') return res.status(409).json({ error: 'This delivery changed. Refresh and try again.' })
       console.error('Rider POST error:', error)
       return res.status(500).json({ error: error.message || 'Failed to complete delivery with proof' })
     }

@@ -240,6 +240,7 @@ public class WebViewActivity extends AppCompatActivity {
                     return true;
                 }
                 if (!params.isCaptureEnabled() || !("/technician/jobs".equals(path) || "/technician/jobs/".equals(path)
+                        || "/rider/deliveries".equals(path) || "/rider/deliveries/".equals(path)
                         || "/technician/material-usage".equals(path) || "/technician/material-usage/".equals(path))) return false;
                 finishFileSelection(null);
                 fileCallback = callback;

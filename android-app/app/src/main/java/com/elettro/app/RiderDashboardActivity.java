@@ -142,7 +142,12 @@ public class RiderDashboardActivity extends AppCompatActivity {
             int id = item.getItemId();
             drawerLayout.closeDrawer(GravityCompat.START);
             if (id == R.id.nav_home) { showSection("home"); return true; }
-            if (id == R.id.nav_deliveries) { showSection("deliveries"); return true; }
+            if (id == R.id.nav_deliveries) {
+                android.content.Intent intent = new android.content.Intent(this, WebViewActivity.class);
+                intent.putExtra(WebViewActivity.EXTRA_ROUTE, "/rider/deliveries");
+                startActivity(intent);
+                return true;
+            }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_profile) { showSection("profile"); return true; }
             if (id == R.id.nav_logout) { logout(); return true; }
