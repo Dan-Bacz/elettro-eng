@@ -648,3 +648,12 @@ model DeliveryHistory {
 
   @@index([orderId, createdAt])
 }
+
+model SikatPayWebhookEvent {
+  id             String   @id
+  paymentId      String
+  orderReference String?
+  amountCentavos BigInt
+  livemode       Boolean
+  receivedAt     DateTime @default(now())
+}
