@@ -57,7 +57,7 @@ type Confirmation = {
 
 function isValidPhone(p: string) {
   const digits = (p || "").replace(/\D/g, "")
-  return digits.length >= 10 && digits.length <= 15
+  return digits.length >= 8 && digits.length <= 15
 }
 
 export default function CheckoutModal() {
@@ -148,6 +148,7 @@ export default function CheckoutModal() {
           clientName: data.user.name || current.clientName,
           email: data.user.email || current.email,
           phone: data.user.phone || current.phone,
+          address: current.address || data.user.address || "",
         }))
       })
       .catch((reason) => console.error("Could not load client contact details:", reason))

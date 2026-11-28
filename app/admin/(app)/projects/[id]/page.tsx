@@ -6,6 +6,7 @@ import StatusBadge from '../../../../../components/admin/StatusBadge'
 import ConfirmDialog from '../../../../../components/admin/ConfirmDialog'
 import { statusProgress, formatDate, formatDateTime } from '../../../../../components/admin/types'
 import type { BookingObj, UserObj } from '../../../../../components/admin/types'
+import { formatPeso } from '@/components/client/store/storeUtils'
 
 const STEPS = ['APPROVED', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED']
 
@@ -201,7 +202,7 @@ export default function AdminProjectDetailPage() {
               <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Lead Technician</dt><dd className="mt-1 text-xs font-semibold text-slate-700">{booking.assignedTo?.name || '—'}</dd></div>
               <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Start Date</dt><dd className="mt-1 text-xs font-semibold text-slate-700">{formatDate(booking.startDate)}</dd></div>
               <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">End Date</dt><dd className="mt-1 text-xs font-semibold text-slate-700">{formatDate(booking.endDate)}</dd></div>
-              <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Budget</dt><dd className="mt-1 text-xs font-semibold text-slate-700">{booking.budget != null ? `$${Number(booking.budget).toLocaleString()}` : '—'}</dd></div>
+              <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Budget</dt><dd className="mt-1 text-xs font-semibold text-slate-700">{booking.budget != null ? formatPeso(booking.budget, 2) : '—'}</dd></div>
               <div><dt className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Created</dt><dd className="mt-1 text-xs font-semibold text-slate-700">{formatDate(booking.createdAt)}</dd></div>
             </dl>
           </div>

@@ -15,7 +15,7 @@ function readPhoto(file: File) {
   })
 }
 
-export default function StaffAccountSettings({ department, initialProfile }: { department: 'Sales' | 'Warehouse'; initialProfile: StaffProfile }) {
+export default function AccountSettings({ department, initialProfile }: { department: 'Sales' | 'Warehouse' | 'Client'; initialProfile: StaffProfile }) {
   const router = useRouter()
   const photoDialog = useRef<HTMLDialogElement>(null)
   const [saved, setSaved] = useState(initialProfile)
@@ -95,7 +95,7 @@ export default function StaffAccountSettings({ department, initialProfile }: { d
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <header className="rounded-3xl border border-slate-800 bg-slate-950 px-5 py-6 text-white sm:px-8 sm:py-8">
-        <p className="text-sm font-semibold text-yellow-300">{department} Department</p>
+        <p className="text-sm font-semibold text-yellow-300">{department === 'Client' ? 'Client portal' : `${department} Department`}</p>
         <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Account settings</h1>
         <p className="mt-2 text-sm text-slate-300">Manage your profile photo and contact information.</p>
       </header>
@@ -155,7 +155,7 @@ export default function StaffAccountSettings({ department, initialProfile }: { d
               </label>
               <label className="text-sm font-semibold text-slate-800 sm:col-span-2">
                 Phone number
-                <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={40} autoComplete="tel" className={fieldClass} />
+                <input type="tel" required={department === 'Client'} value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={40} autoComplete="tel" className={fieldClass} />
               </label>
               <label className="text-sm font-semibold text-slate-800 sm:col-span-2">
                 Address

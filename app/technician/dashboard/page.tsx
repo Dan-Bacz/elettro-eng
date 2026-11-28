@@ -7,6 +7,7 @@ import type { BookingObj, UserObj } from '../../../components/admin/types'
 import { formatDate, formatDateTime } from '../../../components/admin/types'
 import TechnicianSectionPage from '../../../components/admin/TechnicianSectionPage'
 import TechnicianAnalytics from '../../../components/admin/TechnicianAnalytics'
+import { formatPeso } from '@/components/client/store/storeUtils'
 
 type TechPayload = {
   tech: UserObj
@@ -264,7 +265,7 @@ export default function TechnicianDashboardPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-xs shrink-0">
-                      <span className="font-bold text-slate-700">{b.budget != null ? `$${Number(b.budget).toLocaleString()}` : '—'}</span>
+                      <span className="font-bold text-slate-700">{b.budget != null ? formatPeso(b.budget, 2) : '—'}</span>
                       <span className="text-slate-400">{isOpen ? '▲' : '▼'}</span>
                     </div>
                   </button>

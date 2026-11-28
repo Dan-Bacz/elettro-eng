@@ -7,6 +7,7 @@ import ConfirmDialog from '../../../../../components/admin/ConfirmDialog'
 import { BOOKING_STATUSES } from '../../../../../components/admin/types'
 import { formatDate, formatDateTime } from '../../../../../components/admin/types'
 import type { BookingObj, UserObj } from '../../../../../components/admin/types'
+import { formatPeso } from '@/components/client/store/storeUtils'
 
 export default function AdminBookingDetailPage() {
   const params = useParams<{ id: string }>()
@@ -167,7 +168,7 @@ export default function AdminBookingDetailPage() {
               <Detail label="Client" value={
                 booking.client ? `${booking.client.name} (${booking.client.email})${booking.client.phone ? ` · ${booking.client.phone}` : ''}` : '—'
               } />
-              <Detail label="Allocated Budget" value={booking.budget != null ? `₱${Number(booking.budget).toLocaleString()}` : 'Not allocated'} />
+              <Detail label="Allocated Budget" value={booking.budget != null ? formatPeso(booking.budget, 2) : 'Not allocated'} />
               <Detail label="Start Date" value={formatDate(booking.startDate)} />
               <Detail label="End Date" value={formatDate(booking.endDate)} />
             </dl>

@@ -6,6 +6,7 @@ import StatusBadge from '../../../../../components/admin/StatusBadge'
 import EmptyState from '../../../../../components/admin/EmptyState'
 import type { BookingObj, UserObj } from '../../../../../components/admin/types'
 import { formatDate } from '../../../../../components/admin/types'
+import { formatPeso } from '@/components/client/store/storeUtils'
 
 export default function AdminTechnicianDetailPage() {
   const params = useParams<{ id: string }>()
@@ -159,7 +160,7 @@ export default function AdminTechnicianDetailPage() {
                     <td className="py-3 pr-4 text-xs text-slate-500">{b.client?.name || '—'}</td>
                     <td className="py-3 pr-4"><StatusBadge status={b.status} /></td>
                     <td className="py-3 pr-4 text-xs text-slate-400">{formatDate(b.startDate)} → {formatDate(b.endDate)}</td>
-                    <td className="py-3 text-right text-xs font-bold text-slate-700">{b.budget != null ? `$${Number(b.budget).toLocaleString()}` : '—'}</td>
+                    <td className="py-3 text-right text-xs font-bold text-slate-700">{b.budget != null ? formatPeso(b.budget, 2) : '—'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-import StaffAccountSettings from '../../../../components/departments/StaffAccountSettings'
+import AccountSettings from '../../../../components/departments/AccountSettings'
 import { getSessionUser } from '../../../../lib/auth'
 
 export const metadata = { title: 'Account Settings | Elettro Warehouse' }
@@ -11,7 +11,7 @@ export default async function WarehouseSettingsPage() {
   if (!user || user.role !== 'WAREHOUSE' || user.status !== 'ACTIVE') redirect('/warehouse/login')
 
   return (
-    <StaffAccountSettings department="Warehouse" initialProfile={{
+    <AccountSettings department="Warehouse" initialProfile={{
       name: user.name,
       email: user.email,
       phone: user.phone,

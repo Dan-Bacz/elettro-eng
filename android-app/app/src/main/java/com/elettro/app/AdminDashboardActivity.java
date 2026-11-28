@@ -1578,7 +1578,7 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
                 footer.addView(tvTeam);
 
                 TextView tvBudget = new TextView(this);
-                tvBudget.setText(projBudget >= 0 ? "$" + String.format(Locale.US, "%,.0f", projBudget) : "—");
+                tvBudget.setText(projBudget >= 0 ? "₱" + String.format(Locale.US, "%,.2f", projBudget) : "—");
                 tvBudget.setTextColor(Color.parseColor("#0F172A"));
                 tvBudget.setTextSize(11);
                 tvBudget.setTypeface(null, Typeface.BOLD);
@@ -2399,7 +2399,7 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
         addDetailTitle(layout, "Budget");
         TextView tvBudgetValue = new TextView(this);
         tvBudgetValue.setText(budget >= 0
-                ? "✎  $ " + String.format(Locale.US, "%,.2f", budget) + "   (tap to edit)"
+                ? "✎  ₱" + String.format(Locale.US, "%,.2f", budget) + "   (tap to edit)"
                 : "✎  Not set — tap to add");
         tvBudgetValue.setTextColor(Color.parseColor("#B45309"));
         tvBudgetValue.setTextSize(13);
@@ -2454,7 +2454,7 @@ statLowStock.setText(String.valueOf(stats.optInt("lowStock")));
         EditText input = new EditText(this);
         input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL);
         if (currentBudget >= 0) input.setText(String.valueOf(currentBudget));
-        input.setHint("Budget (USD)");
+        input.setHint("Budget (PHP)");
         LinearLayout wrap = new LinearLayout(this);
         wrap.setOrientation(LinearLayout.VERTICAL);
         wrap.setPadding(40, 16, 40, 0);

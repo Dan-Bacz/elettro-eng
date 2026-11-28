@@ -1,5 +1,5 @@
-import { staffProfileHandler } from '../../../lib/staff-profile-handler'
+import { accountProfileHandler } from '../../../lib/account-profile-handler'
 
 export const config = { api: { bodyParser: { sizeLimit: '3mb' } } }
 
-export default staffProfileHandler('SALES')
+export default accountProfileHandler('SALES')

@@ -5,6 +5,7 @@ import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import type { ReactNode } from "react"
+import { GearIcon } from "../admin/icons"
 import ClientSupportWidget from "./ClientSupportWidget"
 
 type ClientShellProps = {
@@ -19,6 +20,7 @@ const navItems = [
   { label: "View Services", href: "/client/services", icon: "⌁" },
   { label: "View Products", href: "/client/products", icon: "▧" },
   { label: "Submit Feedback", href: "/client/feedback", icon: "✉" },
+  { label: "Account Settings", href: "/client/settings", icon: <GearIcon className="h-4 w-4" /> },
 ]
 
 export default function ClientShell({ user, children }: ClientShellProps) {
@@ -101,10 +103,10 @@ export default function ClientShell({ user, children }: ClientShellProps) {
           ))}
         </nav>
         <div className="border-t border-white/10 p-3">
-          <div className="mb-3 flex min-w-0 items-center gap-3 px-2">
+          <Link href="/client/settings" aria-label="Account settings" onClick={() => setMobileOpen(false)} className="mb-3 flex min-w-0 items-center gap-3 rounded-lg px-2 py-1 hover:bg-white/10">
             {user.profileImageUrl ? <img src={user.profileImageUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">{user.name.trim().charAt(0).toUpperCase()}</span>}
             {!collapsed && <div className="min-w-0"><p className="truncate text-xs font-bold text-white">{user.name}</p><p className="truncate text-[11px] text-gray-500">{user.email}</p></div>}
-          </div>
+          </Link>
           {logoutError && <p role="alert" className="mb-2 px-2 text-xs text-red-300">{logoutError}</p>}
           <button type="button" onClick={handleLogout} disabled={loggingOut} title={collapsed ? "Log out" : undefined} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-400 transition-colors hover:bg-red-500/10 hover:text-red-400 disabled:opacity-60">
             <span aria-hidden="true" className="flex h-5 w-5 shrink-0 items-center justify-center">↪</span>
