@@ -3,7 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import { getSessionUser, getTokenFromRequest } from '../../lib/auth'
 import { uploadToCloudinary } from '../../lib/cloudinary'
 import { isProfilePhotoDataUrl } from '../../lib/profile-photo-data'
-import { riderDeliveryNeedsReason, riderDeliveryTransitions } from '../../lib/rider-delivery-status'
+import { formatDeliveryTime, riderDeliveryLabel, riderDeliveryNeedsReason, riderDeliveryTransitions } from '../../lib/rider-delivery-status'
 
 const prisma = new PrismaClient()
 
@@ -111,15 +111,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // PATCH: Update delivery status (e.g., IN_TRANSIT, DELIVERY_FAILED, CANCELLATION_REQUESTED, RETURN_REQUESTED)
   if (req.method === 'PATCH') {
-    const { orderId, status, reason, notes } = req.body || {}
+    const { orderId, status, reason, notes, expectedArrivalAt } = req.body || {}
+    const hasSchedule = expectedArrivalAt !== undefined
+    const scheduled = typeof expectedArrivalAt === 'string' ? new Date(expectedArrivalAt) : null
 
     if (typeof req.body?.available === 'boolean') {
       const updatedRider = await prisma.user.update({ where: { id: user.id }, data: { available: req.body.available }, select: { id: true, available: true } })
       return res.status(200).json({ ok: true, available: updatedRider.available })
     }
 
-    if (!orderId || !status) {
-      return res.status(400).json({ error: 'Order id and status are required' })
+    if (!orderId || (!status && !hasSchedule)) {
+      return res.status(400).json({ error: 'Choose a delivery status or set an expected arrival time.' })
+    }
+    if (hasSchedule && (!scheduled || !Number.isFinite(scheduled.getTime()) ||
+        scheduled.toISOString() !== expectedArrivalAt || scheduled.getTime() <= Date.now())) {
+      return res.status(400).json({ error: 'Enter a future expected arrival date and time.' })
     }
 
     if (status === 'DELIVERED') {
@@ -139,14 +145,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (order.riderId !== user.id) {
         return res.status(403).json({ error: 'Forbidden: You are not assigned to this delivery' })
       }
+      if ([OrderStatus.CANCELLED, OrderStatus.COMPLETED, OrderStatus.DELIVERED].some(status => status === order.status)) {
+        return res.status(409).json({ error: 'This order is closed.' })
+      }
 
       const currentDeliveryStatus = order.deliveryStatus || DeliveryStatus.ASSIGNED
       const allowedNext = riderDeliveryTransitions[currentDeliveryStatus] || []
 
-      if (!allowedNext.includes(status as DeliveryStatus)) {
+      if (status && !allowedNext.includes(status)) {
         return res.status(409).json({
           error: `Cannot transition delivery from ${currentDeliveryStatus} to ${status}`,
         })
+      }
+      if (hasSchedule && (!['ASSIGNED', 'PREPARING_DISPATCH', 'IN_TRANSIT', 'DELIVERY_FAILED'].includes(currentDeliveryStatus) ||
+          (status && !['PREPARING_DISPATCH', 'IN_TRANSIT'].includes(status)))) {
+        return res.status(409).json({ error: 'Expected arrival can only be scheduled for an active delivery.' })
       }
 
       if (riderDeliveryNeedsReason(String(status)) && (!reason || !String(reason).trim())) {
@@ -154,13 +167,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       const trackingNumber = order.trackingNumber || `ELE-DLV-${new Date(order.createdAt).getFullYear()}-${order.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
+      const nextStatus = (status || currentDeliveryStatus) as DeliveryStatus
+      const scheduleChanged = scheduled && scheduled.getTime() !== order.expectedArrivalAt?.getTime()
+      if (!status && !scheduleChanged) return res.status(200).json({ ok: true, order: withOrderDetails(order) })
+      const scheduleMessage = scheduleChanged ? `Expected arrival: ${formatDeliveryTime(scheduled)}.` : ''
+      const statusMessage = status ? `Delivery status: ${riderDeliveryLabel(nextStatus)}.` : ''
 
       const updated = await prisma.$transaction(async (tx) => {
         const ord = await tx.order.update({
-          where: { id: order.id, riderId: user.id, deliveryStatus: currentDeliveryStatus },
+          where: { id: order.id, riderId: user.id, deliveryStatus: currentDeliveryStatus, updatedAt: order.updatedAt },
           data: {
-            deliveryStatus: status as DeliveryStatus,
+            deliveryStatus: nextStatus,
             trackingNumber,
+            ...(scheduleChanged ? { expectedArrivalAt: scheduled } : {}),
             deliveryFailedReason: reason ? String(reason).trim() : order.deliveryFailedReason,
             status: status === DeliveryStatus.IN_TRANSIT ? OrderStatus.SHIPPED : order.status,
             updatedAt: new Date(),
@@ -171,30 +190,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           data: {
             orderId: order.id,
             trackingNumber,
-            status: status as DeliveryStatus,
+            status: nextStatus,
             actorId: user.id,
             actorRole: 'RIDER',
-            notes: reason ? `${reason}${notes ? ` - ${notes}` : ''}` : notes || null,
+            notes: [scheduleMessage, reason, notes].filter(Boolean).join(' · ') || null,
           },
         })
 
-        // Notify sales officers about delivery status changes
-        const salesUsers = await tx.user.findMany({
-          where: { role: 'SALES', status: 'ACTIVE' },
-          select: { id: true },
+        const staff = await tx.user.findMany({
+          where: { role: { in: ['SALES', 'ADMIN'] }, status: 'ACTIVE' },
+          select: { id: true, role: true },
         })
-
-        if (salesUsers.length) {
-          await tx.notification.createMany({
-            data: salesUsers.map((sales) => ({
-              userId: sales.id,
-              type: 'DELIVERY_UPDATE',
-              title: status === DeliveryStatus.IN_TRANSIT ? 'Order In Transit' : 'Delivery Issue Reported',
-              message: `Rider ${user.name} updated ${withOrderDetails(order).reference} to ${status.replace(/_/g, ' ')}${reason ? `: ${reason}` : ''}.`,
-              link: '/sales/orders',
+        const reference = withOrderDetails(order).reference
+        const message = [`Order ${reference}.`, statusMessage, scheduleMessage].filter(Boolean).join(' ')
+        const title = scheduleChanged ? 'Expected Parcel Arrival Updated' : `Delivery ${riderDeliveryLabel(nextStatus)}`
+        await tx.notification.createMany({
+          data: [
+            { userId: order.clientId, type: 'DELIVERY_UPDATE', title, message, link: `/client/dashboard#order-${order.id}` },
+            ...staff.map(person => ({
+              userId: person.id, type: 'DELIVERY_UPDATE', title,
+              message: [message, reason ? `Reason: ${reason}` : ''].filter(Boolean).join(' '),
+              link: person.role === 'ADMIN' ? '/admin/sales' : '/sales/orders',
             })),
-          })
-        }
+          ],
+        })
 
         return ord
       })
@@ -209,14 +228,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // POST: Photo Proof of Delivery submission and completion
   if (req.method === 'POST') {
-    const { orderId, imageData, arrivalDateTime, recipientName, notes } = req.body || {}
+    const { orderId, imageData, recipientName, notes } = req.body || {}
 
     if (!orderId || !isProfilePhotoDataUrl(imageData)) {
-      return res.status(400).json({ error: 'Capture a valid proof of delivery photo.' })
-    }
-    const arrivedAt = typeof arrivalDateTime === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(arrivalDateTime) ? new Date(arrivalDateTime) : null
-    if (!arrivedAt || !Number.isFinite(arrivedAt.getTime()) || arrivedAt.toISOString() !== arrivalDateTime || arrivedAt.getTime() > Date.now()) {
-      return res.status(400).json({ error: 'Enter a valid parcel arrival date and time that has already occurred.' })
+      return res.status(400).json({ error: 'Capture a valid proof-of-delivery selfie.' })
     }
 
     try {
@@ -231,7 +246,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(403).json({ error: 'Forbidden: You are not assigned to this delivery' })
       }
 
-      if (order.deliveryStatus !== DeliveryStatus.IN_TRANSIT) {
+      if (order.deliveryStatus !== DeliveryStatus.IN_TRANSIT || order.status === OrderStatus.CANCELLED) {
         return res.status(409).json({ error: 'Only an in-transit delivery can be completed.' })
       }
 
@@ -246,8 +261,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const trackingNumber = order.trackingNumber || `ELE-DLV-${new Date(order.createdAt).getFullYear()}-${order.id.replace(/-/g, '').slice(0, 6).toUpperCase()}`
 
       const result = await prisma.$transaction(async (tx) => {
+        const arrivedAt = new Date()
         const updatedOrder = await tx.order.update({
-          where: { id: order.id, riderId: user.id, deliveryStatus: DeliveryStatus.IN_TRANSIT },
+          where: { id: order.id, riderId: user.id, deliveryStatus: DeliveryStatus.IN_TRANSIT, updatedAt: order.updatedAt },
           data: {
             deliveryStatus: DeliveryStatus.DELIVERED,
             status: OrderStatus.DELIVERED,
@@ -297,14 +313,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             type: 'ORDER_DELIVERED',
             title: 'Order Delivered',
             message: `Your order ${withOrderDetails(order).reference} has been delivered by rider ${user.name}.`,
-            link: '/client/dashboard',
+            link: `/client/dashboard#order-${order.id}`,
           },
         }).catch(() => {})
 
         // Notify sales officers
         const salesWorkers = await tx.user.findMany({
-          where: { role: 'SALES', status: 'ACTIVE' },
-          select: { id: true },
+          where: { role: { in: ['SALES', 'ADMIN'] }, status: 'ACTIVE' },
+          select: { id: true, role: true },
         })
 
         if (salesWorkers.length) {
@@ -314,7 +330,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               type: 'DELIVERY_COMPLETED',
               title: 'Delivery Completed',
               message: `Order ${withOrderDetails(order).reference} was delivered by ${user.name}. Proof photo is available for review.`,
-              link: '/sales/orders',
+              link: sales.role === 'ADMIN' ? '/admin/sales' : '/sales/orders',
             })),
           }).catch(() => {})
         }

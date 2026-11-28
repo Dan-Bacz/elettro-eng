@@ -16,13 +16,14 @@ export function ReportPhotoGallery({ photos }: { photos: string[] }) {
   )
 }
 
-export default function ReportPhotoPicker({ label, photos, onChange, onProcessing, disabled, maxPhotos = MAX_REPORT_PHOTOS }: {
+export default function ReportPhotoPicker({ label, photos, onChange, onProcessing, disabled, maxPhotos = MAX_REPORT_PHOTOS, camera = 'environment' }: {
   label: string
   photos: string[]
   onChange: (photos: string[]) => void
   onProcessing: (processing: boolean) => void
   disabled: boolean
   maxPhotos?: number
+  camera?: 'user' | 'environment'
 }) {
   const [processing, setProcessing] = useState(false)
   const [error, setError] = useState('')
@@ -32,7 +33,7 @@ export default function ReportPhotoPicker({ label, photos, onChange, onProcessin
       <legend className="text-xs font-bold text-slate-800">{label}</legend>
       <label className="inline-block cursor-pointer rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus-within:ring-2 focus-within:ring-cyan-600">
         {processing ? 'Preparing photo…' : 'Capture photo'}
-        <input type="file" accept="image/*" capture="environment" aria-label={`Capture ${label.toLowerCase()}`} className="sr-only" disabled={photos.length >= maxPhotos} onChange={async (event) => {
+        <input type="file" accept="image/*" capture={camera} aria-label={`Capture ${label.toLowerCase()}`} className="sr-only" disabled={photos.length >= maxPhotos} onChange={async (event) => {
           const file = event.currentTarget.files?.[0]
           event.currentTarget.value = ''
           if (!file) return

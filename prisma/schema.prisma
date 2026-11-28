@@ -344,6 +344,7 @@ model Order {
   trackingNumber       String?           @unique
   deliveryStatus       DeliveryStatus    @default(AWAITING_ASSIGNMENT)
   deliveryFailedReason String?
+  expectedArrivalAt    DateTime?
   assignedRider        User?             @relation("OrderAssignedRider", fields: [riderId], references: [id], onDelete: SetNull)
   proofOfDelivery      ProofOfDelivery?
   deliveryHistories    DeliveryHistory[]

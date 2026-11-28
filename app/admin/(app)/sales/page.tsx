@@ -8,6 +8,8 @@ import EmptyState from '../../../../components/admin/EmptyState'
 import PageHeader from '../../../../components/admin/PageHeader'
 import { ArrowRightIcon, CartIcon } from '../../../../components/admin/icons'
 import type { OrderObj } from '../../../../components/admin/types'
+import { formatDeliveryTime, riderDeliveryLabel } from '@/lib/rider-delivery-status'
+import { watchOrderUpdates } from '@/lib/order-refresh'
 
 type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
 
@@ -102,7 +104,15 @@ export default function AdminSalesPage() {
     }
   }, [router])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    void load()
+    return watchOrderUpdates(async () => {
+      try {
+        const response = await fetch('/api/orders', { cache: 'no-store' })
+        if (response.ok) setOrders((await response.json()).orders || [])
+      } catch { /* Keep the last loaded records and retry on the next refresh. */ }
+    })
+  }, [load])
 
   const visible = orders.filter((o) => {
     const matchesFilter = filter === 'ALL' || o.status === filter
@@ -279,9 +289,32 @@ export default function AdminSalesPage() {
                     </div>
                     {order.fulfillmentMethod === 'DELIVERY' && (
                       <div className="mt-3 rounded-xl border border-slate-200 p-3">
+                        <h3 className="text-xs font-black text-slate-800">Delivery record</h3>
+                        <div className="mt-2 space-y-1 text-xs text-slate-700">
+                          <p><strong>Status:</strong> {riderDeliveryLabel(order.status === 'CANCELLED' ? 'CANCELLED' : order.deliveryStatus || 'AWAITING_ASSIGNMENT')}</p>
+                          {order.riderName && <p><strong>Rider:</strong> {order.riderName}</p>}
+                          {order.trackingNumber && <p><strong>Tracking:</strong> {order.trackingNumber}</p>}
+                          {order.expectedArrivalAt && <p><strong>Expected arrival:</strong> {formatDeliveryTime(order.expectedArrivalAt)}</p>}
+                          {order.deliveryFailedReason && <p><strong>Reason:</strong> {order.deliveryFailedReason}</p>}
+                          {order.proofOfDelivery && (
+                            <p><strong>Completed:</strong> {formatDeliveryTime(order.proofOfDelivery.deliveredAt)} <a href={order.proofOfDelivery.imageUrl} target="_blank" rel="noreferrer" className="ml-1 font-bold text-cyan-800 underline">View proof photo</a></p>
+                          )}
+                        </div>
+                        {!!order.deliveryHistories?.length && (
+                          <details className="mt-2 border-t border-slate-200 pt-2 text-xs">
+                            <summary className="cursor-pointer font-bold text-cyan-800">Delivery timeline</summary>
+                            <ol className="mt-2 space-y-2">
+                              {order.deliveryHistories.map(event => (
+                                <li key={event.id}><strong>{riderDeliveryLabel(event.status)}</strong> · {formatDeliveryTime(event.createdAt)}{event.notes && <p className="break-words text-slate-600">{event.notes}</p>}</li>
+                              ))}
+                            </ol>
+                          </details>
+                        )}
+                        <div className="mt-3 border-t border-slate-200 pt-2">
                         <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Delivery fee</div>
                         <div className="mt-1 text-xs font-bold text-slate-700">₱{Number(order.shipping || 0).toLocaleString()}</div>
                         {order.shippingConfirmed && <span className="text-[10px] font-semibold text-emerald-700">Fee confirmed</span>}
+                        </div>
                       </div>
                     )}
                     {order.fulfillmentNote && (

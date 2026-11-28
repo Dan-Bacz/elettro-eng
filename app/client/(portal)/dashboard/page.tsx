@@ -4,6 +4,8 @@ import { isSikatPayTestOrder, SIKATPAY_TEST_PAID, SIKATPAY_TEST_PENDING } from '
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { formatDeliveryTime, riderDeliveryLabel } from "@/lib/rider-delivery-status"
+import { watchOrderUpdates } from "@/lib/order-refresh"
 
 type Booking = {
   id: string
@@ -26,6 +28,8 @@ type Order = {
   paymentMethod: string
   paymentReference: string | null
   fulfillmentMethod: "DELIVERY" | "PICKUP"
+  deliveryStatus?: string
+  expectedArrivalAt?: string | null
   total: number
   shipping: number
   shippingConfirmed: boolean
@@ -126,6 +130,8 @@ function StatusPill({ status, labels }: { status: string; labels: Record<string,
 function orderStatusLabel(order: Order) {
   if (order.paymentStatus === SIKATPAY_TEST_PAID) return "Test payment recorded"
   if (order.paymentStatus === SIKATPAY_TEST_PENDING) return "Test payment pending"
+  if (order.status !== "CANCELLED" && order.deliveryStatus === "CANCELLED") return "Delivery cancelled"
+  if (order.deliveryStatus === "IN_TRANSIT") return "In transit"
   if (order.status === "PENDING") return "Awaiting confirmation"
   if (order.status === "APPROVED" && order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID") return "To Pay"
   if (order.status === "APPROVED" && order.warehouseRequest && order.warehouseRequest.status !== "FULFILLED") return "Awaiting warehouse release"
@@ -240,10 +246,10 @@ export default function ClientDashboardPage() {
   useEffect(() => {
     loadDashboard()
     const returningFromTest = new URLSearchParams(window.location.search).has("sikatpay")
-    const interval = window.setInterval(loadDashboard, 30_000)
+    const stop = watchOrderUpdates(loadDashboard)
     const check = returningFromTest ? window.setTimeout(loadDashboard, 3_000) : undefined
     return () => {
-      window.clearInterval(interval)
+      stop()
       window.clearTimeout(check)
     }
   }, [loadDashboard])
@@ -509,6 +515,14 @@ export default function ClientDashboardPage() {
                     </div>
                   )}
                   {order.fulfillmentMethod === "DELIVERY" && <p className="mt-4 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery address:</span> {[order.address, order.barangay, order.city, order.province, order.postalCode].filter(Boolean).join(", ") || "Not specified"}</p>}
+                  {order.fulfillmentMethod === "DELIVERY" && order.deliveryStatus && (
+                    <div className="mt-3 rounded-lg bg-cyan-50 px-4 py-3 text-sm text-cyan-950">
+                      <p><strong>Delivery status:</strong> {order.status === "CANCELLED" ? "Cancelled" : riderDeliveryLabel(order.deliveryStatus)}</p>
+                      {order.expectedArrivalAt && order.status !== "CANCELLED" && !["DELIVERED", "CANCELLED", "RETURNED"].includes(order.deliveryStatus) && (
+                        <p className="mt-1"><strong>Expected arrival:</strong> {formatDeliveryTime(order.expectedArrivalAt)}</p>
+                      )}
+                    </div>
+                  )}
                   {order.deliveryNotes && <p className="mt-2 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery notes:</span> {order.deliveryNotes}</p>}
                   {isSikatPayTestOrder(order.paymentStatus) && (
                     <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">

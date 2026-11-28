@@ -9,6 +9,8 @@ import Image from 'next/image'
 import EmptyState from '../../../../components/admin/EmptyState'
 import { CartIcon, SearchIcon } from '../../../../components/admin/icons'
 import type { OrderObj } from '../../../../components/admin/types'
+import { formatDeliveryTime, riderDeliveryLabel } from '@/lib/rider-delivery-status'
+import { watchOrderUpdates } from '@/lib/order-refresh'
 
 type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
 
@@ -81,7 +83,8 @@ export default function SalesOrdersPage() {
   const [printSelection, setPrintSelection] = useState<React.ComponentProps<typeof SalesOrderPrint>['selection'] | null>(null)
 
   // Rider assignment state
-  const [viewingOrder, setViewingOrder] = useState<OrderObj | null>(null)
+  const [viewingOrderSnapshot, setViewingOrder] = useState<OrderObj | null>(null)
+  const viewingOrder = orders.find(order => order.id === viewingOrderSnapshot?.id) ?? viewingOrderSnapshot
   const [assigningOrder, setAssigningOrder] = useState<OrderObj | null>(null)
   const [selectedRiderId, setSelectedRiderId] = useState('')
   const [assigning, setAssigning] = useState(false)
@@ -91,7 +94,8 @@ export default function SalesOrdersPage() {
   const [viewingProof, setViewingProof] = useState<OrderObj | null>(null)
 
   // Delivery history modal
-  const [viewingHistory, setViewingHistory] = useState<OrderObj | null>(null)
+  const [viewingHistorySnapshot, setViewingHistory] = useState<OrderObj | null>(null)
+  const viewingHistory = orders.find(order => order.id === viewingHistorySnapshot?.id) ?? viewingHistorySnapshot
 
   // Order approval / shipping fee modal
   const [confirmingOrder, setConfirmingOrder] = useState<OrderObj | null>(null)
@@ -127,6 +131,12 @@ export default function SalesOrdersPage() {
 
   useEffect(() => {
     void load()
+    return watchOrderUpdates(async () => {
+      try {
+        const response = await fetch('/api/orders', { cache: 'no-store' })
+        if (response.ok) setOrders((await response.json()).orders || [])
+      } catch { /* Keep the last loaded records and retry on the next refresh. */ }
+    })
   }, [load])
 
   async function handleAssignRider() {
@@ -403,7 +413,8 @@ export default function SalesOrdersPage() {
                   <div className="mt-3 space-y-1 text-xs text-slate-600">
                     <p><span className="font-bold">Fulfillment:</span> {isDelivery ? 'Delivery' : 'Pickup'}</p>
                     <p><span className="font-bold">Payment:</span> {(order.paymentMethod || 'Not specified').replace(/_/g, ' ')} · {order.paymentStatus || 'UNPAID'}</p>
-                    {isDelivery && <p><span className="font-bold">Delivery:</span> <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${DELIVERY_STATUS_STYLES[deliveryStatus] || 'bg-slate-100 text-slate-700'}`}>{deliveryStatus.replace(/_/g, ' ')}</span></p>}
+                    {isDelivery && <p><span className="font-bold">Delivery:</span> <span className={`rounded border px-1.5 py-0.5 text-[10px] font-bold ${DELIVERY_STATUS_STYLES[deliveryStatus] || 'bg-slate-100 text-slate-700'}`}>{riderDeliveryLabel(deliveryStatus)}</span></p>}
+                    {isDelivery && order.expectedArrivalAt && <p><span className="font-bold">Expected arrival:</span> {formatDeliveryTime(order.expectedArrivalAt)}</p>}
                     {order.trackingNumber && <p><span className="font-bold">Tracking:</span> {order.trackingNumber}</p>}
                   </div>
                 </div>
@@ -433,7 +444,7 @@ export default function SalesOrdersPage() {
                 {order.usesSalesStock && order.status === 'PROCESSING' && (
                   <button onClick={() => void updateOrder(order, isDelivery ? 'SHIPPED' : 'READY_FOR_PICKUP')} disabled={updatingOrder || (isDelivery && !order.riderId)} className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{isDelivery ? 'Mark shipped' : 'Mark ready for pickup'}</button>
                 )}
-                {!testOrder && isDelivery && order.status !== 'CANCELLED' && <button onClick={() => { setAssigningOrder(order); setSelectedRiderId(order.riderId || ''); setAssignError(''); setViewingOrder(null) }} className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">{order.riderId ? 'Reassign rider' : 'Assign rider'}</button>}
+                {!testOrder && isDelivery && !['DELIVERED', 'COMPLETED', 'CANCELLED'].includes(order.status) && <button onClick={() => { setAssigningOrder(order); setSelectedRiderId(order.riderId || ''); setAssignError(''); setViewingOrder(null) }} className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">{order.riderId ? 'Reassign rider' : 'Assign rider'}</button>}
                 {order.proofOfDelivery && <button onClick={() => { setViewingProof(order); setViewingOrder(null) }} className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-black text-white hover:bg-emerald-500">View delivery proof</button>}
                 {order.deliveryHistories && order.deliveryHistories.length > 0 && <button onClick={() => { setViewingHistory(order); setViewingOrder(null) }} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50">Delivery timeline</button>}
                 <button onClick={() => setViewingOrder(null)} className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white hover:bg-slate-800">Close</button>
@@ -584,7 +595,7 @@ export default function SalesOrdersPage() {
               <div className="rounded-xl bg-slate-50 p-3 text-xs space-y-1">
                 <div>
                   <span className="font-bold text-slate-700">Delivered At: </span>
-                  <span className="text-slate-600">{formatDate(viewingProof.proofOfDelivery.deliveredAt)}</span>
+                  <span className="text-slate-600">{formatDeliveryTime(viewingProof.proofOfDelivery.deliveredAt)}</span>
                 </div>
                 {viewingProof.proofOfDelivery.recipientName && (
                   <div>

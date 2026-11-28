@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import ReportPhotoPicker from '@/components/ReportPhotoPicker'
 import StatusBadge from '@/components/admin/StatusBadge'
-import { riderDeliveryNeedsReason, riderDeliveryTransitions } from '@/lib/rider-delivery-status'
+import { formatDeliveryTime, riderDeliveryLabel, riderDeliveryNeedsReason, riderDeliveryTransitions } from '@/lib/rider-delivery-status'
 
 type Delivery = {
   id: string
@@ -13,6 +13,7 @@ type Delivery = {
   clientName?: string
   deliveryAddress?: string
   deliveryStatus: string
+  expectedArrivalAt?: string | null
   items: { id: string; name: string; quantity: number; unit?: string }[]
   proofOfDelivery?: { deliveredAt: string; imageUrl: string; recipientName?: string } | null
 }
@@ -64,7 +65,7 @@ export default function RiderDeliveriesPage() {
               <h2 className="mt-1 text-base font-black text-slate-900">{order.clientName || 'Customer delivery'}</h2>
               {order.deliveryAddress && <p className="mt-1 break-words text-sm text-slate-600">{order.deliveryAddress}</p>}
             </div>
-            <StatusBadge status={order.deliveryStatus} />
+            <StatusBadge status={order.deliveryStatus === 'DELIVERED' ? 'COMPLETED' : order.deliveryStatus} />
           </div>
           <button type="button" aria-expanded={selected?.id === order.id} onClick={() => setSelectedId(selected?.id === order.id ? '' : order.id)} className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-800">
             {selected?.id === order.id ? 'Hide delivery details' : 'View delivery'}
@@ -79,7 +80,9 @@ export default function RiderDeliveriesPage() {
 function DeliveryDetails({ order, onUpdate }: { order: Delivery; onUpdate: (changes: Partial<Delivery>) => void }) {
   const [nextStatus, setNextStatus] = useState('')
   const [reason, setReason] = useState('')
-  const [arrival, setArrival] = useState('')
+  const [arrival, setArrival] = useState(() => order.expectedArrivalAt
+    ? new Date(new Date(order.expectedArrivalAt).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16)
+    : '')
   const [recipient, setRecipient] = useState('')
   const [photos, setPhotos] = useState<string[]>([])
   const [preparing, setPreparing] = useState(false)
@@ -88,14 +91,16 @@ function DeliveryDetails({ order, onUpdate }: { order: Delivery; onUpdate: (chan
   const allowed = riderDeliveryTransitions[order.deliveryStatus] ?? []
   const needsReason = riderDeliveryNeedsReason(nextStatus)
 
-  async function submit(event: FormEvent<HTMLFormElement>, complete: boolean) {
+  async function submit(event: FormEvent<HTMLFormElement>, action: 'status' | 'schedule' | 'complete') {
     event.preventDefault()
     if (busy || preparing) return
-    const arrivedAt = new Date(arrival)
-    if (complete && (!photos[0] || !Number.isFinite(arrivedAt.getTime()) || arrivedAt.getTime() > Date.now())) {
-      setFeedback({ error: true, message: 'Enter the actual arrival date and time and capture a proof photo.' })
+    const complete = action === 'complete'
+    const expected = new Date(`${arrival}:00+08:00`)
+    if (action === 'schedule' && (!Number.isFinite(expected.getTime()) || expected.getTime() <= Date.now())) {
+      setFeedback({ error: true, message: 'Enter a future expected arrival date and time.' })
       return
     }
+    if (complete && !photos[0]) return
     setBusy(true)
     setFeedback(null)
     try {
@@ -103,15 +108,17 @@ function DeliveryDetails({ order, onUpdate }: { order: Delivery; onUpdate: (chan
         method: complete ? 'POST' : 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(complete
-          ? { orderId: order.id, arrivalDateTime: arrivedAt.toISOString(), imageData: photos[0], recipientName: recipient }
-          : { orderId: order.id, status: nextStatus, reason: needsReason ? reason : undefined }),
+          ? { orderId: order.id, imageData: photos[0], recipientName: recipient }
+          : action === 'schedule'
+            ? { orderId: order.id, expectedArrivalAt: expected.toISOString() }
+            : { orderId: order.id, status: nextStatus, reason: needsReason ? reason : undefined }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Unable to update this delivery.')
       onUpdate({ ...data.order, ...(complete ? { proofOfDelivery: data.proof } : {}) })
       setNextStatus('')
       setReason('')
-      setFeedback({ error: false, message: complete ? 'Proof submitted. Delivery completed.' : 'Delivery status updated.' })
+      setFeedback({ error: false, message: complete ? 'Selfie submitted. Delivery completed.' : action === 'schedule' ? 'Expected arrival saved. The client can see it in order tracking.' : 'Delivery status updated.' })
     } catch (error) {
       setFeedback({ error: true, message: (error as Error).message })
     } finally {
@@ -126,13 +133,23 @@ function DeliveryDetails({ order, onUpdate }: { order: Delivery; onUpdate: (chan
           {order.items.map(item => <li key={item.id} className="flex justify-between gap-3 py-2 text-sm"><span>{item.name}</span><span className="shrink-0 font-semibold">{item.quantity} {item.unit || 'pcs'}</span></li>)}
         </ul>
       )}
+      {order.expectedArrivalAt && <p className="text-sm text-slate-700">Expected arrival {formatDeliveryTime(order.expectedArrivalAt)}</p>}
       {allowed.length > 0 && (
-        <form onSubmit={event => void submit(event, false)} className="space-y-3 rounded-xl border border-slate-200 p-3">
+        <form onSubmit={event => void submit(event, 'schedule')} className="space-y-3 rounded-xl border border-slate-200 p-3">
+          <label className="block space-y-1 text-sm font-semibold">
+            <span>Expected parcel arrival (Philippine time)</span>
+            <input className={field} type="datetime-local" required value={arrival} onChange={event => setArrival(event.target.value)} disabled={busy} />
+          </label>
+          <button type="submit" className={button} disabled={busy || preparing || !arrival}>Save expected arrival</button>
+        </form>
+      )}
+      {allowed.length > 0 && (
+        <form onSubmit={event => void submit(event, 'status')} className="space-y-3 rounded-xl border border-slate-200 p-3">
           <label className="block space-y-1 text-sm font-semibold">
             <span>New delivery status</span>
             <select className={field} value={nextStatus} onChange={event => setNextStatus(event.target.value)} required disabled={busy}>
               <option value="">Select status</option>
-              {allowed.map(status => <option key={status} value={status}>{status.toLowerCase().replaceAll('_', ' ')}</option>)}
+              {allowed.map(status => <option key={status} value={status}>{status === 'IN_TRANSIT' ? 'Start delivery (in transit)' : status === 'CANCELLED' ? 'Cancel delivery' : riderDeliveryLabel(status)}</option>)}
             </select>
           </label>
           {needsReason && <label className="block space-y-1 text-sm font-semibold"><span>Reason</span><textarea className={field} rows={2} required value={reason} onChange={event => setReason(event.target.value)} /></label>}
@@ -140,18 +157,17 @@ function DeliveryDetails({ order, onUpdate }: { order: Delivery; onUpdate: (chan
         </form>
       )}
       {order.deliveryStatus === 'IN_TRANSIT' && (
-        <form onSubmit={event => void submit(event, true)} className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
+        <form onSubmit={event => void submit(event, 'complete')} className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:p-4">
           <h3 className="text-sm font-black text-emerald-950">Complete delivery</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block space-y-1 text-sm font-semibold"><span>Parcel arrival date and time</span><input className={field} type="datetime-local" required value={arrival} onChange={event => setArrival(event.target.value)} disabled={busy} /></label>
             <label className="block space-y-1 text-sm font-semibold"><span>Received by (optional)</span><input className={field} value={recipient} onChange={event => setRecipient(event.target.value)} disabled={busy} /></label>
           </div>
-          <ReportPhotoPicker label="Proof of delivery photo (required)" photos={photos} onChange={setPhotos} onProcessing={setPreparing} maxPhotos={1} disabled={busy} />
-          <button className={button} type="submit" disabled={busy || preparing || !arrival || !photos[0]}>Submit proof and complete delivery</button>
+          <ReportPhotoPicker label="Proof-of-delivery selfie (required)" photos={photos} onChange={setPhotos} onProcessing={setPreparing} maxPhotos={1} disabled={busy} camera="user" />
+          <button className={button} type="submit" disabled={busy || preparing || !photos[0]}>Submit selfie and complete delivery</button>
         </form>
       )}
       {order.proofOfDelivery && <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
-        <p>Parcel arrived {new Date(order.proofOfDelivery.deliveredAt).toLocaleString()}</p>
+        <p>Delivery completed {formatDeliveryTime(order.proofOfDelivery.deliveredAt)}</p>
         {order.proofOfDelivery.recipientName && <p>Received by {order.proofOfDelivery.recipientName}</p>}
         <a href={order.proofOfDelivery.imageUrl} className="mt-2 inline-block font-bold underline">View proof photo</a>
       </div>}

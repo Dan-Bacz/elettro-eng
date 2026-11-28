@@ -52,7 +52,18 @@ public class WebViewActivity extends AppCompatActivity {
             photo -> finishFileSelection(photo != null && "content".equals(photo.getScheme())
                     && !(getPackageName() + ".fileprovider").equals(photo.getAuthority()) ? new Uri[]{photo} : null));
     private final ActivityResultLauncher<Uri> takePicture = registerForActivityResult(
-            new ActivityResultContracts.TakePicture(),
+            new ActivityResultContracts.TakePicture() {
+                @Override public Intent createIntent(android.content.Context context, Uri photo) {
+                    Intent intent = super.createIntent(context, photo);
+                    String url = webView.getUrl();
+                    String path = url == null ? null : Uri.parse(url).getPath();
+                    if ("/rider/deliveries".equals(path) || "/rider/deliveries/".equals(path)) {
+                        intent.putExtra("android.intent.extras.CAMERA_FACING", 1);
+                        intent.putExtra("android.intent.extra.USE_FRONT_CAMERA", true);
+                    }
+                    return intent;
+                }
+            },
             saved -> finishFileSelection(saved ? new Uri[]{cameraPhoto} : null));
     private final ActivityResultLauncher<String> cameraPermission = registerForActivityResult(
             new ActivityResultContracts.RequestPermission(),

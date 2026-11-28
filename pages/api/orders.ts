@@ -134,6 +134,9 @@ export default async function handler(req: any, res: any) {
 
       let assignedRiderUser: any = null
       if (hasRiderId && riderId) {
+        if (['DELIVERED', 'COMPLETED', 'CANCELLED'].includes(order.status) || order.deliveryStatus === 'DELIVERED') {
+          return res.status(409).json({ error: 'A completed or cancelled order cannot be reassigned.' })
+        }
         assignedRiderUser = await prisma.user.findFirst({
           where: { id: riderId, role: 'RIDER', status: 'ACTIVE', available: true },
         })
@@ -225,6 +228,7 @@ export default async function handler(req: any, res: any) {
           updateData.riderName = assignedRiderUser.name
           updateData.riderAssignedAt = new Date()
           updateData.deliveryStatus = 'ASSIGNED'
+          updateData.expectedArrivalAt = null
           updateData.trackingNumber = generatedTracking
           if (order.status === 'PROCESSING') {
             updateData.status = 'SHIPPED'
