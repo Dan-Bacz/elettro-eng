@@ -1,6 +1,7 @@
 'use client'
 import { useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import AdminSidebar from './AdminSidebar'
 import AdminHeader from './AdminHeader'
 
@@ -10,8 +11,20 @@ type AdminShellProps = {
 }
 
 export default function AdminShell({ user, children }: AdminShellProps) {
+  const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
   const [unread, setUnread] = useState(0)
+
+  useEffect(() => {
+    if (pathname !== '/admin/materials-requests') return
+    const narrow = window.matchMedia('(max-width: 639px)')
+    function collapseOnNarrowScreen() {
+      if (narrow.matches) setCollapsed(true)
+    }
+    collapseOnNarrowScreen()
+    narrow.addEventListener('change', collapseOnNarrowScreen)
+    return () => narrow.removeEventListener('change', collapseOnNarrowScreen)
+  }, [pathname])
 
   const refreshUnread = useCallback(async () => {
     try {
