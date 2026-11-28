@@ -6,7 +6,7 @@ import SearchBar from '../../../../components/admin/SearchBar'
 import FilterBar from '../../../../components/admin/FilterBar'
 import EmptyState from '../../../../components/admin/EmptyState'
 import PageHeader from '../../../../components/admin/PageHeader'
-import { CartIcon } from '../../../../components/admin/icons'
+import { ArrowRightIcon, CartIcon } from '../../../../components/admin/icons'
 import type { OrderObj } from '../../../../components/admin/types'
 
 type Filter = 'ALL' | 'PENDING' | 'APPROVED' | 'PROCESSING' | 'READY_FOR_PICKUP' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED'
@@ -157,7 +157,7 @@ export default function AdminSalesPage() {
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4 xl:grid-cols-3">
         {[
           ['Client Orders', orders.length, `${pendingCount} pending`, 'from-cyan-400 to-blue-600', '/admin/sales/orders'],
           ['Completed Orders', completedOrders, 'customer orders received', 'from-emerald-400 to-teal-600', '/admin/sales/completed'],
@@ -165,7 +165,27 @@ export default function AdminSalesPage() {
           ['Payment Records', counterSales.filter((sale) => Number(sale.paymentAmount) >= Number(sale.total)).length, 'counter sales paid', 'from-amber-300 to-orange-600', '/admin/sales/payments'],
           ['Warehouse Requests', warehouseRequests.length, 'sales requests to warehouse', 'from-orange-400 to-red-600', '/admin/sales/warehouse-requests'],
           ['Sales Stock', salesStock.length, `${salesStockUnits.toLocaleString()} units available`, 'from-teal-400 to-cyan-600', '/admin/sales/stock'],
-        ].map(([label, value, note, accent, href]) => <Link href={String(href)} key={String(label)} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_24px_40px_-20px_rgba(15,23,42,0.45)]"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" /><div className="relative"><div className="flex items-start justify-between gap-2"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p><span className="text-[10px] font-black text-slate-400 transition group-hover:text-slate-900">View →</span></div><p className="mt-3 text-3xl font-black text-slate-900">{value}</p><p className="mt-1 text-[11px] font-medium text-slate-500">{note}</p></div></Link>)}
+        ].map(([label, value, note, accent, href]) => (
+          <Link
+            key={String(label)}
+            href={String(href)}
+            aria-label={`View ${label}`}
+            className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-cyan-400 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-700"
+          >
+            <div aria-hidden="true" className={`h-1 bg-gradient-to-r ${accent}`} />
+            <div className="flex-1 px-5 py-5">
+              <h2 className="break-words text-sm font-bold text-slate-800">{label}</h2>
+              <p className="mt-2 break-words text-3xl font-black tabular-nums text-slate-950">{value}</p>
+              <p className="mt-1 break-words text-xs leading-5 text-slate-600">{note}</p>
+            </div>
+            <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
+              <span className="flex min-h-[44px] items-center justify-between gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors group-hover:bg-cyan-800 group-focus-visible:bg-cyan-800">
+                View
+                <ArrowRightIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </span>
+            </div>
+          </Link>
+        ))}
       </div>
 
       <div className="hidden">
