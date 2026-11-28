@@ -85,6 +85,9 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'Attach up to three valid photos.' })
       }
       const completing = completeProject === true
+      if (!completing && user.role === 'TECH' && photos.length === 0) {
+        return res.status(400).json({ error: 'Capture at least one progress photo before submitting the report.' })
+      }
       if (completing && (photos.length === 0 || Number(progress ?? 0) !== 0)) {
         return res.status(400).json({ error: 'Capture at least one final result photo to complete the project.' })
       }
