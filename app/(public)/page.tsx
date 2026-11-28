@@ -5,6 +5,12 @@ import FeaturedProducts from "@/components/client/FeaturedProducts"
 import CTASection from "@/components/client/CTASection"
 import { SERVICES } from "@/components/client/siteData"
 
+export const metadata = {
+  other: {
+    "sikatpay-verification": "sikatpay-d011d85dbaaf7a98e964c119",
+  },
+}
+
 const serviceImage: Record<string, string> = {
   "electrical-installation": "/installation.png",
   "electrical-maintenance": "/maintenance.png",
