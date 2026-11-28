@@ -3,9 +3,14 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import StatusBadge from '../../../../../components/admin/StatusBadge'
+import { CartIcon, DocumentIcon } from '../../../../../components/admin/icons'
 import EmptyState from '../../../../../components/admin/EmptyState'
 import type { BookingObj, DashboardData, OrderObj, UserObj } from '../../../../../components/admin/types'
 import { formatDate } from '../../../../../components/admin/types'
+
+const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format
+const headingCell = 'px-4 py-3 text-left text-xs font-bold text-slate-700'
+const bodyCell = 'px-4 py-3 text-sm text-slate-700'
 
 export default function AdminClientDetailPage() {
   const params = useParams<{ id: string }>()
@@ -20,6 +25,8 @@ export default function AdminClientDetailPage() {
   useEffect(() => {
     let cancelled = false
     async function load() {
+      setLoading(true)
+      setError('')
       try {
         const res = await fetch('/api/dashboard')
         if (!res.ok) {
@@ -27,15 +34,15 @@ export default function AdminClientDetailPage() {
           throw new Error('Failed to load client')
         }
         const payload: DashboardData = await res.json()
-        const found = (payload.clients || []).find((c: any) => c.id === clientId)
+        const found = (payload.clients || []).find((record) => record.id === clientId)
         if (!found) throw new Error('Client not found')
         if (!cancelled) {
           setClient(found)
           setBookings((payload.bookings || []).filter((b) => b.clientId === clientId))
           setOrders((payload.orders || []).filter((order) => order.clientId === clientId))
         }
-      } catch (e: any) {
-        if (!cancelled) setError(e.message || 'Failed to load client')
+      } catch (error) {
+        if (!cancelled) setError(error instanceof Error ? error.message : 'Failed to load client')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -67,128 +74,130 @@ export default function AdminClientDetailPage() {
         ? 'Active'
         : 'Awaiting email verification'
 
+  const initials = client.name.trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join('').toUpperCase() || 'C'
+  const indicators = [
+    ['Bookings', bookings.length],
+    ['Active bookings', active],
+    ['Completed bookings', completed],
+    ['Product orders', orders.length],
+    ['Order value', money(totalSpent)],
+  ] as const
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/admin/clients" className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-yellow-600">←</Link>
-        <h1 className="text-lg font-black text-slate-900">Client Profile</h1>
-      </div>
+    <div className="min-w-0 space-y-5">
+      <Link href="/admin/clients" className="inline-flex min-h-[40px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:border-cyan-500 hover:text-cyan-800">
+        <span aria-hidden="true">&larr;</span> Back to clients
+      </Link>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black text-yellow-400 text-xl font-black">{client.name?.charAt(0)?.toUpperCase()}</div>
-            <div>
-              <h2 className="text-base font-black text-slate-900">{client.name}</h2>
-              <div className="text-xs text-slate-400">{client.email}</div>
+      <header className="rounded-3xl bg-gradient-to-br from-slate-950 via-[#172c3c] to-[#08727f] px-5 py-6 text-white shadow-sm sm:px-8 sm:py-7">
+        <div className="flex flex-wrap items-center gap-4">
+          <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-yellow-300 text-2xl font-black text-slate-950">{initials}</span>
+          <div className="min-w-0">
+            <h1 className="break-words text-2xl font-black tracking-tight sm:text-3xl">{client.name}</h1>
+            <span className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${accountStatus === 'Active' ? 'bg-emerald-100 text-emerald-900' : accountStatus === 'Awaiting email verification' ? 'bg-amber-100 text-amber-900' : 'bg-rose-100 text-rose-900'}`}>{accountStatus}</span>
+          </div>
+        </div>
+
+        <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-white/20 pt-5 sm:grid-cols-3 xl:grid-cols-5">
+          {indicators.map(([label, value]) => (
+            <div key={label} className="min-w-0">
+              <dt className="text-xs font-semibold text-slate-200">{label}</dt>
+              <dd className="mt-1 break-words text-lg font-black tabular-nums text-white">{value}</dd>
             </div>
-          </div>
-          <dl className="mt-5 space-y-3 text-xs">
-            <div className="flex justify-between"><dt className="text-slate-400">Phone</dt><dd className="font-bold text-slate-700">{client.phone || '—'}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="shrink-0 text-slate-400">Address</dt><dd className="text-right font-bold text-slate-700">{client.address || '—'}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-400">Account</dt><dd className={`font-bold ${accountStatus === 'Active' ? 'text-emerald-700' : accountStatus === 'Awaiting email verification' ? 'text-amber-700' : 'text-red-700'}`}>{accountStatus}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-400">Joined</dt><dd className="font-bold text-slate-700">{formatDate(client.createdAt)}</dd></div>
-              {client.emailVerifiedAt && <div className="flex justify-between"><dt className="text-slate-400">Verified</dt><dd className="font-bold text-slate-700">{formatDate(client.emailVerifiedAt)}</dd></div>}
-            </dl>
-        </div>
+          ))}
+        </dl>
+      </header>
 
-        <div className="grid grid-cols-2 gap-4 lg:col-span-2 lg:grid-cols-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
-              <div className="text-2xl font-black text-slate-900">{bookings.length}</div>
-              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Bookings</div>
+      <section aria-labelledby="contact-heading" className="rounded-2xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6">
+        <h2 id="contact-heading" className="text-base font-bold text-slate-950">Contact and account details</h2>
+        <dl className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[
+            ['Email', client.email],
+            ['Phone', client.phone || 'Not provided'],
+            ['Address', client.address || 'Not provided'],
+            ['Joined', formatDate(client.createdAt)],
+            ['Email verified', client.emailVerifiedAt ? formatDate(client.emailVerifiedAt) : 'Awaiting verification'],
+          ].map(([label, value]) => (
+            <div className="min-w-0 rounded-xl bg-slate-50 px-4 py-3" key={label}>
+              <dt className="text-xs font-semibold text-slate-600">{label}</dt>
+              <dd className="mt-1 break-words text-sm font-semibold text-slate-900">{value}</dd>
             </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="text-2xl font-black text-yellow-600">{active}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Active</div>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="text-2xl font-black text-emerald-600">{completed}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Completed</div>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="text-2xl font-black text-slate-900">{orders.length}</div>
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Product Orders</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 lg:col-span-2">
-          <h2 className="text-sm font-black text-slate-900">Booking History</h2>
-          {bookings.length === 0 ? (
-            <EmptyState icon="🧾" title="No bookings yet" message="This client has not made any bookings." />
-          ) : (
-            <div className="mt-3 overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left">
-                <thead>
-                  <tr className="text-[10px] uppercase tracking-wider text-slate-400">
-                    <th className="pb-3 pr-4 font-bold">Booking</th>
-                    <th className="pb-3 pr-4 font-bold">Status</th>
-                    <th className="pb-3 pr-4 font-bold">Technician</th>
-                    <th className="pb-3 font-bold text-right">Budget</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookings.map((b) => (
-                    <tr key={b.id} className="border-t border-slate-100">
-                      <td className="py-3 pr-4">
-                        <Link href={`/admin/bookings/${b.id}`} className="text-xs font-bold text-slate-800 hover:text-yellow-600">{b.title}</Link>
-                      </td>
-                      <td className="py-3 pr-4"><StatusBadge status={b.status} /></td>
-                      <td className="py-3 pr-4 text-xs text-slate-500">{b.assignedTo?.name || '—'}</td>
-                      <td className="py-3 text-right text-xs font-bold text-slate-700">{b.budget != null ? `$${Number(b.budget).toLocaleString()}` : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5">
-          <h2 className="text-sm font-black text-slate-900">Totals</h2>
-          <div className="mt-4 space-y-3 text-xs">
-            <div className="flex justify-between"><span className="text-slate-400">Bookings</span><span className="font-black text-slate-800">{bookings.length}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Completed</span><span className="font-black text-slate-800">{completed}</span></div>
-            <div className="flex justify-between"><span className="text-slate-400">Order Value</span><span className="font-black text-slate-800">${totalSpent.toLocaleString()}</span></div>
-          </div>
-        </div>
-      </div>
-
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <h2 className="text-sm font-black text-slate-900">Product Order History</h2>
-        {orders.length === 0 ? (
-          <EmptyState icon="📦" title="No product orders" message="This client has not placed any product orders." />
-        ) : (
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[600px] text-left">
-              <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-slate-400">
-                  <th className="pb-3 pr-4 font-bold">Order</th>
-                  <th className="pb-3 pr-4 font-bold">Products</th>
-                  <th className="pb-3 pr-4 font-bold">Status</th>
-                  <th className="pb-3 pr-4 font-bold">Payment</th>
-                  <th className="pb-3 text-right font-bold">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-t border-slate-100">
-                    <td className="py-3 pr-4">
-                      <div className="text-xs font-bold text-slate-800">{order.reference}</div>
-                      <div className="text-[10px] text-slate-400">{formatDate(order.createdAt)}</div>
-                    </td>
-                    <td className="py-3 pr-4 text-xs text-slate-600">{order.items.map((item) => `${item.name} × ${item.quantity}`).join(', ')}</td>
-                    <td className="py-3 pr-4"><StatusBadge status={order.status} /></td>
-                    <td className="py-3 pr-4 text-xs text-slate-600">{order.paymentStatus || '—'}</td>
-                    <td className="py-3 text-right text-xs font-bold text-slate-700">${Number(order.total).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+          ))}
+        </dl>
       </section>
+
+      <HistorySection title="Booking history" count={bookings.length}>
+        {bookings.length === 0 ? (
+          <EmptyState icon={<DocumentIcon className="h-6 w-6" />} title="No bookings yet" message="This client has not made any bookings." />
+        ) : (
+          <table className="w-full min-w-[540px] text-left">
+            <thead className="bg-slate-100">
+              <tr>
+                <th scope="col" className={headingCell}>Booking</th>
+                <th scope="col" className={headingCell}>Status</th>
+                <th scope="col" className={headingCell}>Technician</th>
+                <th scope="col" className={`${headingCell} text-right`}>Budget</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {bookings.map((booking) => (
+                <tr key={booking.id} className="even:bg-slate-50/60">
+                  <th scope="row" className={bodyCell}>
+                    <Link href={`/admin/bookings/${booking.id}`} className="break-words font-bold text-cyan-800 hover:underline">{booking.title}</Link>
+                  </th>
+                  <td className={bodyCell}><StatusBadge status={booking.status} /></td>
+                  <td className={bodyCell}>{booking.assignedTo?.name || 'Unassigned'}</td>
+                  <td className={`${bodyCell} whitespace-nowrap text-right font-semibold`}>{booking.budget != null ? money(Number(booking.budget)) : 'Not set'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </HistorySection>
+
+      <HistorySection title="Product order history" count={orders.length}>
+        {orders.length === 0 ? (
+          <EmptyState icon={<CartIcon className="h-6 w-6" />} title="No product orders" message="This client has not placed any product orders." />
+        ) : (
+          <table className="w-full min-w-[620px] text-left">
+            <thead className="bg-slate-100">
+              <tr>
+                <th scope="col" className={headingCell}>Order</th>
+                <th scope="col" className={headingCell}>Products</th>
+                <th scope="col" className={headingCell}>Status</th>
+                <th scope="col" className={headingCell}>Payment</th>
+                <th scope="col" className={`${headingCell} text-right`}>Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {orders.map((order) => (
+                <tr key={order.id} className="even:bg-slate-50/60">
+                  <th scope="row" className={bodyCell}>
+                    <span className="font-mono text-xs font-bold text-slate-950">{order.reference}</span>
+                    <time dateTime={order.createdAt} className="mt-1 block text-xs font-normal text-slate-600">{formatDate(order.createdAt)}</time>
+                  </th>
+                  <td className={`${bodyCell} w-2/5 break-words`}>{(order.items || []).map((item) => `${item.name} (qty ${item.quantity})`).join(', ') || 'No items listed'}</td>
+                  <td className={bodyCell}><StatusBadge status={order.status} /></td>
+                  <td className={`${bodyCell} capitalize`}>{order.paymentStatus?.toLowerCase().replace(/_/g, ' ') || 'Not specified'}</td>
+                  <td className={`${bodyCell} whitespace-nowrap text-right font-semibold`}>{money(Number(order.total) || 0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </HistorySection>
     </div>
+  )
+}
+
+function HistorySection({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
+        <h2 className="text-base font-bold text-slate-950">{title}</h2>
+        <span className="text-xs font-semibold text-slate-600">{count} {count === 1 ? 'record' : 'records'}</span>
+      </div>
+      <div className="overflow-x-auto">{children}</div>
+    </section>
   )
 }
