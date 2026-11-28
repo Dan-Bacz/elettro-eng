@@ -8,7 +8,7 @@ import type { ReactNode } from "react"
 import ClientSupportWidget from "./ClientSupportWidget"
 
 type ClientShellProps = {
-  user: { name: string; email: string }
+  user: { name: string; email: string; profileImageUrl?: string | null }
   children: ReactNode
 }
 
@@ -102,7 +102,7 @@ export default function ClientShell({ user, children }: ClientShellProps) {
         </nav>
         <div className="border-t border-white/10 p-3">
           <div className="mb-3 flex min-w-0 items-center gap-3 px-2">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">{user.name.trim().charAt(0).toUpperCase()}</span>
+            {user.profileImageUrl ? <img src={user.profileImageUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">{user.name.trim().charAt(0).toUpperCase()}</span>}
             {!collapsed && <div className="min-w-0"><p className="truncate text-xs font-bold text-white">{user.name}</p><p className="truncate text-[11px] text-gray-500">{user.email}</p></div>}
           </div>
           {logoutError && <p role="alert" className="mb-2 px-2 text-xs text-red-300">{logoutError}</p>}

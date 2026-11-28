@@ -14,11 +14,11 @@ export default async function ClientPortalLayout({ children }: { children: React
 
   const client = await prisma.user.findUnique({
     where: { id: session.id },
-    select: { name: true, email: true, role: true, status: true, emailVerifiedAt: true },
+    select: { name: true, email: true, role: true, status: true, emailVerifiedAt: true, profileImageUrl: true },
   })
   if (!client || client.role !== "CLIENT" || client.status !== "ACTIVE" || !client.emailVerifiedAt) {
     redirect("/client/login")
   }
 
-  return <ClientShell user={{ name: client.name, email: client.email }}>{children}</ClientShell>
+  return <ClientShell user={{ name: client.name, email: client.email, profileImageUrl: client.profileImageUrl }}>{children}</ClientShell>
 }

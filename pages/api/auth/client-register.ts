@@ -3,7 +3,11 @@ import type { NextApiRequest, NextApiResponse } from 'next'
 import bcrypt from 'bcryptjs'
 import { isRateLimited } from '../../../lib/client-auth'
 import { getClientVerificationUrl, sendClientVerificationEmail } from '../../../lib/email'
+import { uploadToCloudinary } from '../../../lib/cloudinary'
+import { isProfilePhotoDataUrl } from '../../../lib/profile-photo-data'
 import { prisma } from '../../../lib/prisma'
+
+export const config = { api: { bodyParser: { sizeLimit: '3mb' } } }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}?/
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000
@@ -90,6 +94,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    const photo = req.body?.profileImage
+    let profileImageUrl: string | null = null
+    if (photo != null && photo !== '') {
+      if (!isProfilePhotoDataUrl(photo)) {
+        return res.status(400).json({ error: 'Choose a JPG, PNG, or WebP profile photo up to 2 MB.' })
+      }
+      const uploaded = await uploadToCloudinary(photo, 'elettro-client-profiles')
+      if (!uploaded) return res.status(502).json({ error: 'Could not upload your profile photo. Please try again.' })
+      profileImageUrl = uploaded.secure_url
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10)
     const now = new Date()
     const token = randomBytes(32).toString('hex')
@@ -110,6 +125,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           phone,
           password: hashedPassword,
           role: 'CLIENT',
+          profileImageUrl,
           status: 'PENDING',
           approved: false,
         },

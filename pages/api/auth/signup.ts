@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { isProfilePhotoDataUrl } from '../../../lib/profile-photo-data'
 import { uploadToCloudinary } from '../../../lib/cloudinary'
 import { sendAdminRegistrationNotification } from '../../../lib/email'
 
@@ -8,22 +9,9 @@ const prisma = new PrismaClient()
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '12mb',
+      sizeLimit: '3mb',
     },
   },
-}
-
-async function resolveProfileImage(profileImage: string | undefined | null) {
-  if (!profileImage) return null
-  const raw = String(profileImage).trim()
-  if (!raw) return null
-  // A locally selected/captured image must be uploaded to Cloudinary
-  if (raw.startsWith('data:')) {
-    const uploaded = await uploadToCloudinary(raw, 'technician-img')
-    return uploaded ? uploaded.secure_url : null
-  }
-  // A remote URL can be stored directly
-  return raw
 }
 
 export default async function handler(req: any, res: any) {
@@ -58,7 +46,16 @@ export default async function handler(req: any, res: any) {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
-    const profileImageUrl = await resolveProfileImage(profileImage)
+    let profileImageUrl: string | null = null
+    if (profileImage != null && profileImage !== '') {
+      if (!isProfilePhotoDataUrl(profileImage)) {
+        return res.status(400).json({ error: 'Choose a JPG, PNG, or WebP profile photo up to 2 MB.' })
+      }
+      const folder = userRole === 'TECH' ? 'technician-img' : `elettro-${userRole.toLowerCase()}-profiles`
+      const uploaded = await uploadToCloudinary(profileImage, folder)
+      if (!uploaded) return res.status(502).json({ error: 'Could not upload your profile photo. Please try again.' })
+      profileImageUrl = uploaded.secure_url
+    }
 
     const user = await prisma.user.create({
       data: {

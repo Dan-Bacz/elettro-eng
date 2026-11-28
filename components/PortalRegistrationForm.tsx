@@ -2,7 +2,8 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useRef, useState, type ChangeEvent, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
+import RegistrationPhotoPicker, { registrationPhotoData } from './RegistrationPhotoPicker'
 
 type Portal = "client" | "sales" | "warehouse"
 
@@ -11,27 +12,17 @@ export default function PortalRegistrationForm({ portal }: { portal: Portal }) {
   const label = portal === "client" ? "Client portal" : portal === "sales" ? "Sales team" : "Warehouse team"
   const loginPath = `/${portal}/login`
   const [form, setForm] = useState({ firstName: "", middleName: "", lastName: "", email: "", phone: "", address: "", password: "", confirmPassword: "" })
-  const [profileImage, setProfileImage] = useState("")
+  const [photo, setPhoto] = useState<File | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
   const inputClass = "mt-1.5 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-yellow-400 focus:bg-white/10 focus:ring-2 focus:ring-yellow-400/20"
 
   function update(field: keyof typeof form, value: string) {
     setForm(current => ({ ...current, [field]: value }))
     setError("")
-  }
-
-  function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setProfileImage(String(reader.result || ""))
-    reader.readAsDataURL(file)
-    event.target.value = ""
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -49,7 +40,7 @@ export default function PortalRegistrationForm({ portal }: { portal: Portal }) {
           ...form,
           name,
           role: isClient ? undefined : portal.toUpperCase(),
-          profileImage: isClient ? undefined : profileImage || undefined,
+          profileImage: await registrationPhotoData(photo),
         }),
       })
       const data = await response.json().catch(() => ({}))
@@ -89,11 +80,7 @@ export default function PortalRegistrationForm({ portal }: { portal: Portal }) {
               <p className="mt-2 text-sm leading-5 text-gray-400">Complete your details to register for the {portal} portal.</p>
               <form onSubmit={submit} className="mt-6 space-y-5">
                 {error && <p role="alert" className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm font-medium text-red-300">{error}</p>}
-                {!isClient && <div className="flex items-center gap-4 rounded-2xl border border-white/10 bg-black/10 p-4">
-                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/5 text-2xl text-gray-500">{profileImage ? <img src={profileImage} alt="Profile preview" className="h-full w-full object-cover" /> : "👤"}</div>
-                  <div><button type="button" onClick={() => fileRef.current?.click()} className="rounded-xl border border-white/15 px-4 py-2 text-xs font-bold text-gray-300 transition hover:border-yellow-400 hover:text-yellow-300">Upload photo</button><p className="mt-1 text-[11px] text-gray-500">Optional profile photo</p></div>
-                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-                </div>}
+                <RegistrationPhotoPicker photo={photo} onChange={setPhoto} disabled={loading} dark />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <label className="block text-sm font-semibold text-gray-300">First name<input className={inputClass} value={form.firstName} onChange={e => update("firstName", e.target.value)} autoComplete="given-name" required maxLength={60} /></label>
                   <label className="block text-sm font-semibold text-gray-300">Middle name <span className="font-normal text-gray-500">(optional)</span><input className={inputClass} value={form.middleName} onChange={e => update("middleName", e.target.value)} autoComplete="additional-name" maxLength={60} /></label>

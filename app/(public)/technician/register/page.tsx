@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
+import RegistrationPhotoPicker, { registrationPhotoData } from '../../../../components/RegistrationPhotoPicker'
 import { useRouter } from 'next/navigation'
 
 const SPECIALIZATIONS = ['Electrical', 'Plumbing', 'HVAC', 'Renovation', 'Painting', 'General Maintenance']
@@ -11,23 +12,13 @@ export default function TechnicianRegisterPage() {
     name: '', email: '', phone: '', address: '', specialization: '', yearsOfExperience: '',
     skills: '', password: '', confirmPassword: '',
   })
-  const [profileImage, setProfileImage] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
-  const fileRef = useRef<HTMLInputElement>(null)
 
   function setField(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
-  }
-
-  function handlePhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => setProfileImage(String(reader.result || ''))
-    reader.readAsDataURL(file)
-    e.target.value = ''
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -55,7 +46,7 @@ export default function TechnicianRegisterPage() {
           yearsOfExperience: form.yearsOfExperience ? Number(form.yearsOfExperience) : undefined,
           skills: form.skills || undefined,
           password: form.password,
-          profileImage: profileImage || undefined,
+          profileImage: await registrationPhotoData(photo),
         }),
       })
       if (!res.ok) {
@@ -98,24 +89,7 @@ export default function TechnicianRegisterPage() {
         <form onSubmit={handleSubmit} className="space-y-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{error}</div>}
 
-          {/* Photo */}
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-slate-300 bg-slate-50">
-              {profileImage ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
-              ) : (
-                <span className="text-2xl text-slate-300">👤</span>
-              )}
-            </div>
-            <div>
-              <button type="button" onClick={() => fileRef.current?.click()} className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-600 hover:border-yellow-400 hover:text-yellow-700 transition-colors">
-                Upload Photo
-              </button>
-              <p className="mt-1 text-[11px] text-slate-400">Optional · used on your technician profile</p>
-            </div>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-          </div>
+          <RegistrationPhotoPicker photo={photo} onChange={setPhoto} disabled={loading} />
 
           {/* Personal info */}
           <Field label="Full Name *" value={form.name} onChange={(v) => setField('name', v)} required placeholder="e.g. John Doe" />

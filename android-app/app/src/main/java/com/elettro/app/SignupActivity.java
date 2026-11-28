@@ -35,6 +35,7 @@ import java.io.InputStream;
 public class SignupActivity extends AppCompatActivity {
     private static final int REQ_CAMERA = 1001;
     private static final int REQ_CAMERA_PERMISSION = 1002;
+    private static final int REQ_PROFILE_PHOTO = 1003;
 
     private TextInputEditText nameInput;
     private TextInputEditText emailInput;
@@ -73,6 +74,7 @@ public class SignupActivity extends AppCompatActivity {
 
         findViewById(R.id.camera_container).setOnClickListener(v -> openCamera());
         captureProfileBtn.setOnClickListener(v -> openCamera());
+        findViewById(R.id.upload_profile_btn).setOnClickListener(v -> openPhotoPicker());
 
         findViewById(R.id.login_link_action).setOnClickListener(v -> {
             finish();
@@ -106,19 +108,45 @@ public class SignupActivity extends AppCompatActivity {
         }
     }
 
-    private void processCapturedImage(Uri uri) {
+    private void openPhotoPicker() {
+        Intent pickPhoto = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pickPhoto.addCategory(Intent.CATEGORY_OPENABLE);
+        pickPhoto.setType("image/*");
         try {
-            InputStream is = getContentResolver().openInputStream(uri);
-            Bitmap bitmap = BitmapFactory.decodeStream(is);
-            if (is != null) is.close();
-            if (bitmap == null) return;
+            startActivityForResult(pickPhoto, REQ_PROFILE_PHOTO);
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, "No photo picker found", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void processProfileImage(Uri uri) {
+        try {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            try (InputStream stream = getContentResolver().openInputStream(uri)) {
+                BitmapFactory.decodeStream(stream, null, options);
+            }
+            if (options.outWidth < 1 || options.outHeight < 1) {
+                throw new java.io.IOException("Could not decode photo");
+            }
+
+            options.inSampleSize = 1;
+            while (Math.max(options.outWidth, options.outHeight) / options.inSampleSize > 1200) {
+                options.inSampleSize *= 2;
+            }
+            options.inJustDecodeBounds = false;
+            Bitmap bitmap;
+            try (InputStream stream = getContentResolver().openInputStream(uri)) {
+                bitmap = BitmapFactory.decodeStream(stream, null, options);
+            }
+            if (bitmap == null) throw new java.io.IOException("Could not decode photo");
 
             int maxDim = 600;
             int w = bitmap.getWidth();
             int h = bitmap.getHeight();
             if (Math.max(w, h) > maxDim) {
                 float scale = (float) maxDim / Math.max(w, h);
-                bitmap = Bitmap.createScaledBitmap(bitmap, (int)(w * scale), (int)(h * scale), true);
+                bitmap = Bitmap.createScaledBitmap(bitmap, Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)), true);
             }
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -157,8 +185,11 @@ public class SignupActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQ_CAMERA && resultCode == RESULT_OK) {
-            if (capturedImageUri != null) processCapturedImage(capturedImageUri);
-            else if (data != null && data.getData() != null) processCapturedImage(data.getData());
+            if (capturedImageUri != null) processProfileImage(capturedImageUri);
+            else if (data != null && data.getData() != null) processProfileImage(data.getData());
+        } else if (requestCode == REQ_PROFILE_PHOTO && resultCode == RESULT_OK
+                && data != null && data.getData() != null) {
+            processProfileImage(data.getData());
         }
     }
 

@@ -91,7 +91,7 @@ export default function AdminClientDetailPage() {
 
       <header className="rounded-3xl bg-gradient-to-br from-slate-950 via-[#172c3c] to-[#08727f] px-5 py-6 text-white shadow-sm sm:px-8 sm:py-7">
         <div className="flex flex-wrap items-center gap-4">
-          <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-yellow-300 text-2xl font-black text-slate-950">{initials}</span>
+          {client.profileImageUrl ? <img src={client.profileImageUrl} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" /> : <span aria-hidden="true" className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-yellow-300 text-2xl font-black text-slate-950">{initials}</span>}
           <div className="min-w-0">
             <h1 className="break-words text-2xl font-black tracking-tight sm:text-3xl">{client.name}</h1>
             <span className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${accountStatus === 'Active' ? 'bg-emerald-100 text-emerald-900' : accountStatus === 'Awaiting email verification' ? 'bg-amber-100 text-amber-900' : 'bg-rose-100 text-rose-900'}`}>{accountStatus}</span>
