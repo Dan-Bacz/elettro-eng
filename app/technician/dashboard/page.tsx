@@ -22,7 +22,7 @@ export default function TechnicianDashboardPage() {
         router.replace('/technician/jobs')
         return
       }
-      setSection(hash || 'home')
+      setSection(hash === 'profile' ? 'settings' : hash || 'home')
     }
     syncSection()
     window.addEventListener('hashchange', syncSection)

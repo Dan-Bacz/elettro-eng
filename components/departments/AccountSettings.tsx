@@ -15,8 +15,13 @@ function readPhoto(file: File) {
   })
 }
 
-export default function AccountSettings({ department, initialProfile }: { department: 'Sales' | 'Warehouse' | 'Client'; initialProfile: StaffProfile }) {
+export default function AccountSettings({ department, initialProfile, onSaved }: {
+  department: 'Sales' | 'Warehouse' | 'Client' | 'Technician'
+  initialProfile: StaffProfile
+  onSaved?: () => void
+}) {
   const router = useRouter()
+  const technician = department === 'Technician'
   const photoDialog = useRef<HTMLDialogElement>(null)
   const [saved, setSaved] = useState(initialProfile)
   const [name, setName] = useState(initialProfile.name)
@@ -60,15 +65,16 @@ export default function AccountSettings({ department, initialProfile }: { depart
     setError('')
     setNotice('')
     try {
-      const response = await fetch(`/api/${department.toLowerCase()}/profile`, {
+      const photoData = photo ? await readPhoto(photo) : photo
+      const response = await fetch(technician ? '/api/tech' : `/api/${department.toLowerCase()}/profile`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, address, photo: photo ? await readPhoto(photo) : photo }),
+        body: JSON.stringify(technician ? { name, profileImage: photoData } : { name, phone, address, photo: photoData }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || 'Could not save your account settings.')
 
-      const profile: StaffProfile = payload.profile
+      const profile: StaffProfile = technician ? { ...saved, name: payload.name, profileImageUrl: payload.profileImageUrl } : payload.profile
       setSaved(profile)
       setName(profile.name)
       setPhone(profile.phone || '')
@@ -76,6 +82,7 @@ export default function AccountSettings({ department, initialProfile }: { depart
       setPhoto(undefined)
       setNotice('Your account settings were saved.')
       router.refresh()
+      onSaved?.()
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Could not save your account settings.')
     } finally {
@@ -95,9 +102,9 @@ export default function AccountSettings({ department, initialProfile }: { depart
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <header className="rounded-3xl border border-slate-800 bg-slate-950 px-5 py-6 text-white sm:px-8 sm:py-8">
-        <p className="text-sm font-semibold text-yellow-300">{department === 'Client' ? 'Client portal' : `${department} Department`}</p>
+        <p className="text-sm font-semibold text-yellow-300">{department === 'Client' || technician ? `${department} portal` : `${department} Department`}</p>
         <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Account settings</h1>
-        <p className="mt-2 text-sm text-slate-300">Manage your profile photo and contact information.</p>
+        <p className="mt-2 text-sm text-slate-300">{technician ? 'Manage your name and profile photo.' : 'Manage your profile photo and contact information.'}</p>
       </header>
 
       <form onSubmit={save} className="space-y-5">
@@ -153,14 +160,14 @@ export default function AccountSettings({ department, initialProfile }: { depart
                 Sign-in email
                 <input value={saved.email} type="email" readOnly className={`${fieldClass} bg-slate-50 text-slate-600`} />
               </label>
-              <label className="text-sm font-semibold text-slate-800 sm:col-span-2">
+              {!technician && <label className="text-sm font-semibold text-slate-800 sm:col-span-2">
                 Phone number
                 <input type="tel" required={department === 'Client'} value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={40} autoComplete="tel" className={fieldClass} />
-              </label>
-              <label className="text-sm font-semibold text-slate-800 sm:col-span-2">
+              </label>}
+              {!technician && <label className="text-sm font-semibold text-slate-800 sm:col-span-2">
                 Address
                 <textarea value={address} onChange={(event) => setAddress(event.target.value)} maxLength={300} autoComplete="street-address" rows={3} className={`${fieldClass} resize-y`} />
-              </label>
+              </label>}
             </div>
           </section>
         </fieldset>

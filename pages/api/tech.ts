@@ -165,13 +165,18 @@ export default async function handler(req: any, res: any) {
     try {
       const current = await prisma.user.findUnique({
         where: { id: String(payload.userId) },
-        select: { id: true, profileImageUrl: true }
+        select: { id: true, role: true, status: true }
       })
 
       if (!current) return res.status(404).json({ error: 'Technician not found' })
+      if (current.role !== 'TECH' || current.status !== 'ACTIVE') return res.status(403).json({ error: 'Active technician account required.' })
 
-      const { profileImage, removeImage, available } = req.body || {}
-      let profileImageUrl = current.profileImageUrl
+      const { name, profileImage, removeImage, available } = req.body || {}
+      const fullName = typeof name === 'string' ? name.trim() : ''
+      if (name !== undefined && (!fullName || fullName.length > 100)) {
+        return res.status(400).json({ error: 'Enter a full name of up to 100 characters.' })
+      }
+      let profileImageUrl: string | null | undefined
 
       if (removeImage === true) {
         profileImageUrl = null
@@ -192,11 +197,15 @@ export default async function handler(req: any, res: any) {
 
       const updated = await prisma.user.update({
         where: { id: current.id },
-        data: { profileImageUrl, ...(typeof available === 'boolean' ? { available } : {}) },
-        select: { id: true, profileImageUrl: true, available: true }
+        data: {
+          ...(name !== undefined ? { name: fullName } : {}),
+          ...(profileImageUrl !== undefined ? { profileImageUrl } : {}),
+          ...(typeof available === 'boolean' ? { available } : {}),
+        },
+        select: { id: true, name: true, profileImageUrl: true, available: true }
       })
 
-      return res.json({ success: true, profileImageUrl: updated.profileImageUrl, available: updated.available })
+      return res.json({ success: true, ...updated })
     } catch (error: any) {
       console.error('Tech API error:', error)
       return res.status(500).json({ error: error.message || 'Internal server error' })

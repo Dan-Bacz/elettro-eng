@@ -252,7 +252,12 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 startActivity(intent);
                 return true;
             }
-            if (id == R.id.nav_profile) { showSection("profile"); return true; }
+            if (id == R.id.nav_profile) {
+                Intent intent = new Intent(this, WebViewActivity.class);
+                intent.putExtra(WebViewActivity.EXTRA_ROUTE, "/technician/dashboard#settings");
+                startActivity(intent);
+                return true;
+            }
             if (id == R.id.nav_logout) { logout(); return true; }
             return false;
         });

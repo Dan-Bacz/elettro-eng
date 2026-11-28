@@ -4,17 +4,16 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
-import { BarChartIcon, BellIcon, GearIcon, GridIcon, HammerIcon, LogoutIcon, UserIcon, CartIcon } from './icons'
+import { BarChartIcon, BellIcon, GearIcon, GridIcon, HammerIcon, LogoutIcon, CartIcon } from './icons'
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/technician/dashboard' },
   { key: 'jobs', label: 'My Jobs', icon: HammerIcon, href: '/technician/jobs' },
-  { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/technician/dashboard#notifications' },
   { key: 'materials', label: 'Material Requests', icon: CartIcon, href: '/technician/dashboard#materials' },
   { key: 'material-usage', label: 'Material Usage', icon: HammerIcon, href: '/technician/material-usage' },
-  { key: 'profile', label: 'Profile', icon: UserIcon, href: '/technician/dashboard#profile' },
+  { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/technician/dashboard#notifications' },
+  { key: 'settings', label: 'Account Settings', icon: GearIcon, href: '/technician/dashboard#settings' },
   { key: 'reports', label: 'Reports', icon: BarChartIcon, href: '/technician/dashboard#reports' },
-  { key: 'settings', label: 'Settings', icon: GearIcon, href: '/technician/dashboard#settings' },
 ]
 
 type TechnicianSidebarProps = {

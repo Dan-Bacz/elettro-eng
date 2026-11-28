@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import StatusBadge from './StatusBadge'
 import TechnicianMaterialRequestForm from './TechnicianMaterialRequestForm'
+import AccountSettings from '../departments/AccountSettings'
 import { formatDate, formatDateTime } from './types'
 
 type Props = { section: string; data: any; onRefresh: () => Promise<void> }
@@ -61,18 +62,6 @@ export default function TechnicianSectionPage({ section, data, onRefresh }: Prop
     } catch (e: any) { setNotice(e.message || 'Failed to submit leave') } finally { setBusy(false) }
   }
 
-  async function uploadPhoto(file: File | undefined) {
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = async () => {
-      setBusy(true)
-      const res = await fetch('/api/tech', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileImage: reader.result }) })
-      setBusy(false)
-      setNotice(res.ok ? 'Profile photo updated.' : 'Unable to update profile photo.')
-      if (res.ok) await onRefresh()
-    }
-    reader.readAsDataURL(file)
-  }
 
   async function updateAvailability(available: boolean) {
     setAvailabilityBusy(true)
@@ -93,20 +82,18 @@ export default function TechnicianSectionPage({ section, data, onRefresh }: Prop
     notifications: ['Notifications', 'Stay updated with project and material activity.'],
     materials: ['Material Requests', 'Request materials for your assigned projects.'],
     inventory: ['Inventory', 'Browse the current material inventory.'],
-    profile: ['My Profile', 'Review your technician account details.'],
     reports: ['Progress Reports', 'Review progress reports submitted for your projects.'],
     settings: ['Account Settings', 'Your technician account and access information.'],
   }
-  const [title, subtitle] = titles[section] || titles.profile
+  const [title, subtitle] = titles[section] || titles.settings
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {section !== 'settings' && <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div><h1 className="text-2xl font-black text-slate-900">{title}</h1><p className="mt-1 text-xs font-medium text-slate-400">{subtitle}</p></div>
         <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Technician access</span>
-      </div>
+      </div>}
       {notice && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700">{notice}</div>}
-      {section === 'profile' && <div className={`${card} flex items-center justify-between gap-4`}><div><h2 className="text-sm font-black text-slate-900">Assignment availability</h2><p className="mt-1 text-xs text-slate-500">Turn this off when you are unavailable for new work. Your account stays active.</p></div><button type="button" disabled={availabilityBusy} onClick={() => updateAvailability(data.tech.available === false)} className={`relative h-7 w-12 shrink-0 rounded-full transition ${data.tech.available === false ? 'bg-slate-300' : 'bg-emerald-500'} disabled:opacity-50`} aria-label={data.tech.available === false ? 'Set available' : 'Set unavailable'}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${data.tech.available === false ? 'left-1' : 'left-6'}`} /></button></div>}
 
       {section === 'notifications' && <div className="space-y-3"><div className="flex justify-end"><button onClick={() => markNotification()} className="rounded-xl bg-black px-4 py-2 text-xs font-black text-yellow-400">Mark all read</button></div>{notifications.length === 0 ? <div className={card}><p className="text-sm text-slate-400">No notifications yet.</p></div> : notifications.map((n) => <div key={n.id} className={`${card} ${n.read ? 'opacity-65' : 'border-yellow-200 bg-yellow-50/50'}`} onClick={() => !n.read && markNotification(n.id)}><div className="flex items-start justify-between gap-3"><h2 className="text-sm font-black text-slate-900">{n.title}</h2>{!n.read && <span className="rounded-full bg-yellow-400 px-2 py-1 text-[10px] font-black text-black">NEW</span>}</div><p className="mt-2 text-sm text-slate-600">{n.message}</p><p className="mt-2 text-[11px] text-slate-400">{formatDateTime(n.createdAt)}</p></div>)}</div>}
 
@@ -116,10 +103,17 @@ export default function TechnicianSectionPage({ section, data, onRefresh }: Prop
 
       {section === 'inventory' && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{inventory.map((item: any) => <div key={item.id} className={`${card} flex gap-3`}><div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-slate-100">{item.imageUrl && <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />}</div><div className="min-w-0"><h2 className="truncate text-sm font-black text-slate-900">{item.name}</h2><p className="mt-1 text-xs text-slate-500">{item.category || 'General'} · {item.quantity} {item.unit || 'pcs'}</p><p className={`mt-2 text-[11px] font-bold ${item.quantity <= (item.reorderLevel || 10) ? 'text-red-600' : 'text-emerald-600'}`}>{item.quantity <= (item.reorderLevel || 10) ? 'Low stock' : 'Available'}</p></div></div>)}{inventory.length === 0 && <div className={`${card} sm:col-span-2 xl:col-span-3`}><p className="text-sm text-slate-400">No inventory items available.</p></div>}</div>}
 
-      {section === 'profile' && <div className="grid gap-5 lg:grid-cols-[.7fr_1.3fr]"><div className={`${card} flex flex-col items-center justify-center text-center`}><div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-yellow-400 text-3xl font-black text-black">{data.tech.profileImageUrl ? <img src={data.tech.profileImageUrl} alt={data.tech.name} className="h-full w-full object-cover" /> : data.tech.name.charAt(0).toUpperCase()}</div><h2 className="mt-4 text-lg font-black text-slate-900">{data.tech.name}</h2><p className="text-xs text-slate-400">{data.tech.specialization || 'Technician'}</p><label className="mt-4 cursor-pointer rounded-xl bg-black px-4 py-2 text-xs font-black text-yellow-400">{busy ? 'Uploading…' : 'Change photo'}<input type="file" accept="image/*" className="hidden" onChange={(e) => uploadPhoto(e.target.files?.[0])} /></label></div><div className={`${card} grid gap-4 sm:grid-cols-2`}><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Email</p><p className="mt-1 text-sm font-bold text-slate-800">{data.tech.email}</p></div><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Phone</p><p className="mt-1 text-sm font-bold text-slate-800">{data.tech.phone || 'Not provided'}</p></div><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Experience</p><p className="mt-1 text-sm font-bold text-slate-800">{data.tech.yearsOfExperience || 0} years</p></div><div><p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Skills</p><p className="mt-1 text-sm font-bold text-slate-800">{data.tech.skills || 'Not provided'}</p></div></div></div>}
+      {section === 'settings' && (
+        <AccountSettings
+          department="Technician"
+          initialProfile={{ name: data.tech.name, email: data.tech.email, profileImageUrl: data.tech.profileImageUrl, phone: null, address: null }}
+          onSaved={onRefresh}
+        />
+      )}
 
       {section === 'reports' && <div className="space-y-3">{reports.map((report: any) => <div key={report.id} className={card}><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-black text-slate-900">{report.booking.title}</h2><span className="rounded-full bg-yellow-100 px-2.5 py-1 text-[11px] font-black text-yellow-700">{report.progress ?? 0}%</span></div><p className="mt-3 text-sm text-slate-600">{report.content}</p><p className="mt-2 text-[11px] text-slate-400">{formatDateTime(report.createdAt)}</p></div>)}{reports.length === 0 && <div className={card}><p className="text-sm text-slate-400">No progress reports submitted yet.</p></div>}</div>}
 
+      {section === 'settings' && <div className={`${card} flex items-center justify-between gap-4`}><div><h2 className="text-sm font-black text-slate-900">Assignment availability</h2><p className="mt-1 text-xs text-slate-500">Turn this off when you are unavailable for new work. Your account stays active.</p></div><button type="button" disabled={availabilityBusy} onClick={() => updateAvailability(data.tech.available === false)} className={`relative h-7 w-12 shrink-0 rounded-full transition ${data.tech.available === false ? 'bg-slate-300' : 'bg-emerald-500'} disabled:opacity-50`} aria-label={data.tech.available === false ? 'Set available' : 'Set unavailable'}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${data.tech.available === false ? 'left-1' : 'left-6'}`} /></button></div>}
       {section === 'settings' && <div className={card}><h2 className="text-sm font-black text-slate-900">Account access</h2><div className="mt-4 grid gap-4 sm:grid-cols-3"><div><p className="text-[10px] font-black uppercase text-slate-400">Role</p><p className="mt-1 text-sm font-bold text-slate-800">Technician</p></div><div><p className="text-[10px] font-black uppercase text-slate-400">Status</p><p className="mt-1 text-sm font-bold text-emerald-600">{data.tech.status}</p></div><div><p className="text-[10px] font-black uppercase text-slate-400">Access</p><p className="mt-1 text-sm font-bold text-slate-800">Android app only</p></div></div><p className="mt-5 rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">Technician access is restricted to the authenticated Elettro Android application.</p></div>}
     </div>
   )

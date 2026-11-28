@@ -225,7 +225,7 @@
     <string name="drawer_reports_tech">Reports</string>
     <string name="drawer_materials">Material Requests</string>
     <string name="drawer_inventory_tech">Inventory</string>
-    <string name="drawer_profile_tech">Profile</string>
+    <string name="drawer_profile_tech">Account Settings</string>
     <string name="role_technician">Technician</string>
 
     <!-- Technician home -->

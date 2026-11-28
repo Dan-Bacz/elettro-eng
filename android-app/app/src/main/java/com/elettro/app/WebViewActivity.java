@@ -47,6 +47,10 @@ public class WebViewActivity extends AppCompatActivity {
     private boolean returningToLogin;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraPhoto;
+    private final ActivityResultLauncher<String[]> selectProfilePhoto = registerForActivityResult(
+            new ActivityResultContracts.OpenDocument(),
+            photo -> finishFileSelection(photo != null && "content".equals(photo.getScheme())
+                    && !(getPackageName() + ".fileprovider").equals(photo.getAuthority()) ? new Uri[]{photo} : null));
     private final ActivityResultLauncher<Uri> takePicture = registerForActivityResult(
             new ActivityResultContracts.TakePicture(),
             saved -> finishFileSelection(saved ? new Uri[]{cameraPhoto} : null));
@@ -141,12 +145,14 @@ public class WebViewActivity extends AppCompatActivity {
             String section = null;
             if (id == R.id.nav_notifications) section = "notifications";
             else if (id == R.id.nav_materials) section = "materials";
-            else if (id == R.id.nav_profile) section = "profile";
+            else if (id == R.id.nav_profile) section = "settings";
 
             if (section != null) loadAuthenticatedRoute("/technician/dashboard#" + section);
             return section != null;
         });
-        techNavView.setCheckedItem("/technician/material-usage".equals(route) ? R.id.nav_material_usage : R.id.nav_home);
+        if ("/technician/dashboard#settings".equals(route)) techNavView.setCheckedItem(R.id.nav_profile);
+        else if ("/technician/material-usage".equals(route)) techNavView.setCheckedItem(R.id.nav_material_usage);
+        else techNavView.setCheckedItem(R.id.nav_home);
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -218,10 +224,22 @@ public class WebViewActivity extends AppCompatActivity {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
                                                        FileChooserParams params) {
                 String url = view.getUrl();
-                if (url == null || !params.isCaptureEnabled()) return false;
+                if (url == null) return false;
                 Uri page = Uri.parse(url);
                 String path = page.getPath();
-                if (!isAppUrl(page) || !("/technician/jobs".equals(path) || "/technician/jobs/".equals(path)
+                if (!isAppUrl(page)) return false;
+                String section = page.getFragment();
+                if ("/technician/dashboard".equals(path) && ("settings".equals(section) || "profile".equals(section))) {
+                    finishFileSelection(null);
+                    fileCallback = callback;
+                    try {
+                        selectProfilePhoto.launch(new String[]{"image/jpeg", "image/png", "image/webp"});
+                    } catch (android.content.ActivityNotFoundException e) {
+                        finishFileSelection(null);
+                    }
+                    return true;
+                }
+                if (!params.isCaptureEnabled() || !("/technician/jobs".equals(path) || "/technician/jobs/".equals(path)
                         || "/technician/material-usage".equals(path) || "/technician/material-usage/".equals(path))) return false;
                 finishFileSelection(null);
                 fileCallback = callback;

@@ -10,10 +10,6 @@
             android:icon="@drawable/ic_build"
             android:title="@string/nav_my_jobs" />
         <item
-            android:id="@+id/nav_notifications"
-            android:icon="@drawable/ic_notifications"
-            android:title="@string/drawer_notifications" />
-        <item
             android:id="@+id/nav_materials"
             android:icon="@drawable/ic_shopping_cart"
             android:title="@string/drawer_materials" />
@@ -21,6 +17,10 @@
             android:id="@+id/nav_material_usage"
             android:icon="@drawable/ic_build"
             android:title="@string/nav_material_usage" />
+        <item
+            android:id="@+id/nav_notifications"
+            android:icon="@drawable/ic_notifications"
+            android:title="@string/drawer_notifications" />
         <item
             android:id="@+id/nav_profile"
             android:icon="@drawable/ic_person"

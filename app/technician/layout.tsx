@@ -23,7 +23,7 @@ export default async function TechnicianLayout({ children }: { children: ReactNo
         name: user.name,
         email: user.email,
         role: user.role,
-        profileImageUrl: null,
+        profileImageUrl: user.profileImageUrl,
       }}
     >
       {children}
