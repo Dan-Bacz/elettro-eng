@@ -178,13 +178,6 @@ export default function AdminInventoryPage() {
   const selectClass =
     'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400'
 
-  const statCards = [
-    { label: 'Total Items', value: summary.totalItems, icon: 'box', className: 'text-slate-700 bg-slate-100' },
-    { label: 'Low Stock', value: summary.lowStock, icon: 'alert', className: 'text-amber-600 bg-amber-100' },
-    { label: 'Out of Stock', value: summary.outOfStock, icon: 'x', className: 'text-red-600 bg-red-100' },
-    { label: 'Inventory Value', value: money(summary.inventoryValue), icon: 'tag', className: 'text-yellow-600 bg-yellow-100' },
-  ]
-
   return (
     <div className="space-y-5">
       {!isInventoryListPage && <>
@@ -206,42 +199,6 @@ export default function AdminInventoryPage() {
           {[['Items', summary.totalItems], ['Units', analytics.totalUnits], ['Healthy', `${analytics.healthRate}%`], ['Value', money(summary.inventoryValue, 0)]].map(([label, value]) => <div key={label}><div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-300">{label}</div><div className="mt-1 text-xl font-black text-white">{value}</div></div>)}
         </div>
       </section>
-
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        {statCards.map((card) => (
-          <div key={card.label} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_18px_35px_-22px_rgba(15,23,42,0.7)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_24px_40px_-20px_rgba(15,23,42,0.45)]">
-            <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-slate-100 transition group-hover:scale-125" />
-            <div className="relative flex items-center gap-3">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${card.className}`}>
-              {card.icon === 'box' && (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              )}
-              {card.icon === 'alert' && (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
-              )}
-              {card.icon === 'x' && (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              )}
-              {card.icon === 'tag' && (
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                </svg>
-              )}
-            </div>
-            <div className="min-w-0">
-              <div className="truncate text-lg font-black leading-none text-slate-900">{card.value}</div>
-              <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">{card.label}</div>
-            </div>
-            </div>
-          </div>
-        ))}
-      </div>
 
       <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:grid-cols-[1fr_280px]">
         <div>
