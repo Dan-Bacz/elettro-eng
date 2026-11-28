@@ -6,6 +6,8 @@ import EmptyState from '../../../components/admin/EmptyState'
 import type { BookingObj, UserObj } from '../../../components/admin/types'
 import { formatDate, formatDateTime } from '../../../components/admin/types'
 import { formatPeso } from '@/components/client/store/storeUtils'
+import ReportPhotoPicker, { ReportPhotoGallery } from '@/components/ReportPhotoPicker'
+import { readReportPhotos } from '@/lib/report-photos'
 
 type TechPayload = {
   tech: UserObj
@@ -25,7 +27,7 @@ type ReportDraft = {
   checklist: ChecklistItem[]
 }
 
-const TECH_UPDATE_STATUSES = ['ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
+const TECH_UPDATE_STATUSES = ['ASSIGNED', 'IN_PROGRESS', 'CANCELLED']
 
 export default function TechnicianJobsPage() {
   const router = useRouter()
@@ -47,6 +49,11 @@ export default function TechnicianJobsPage() {
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState('')
   const [reportDrafts, setReportDrafts] = useState<Record<string, ReportDraft>>({})
+  const [progressPhotos, setProgressPhotos] = useState<Record<string, string[]>>({})
+  const [finalPhotos, setFinalPhotos] = useState<Record<string, string[]>>({})
+  const [preparingPhoto, setPreparingPhoto] = useState(false)
+  const closed = b?.status === 'COMPLETED' || b?.status === 'CANCELLED'
+  const readyToComplete = !closed && b?.reports?.[0]?.progress === 100
   const [inventoryItems, setInventoryItems] = useState<InventoryOption[]>([])
   const [usageDrafts, setUsageDrafts] = useState<Record<string, UsageDraft>>({})
   async function load() {
@@ -127,14 +134,14 @@ export default function TechnicianJobsPage() {
     setReportDrafts((current) => ({ ...current, [bookingId]: { ...draftFor(bookingId), ...patch } }))
   }
 
-  async function submitReport(bookingId: string) {
+  async function submitReport(bookingId: string, completeProject = false) {
     const draft = draftFor(bookingId)
-    const progress = Number(draft.progress)
+    const progress = completeProject ? 0 : Number(draft.progress)
     if (!Number.isInteger(progress) || progress < 0 || progress > 100) {
       setNotice('Progress addition must be a whole number from 0 to 100.')
       return
     }
-    if (!draft.content.trim()) {
+    if (!completeProject && !draft.content.trim()) {
       setNotice('Add a short summary of the work before submitting the report.')
       return
     }
@@ -144,12 +151,16 @@ export default function TechnicianJobsPage() {
       const res = await fetch('/api/reports', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId, progress, content: draft.content.trim(), workDone: draft.workDone.trim(), issues: draft.issues.trim(), nextWork: draft.nextWork.trim(), checklist: draft.checklist }),
+        body: JSON.stringify(completeProject
+          ? { bookingId, progress, content: 'Final project results', photos: finalPhotos[bookingId], completeProject }
+          : { bookingId, progress, content: draft.content.trim(), workDone: draft.workDone.trim(), issues: draft.issues.trim(), nextWork: draft.nextWork.trim(), checklist: draft.checklist, photos: progressPhotos[bookingId] }),
       })
       const payload = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(payload.error || 'Failed to submit progress report')
-      setReportDrafts((current) => ({ ...current, [bookingId]: { progress: String(progress), content: '', workDone: '', issues: '', nextWork: '', checklist: [] } }))
-      setNotice('Progress report submitted and added to the project total.')
+      setReportDrafts((current) => ({ ...current, [bookingId]: { progress: '0', content: '', workDone: '', issues: '', nextWork: '', checklist: [] } }))
+      setProgressPhotos((current) => ({ ...current, [bookingId]: [] }))
+      if (completeProject) setFinalPhotos((current) => ({ ...current, [bookingId]: [] }))
+      setNotice(completeProject ? 'Final results submitted. Project completed.' : 'Progress report submitted and added to the project total.')
       await loadCb()
     } catch (e: any) {
       setNotice(e.message || 'Failed to submit progress report')
@@ -299,7 +310,7 @@ export default function TechnicianJobsPage() {
               })()}
 
               {/* Structured progress report */}
-              {(() => {
+              {!closed && !readyToComplete && (() => {
                 const draft = draftFor(b.id)
                 return (
                   <div className="rounded-2xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-white p-4">
@@ -310,20 +321,36 @@ export default function TechnicianJobsPage() {
                     <textarea value={draft.content} onChange={(e) => updateDraft(b.id, { content: e.target.value })} placeholder="Progress summary (required)" rows={2} className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium outline-none focus:border-yellow-400 focus:ring-2 focus:ring-yellow-200" />
                     <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3"><div className="flex items-center justify-between"><span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Work checklist</span><button type="button" onClick={() => updateDraft(b.id, { checklist: [...draft.checklist, { id: `${Date.now()}-${draft.checklist.length}`, text: '', checked: false }] })} className="rounded-lg bg-slate-950 px-2.5 py-1.5 text-[10px] font-black text-yellow-300">+ Add task</button></div>{draft.checklist.length === 0 ? <p className="mt-2 text-[11px] text-slate-400">Add the project tasks you are tracking, then check each completed task.</p> : <div className="mt-2 space-y-2">{draft.checklist.map((item) => <div key={item.id} className="flex items-center gap-2"><input type="checkbox" checked={item.checked} onChange={(e) => updateDraft(b.id, { checklist: draft.checklist.map((task) => task.id === item.id ? { ...task, checked: e.target.checked } : task) })} className="h-4 w-4 accent-yellow-400" /><input value={item.text} onChange={(e) => updateDraft(b.id, { checklist: draft.checklist.map((task) => task.id === item.id ? { ...task, text: e.target.value } : task) })} placeholder="Task or deliverable" className={`min-w-0 flex-1 rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-yellow-400 ${item.checked ? 'text-slate-400 line-through' : 'text-slate-700'}`} /><button type="button" onClick={() => updateDraft(b.id, { checklist: draft.checklist.filter((task) => task.id !== item.id) })} className="px-1 text-xs font-black text-red-400 hover:text-red-600">×</button></div>)}</div>}</div>
                     <div className="mt-3 grid gap-2 sm:grid-cols-3"><input value={draft.workDone} onChange={(e) => updateDraft(b.id, { workDone: e.target.value })} placeholder="Additional work done" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-yellow-400" /><input value={draft.issues} onChange={(e) => updateDraft(b.id, { issues: e.target.value })} placeholder="Issues / blockers" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-yellow-400" /><input value={draft.nextWork} onChange={(e) => updateDraft(b.id, { nextWork: e.target.value })} placeholder="Next work" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-yellow-400" /></div>
-                    <button type="button" onClick={() => submitReport(b.id)} disabled={busy} className="mt-3 rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-black transition hover:bg-yellow-500 disabled:opacity-50">{busy ? 'Submitting…' : 'Submit progress report'}</button>
+                    <ReportPhotoPicker key={b.id} label="Progress photos" photos={progressPhotos[b.id] ?? []} onChange={(photos) => setProgressPhotos((current) => ({ ...current, [b.id]: photos }))} onProcessing={setPreparingPhoto} disabled={busy || preparingPhoto} />
+                    <button type="button" onClick={() => submitReport(b.id)} disabled={busy || preparingPhoto} className="mt-3 rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-black transition hover:bg-yellow-500 disabled:opacity-50">{busy ? 'Submitting…' : 'Submit progress report'}</button>
                   </div>
                 )
               })()}
 
+              {readyToComplete && (
+                <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                  <h3 className="text-sm font-black text-emerald-950">Final project results</h3>
+                  <p className="mt-1 text-xs text-emerald-800">Progress is at 100%. Capture at least one photo of the finished work to complete the project.</p>
+                  <ReportPhotoPicker key={b.id} label="Final result photos" photos={finalPhotos[b.id] ?? []} onChange={(photos) => setFinalPhotos((current) => ({ ...current, [b.id]: photos }))} onProcessing={setPreparingPhoto} disabled={busy || preparingPhoto} />
+                  <button type="button" onClick={() => submitReport(b.id, true)} disabled={busy || preparingPhoto || !finalPhotos[b.id]?.length} className="mt-3 rounded-xl bg-emerald-800 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Submit final results and complete</button>
+                </section>
+              )}
+
+              {b.reports?.filter((report) => readReportPhotos(report.photoUrls).length > 0).map((report) => (
+                <section key={report.id} className="space-y-2 rounded-xl border border-slate-200 p-3">
+                  <h3 className="text-xs font-bold text-slate-800">{report.content}</h3>
+                  <ReportPhotoGallery photos={readReportPhotos(report.photoUrls)} />
+                </section>
+              ))}
+
               {/* Status update */}
-              <div className="flex flex-wrap items-center gap-2">
+              {!closed && <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Update status:</span>
                 {TECH_UPDATE_STATUSES.map((s) => (
                   <button
                     key={s}
                     onClick={() => updateStatus(b.id, s)}
-                    disabled={busy || b.status === s || (s === 'COMPLETED' && (b.reports?.[0]?.progress ?? 0) < 100)}
-                    title={s === 'COMPLETED' && (b.reports?.[0]?.progress ?? 0) < 100 ? 'Submit progress updates until the project reaches 100%.' : undefined}
+                    disabled={busy || b.status === s}
                     className={`rounded-full px-3 py-1 text-[11px] font-bold transition-colors disabled:opacity-40 ${
                       b.status === s
                         ? 'bg-black text-yellow-400'
@@ -333,7 +360,7 @@ export default function TechnicianJobsPage() {
                     {s.replace('_', ' ')}
                   </button>
                 ))}
-              </div>
+              </div>}
 
               {/* Add progress update */}
               <div className="flex gap-2">

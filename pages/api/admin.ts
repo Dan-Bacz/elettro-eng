@@ -95,6 +95,9 @@ export default async function handler(req: any, res: any) {
       }
 
       if (action === 'update_status') {
+        if (user.role === 'TECH' && status === 'COMPLETED') {
+          return res.status(400).json({ error: 'Submit final result photos from My Jobs to complete the project.' })
+        }
         const bookingRow = await prisma.booking.findUnique({
           where: { id: bookingId },
           select: { assignedToId: true, status: true }

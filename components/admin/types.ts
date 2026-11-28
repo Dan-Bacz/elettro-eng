@@ -76,6 +76,7 @@ export type ReportObj = {
   workDone?: string | null
   issues?: string | null
   nextWork?: string | null
+  photoUrls?: string | null
   createdAt: string
 }
 

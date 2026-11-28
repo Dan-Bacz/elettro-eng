@@ -6,7 +6,7 @@ import { MAX_PROFILE_PHOTO_BYTES, PROFILE_PHOTO_TYPES } from '../lib/staff-profi
 
 const MAX_SOURCE_BYTES = 20 * 1024 * 1024
 
-export async function registrationPhotoData(file: File | null) {
+export async function registrationPhotoData(file: File | null, maxDataLength = 4 * Math.floor(MAX_PROFILE_PHOTO_BYTES / 3) + 23) {
   if (!file) return undefined
   const url = URL.createObjectURL(file)
   try {
@@ -22,9 +22,11 @@ export async function registrationPhotoData(file: File | null) {
     context.fillStyle = '#fff'
     context.fillRect(0, 0, canvas.width, canvas.height)
     context.drawImage(image, 0, 0, canvas.width, canvas.height)
-    const data = canvas.toDataURL('image/jpeg', 0.86)
-    if (data.length > 4 * Math.floor(MAX_PROFILE_PHOTO_BYTES / 3) + 23) throw new Error('The processed photo is too large.')
-    return data
+    for (const quality of [0.86, 0.72, 0.55, 0.4]) {
+      const data = canvas.toDataURL('image/jpeg', quality)
+      if (data.length <= maxDataLength) return data
+    }
+    throw new Error('The processed photo is too large.')
   } finally {
     URL.revokeObjectURL(url)
   }

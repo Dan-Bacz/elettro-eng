@@ -1,7 +1,9 @@
 package com.elettro.app;
 
 import android.annotation.SuppressLint;
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -9,6 +11,7 @@ import android.view.View;
 import android.view.Gravity;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -17,11 +20,16 @@ import android.webkit.WebViewClient;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.google.android.material.navigation.NavigationView;
+import java.io.File;
+import java.io.IOException;
 
 public class WebViewActivity extends AppCompatActivity {
     public static final String EXTRA_ROUTE = "web_route";
@@ -37,6 +45,17 @@ public class WebViewActivity extends AppCompatActivity {
     private NavigationView techNavView;
     private View menuButton;
     private boolean returningToLogin;
+    private ValueCallback<Uri[]> fileCallback;
+    private Uri cameraPhoto;
+    private final ActivityResultLauncher<Uri> takePicture = registerForActivityResult(
+            new ActivityResultContracts.TakePicture(),
+            saved -> finishFileSelection(saved ? new Uri[]{cameraPhoto} : null));
+    private final ActivityResultLauncher<String> cameraPermission = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(),
+            granted -> {
+                if (granted) launchReportCamera();
+                else finishFileSelection(null);
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -192,10 +211,45 @@ public class WebViewActivity extends AppCompatActivity {
             }
         });
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                                       FileChooserParams params) {
+                String url = view.getUrl();
+                if (url == null || !isAppUrl(Uri.parse(url)) || !params.isCaptureEnabled()
+                        || !"/technician/jobs".equals(Uri.parse(url).getPath())) return false;
+                finishFileSelection(null);
+                fileCallback = callback;
+                if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                    launchReportCamera();
+                } else {
+                    cameraPermission.launch(Manifest.permission.CAMERA);
+                }
+                return true;
+            }
+
             @Override public void onProgressChanged(WebView view, int progress) {
                 loadingBar.setVisibility(progress < 100 ? View.VISIBLE : View.GONE);
             }
         });
+    }
+
+    private void launchReportCamera() {
+        try {
+            File directory = new File(getCacheDir(), "images");
+            if (!directory.isDirectory() && !directory.mkdirs()) throw new IOException("Camera cache unavailable");
+            File photo = File.createTempFile("report-", ".jpg", directory);
+            cameraPhoto = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photo);
+            takePicture.launch(cameraPhoto);
+        } catch (IOException | RuntimeException e) {
+            finishFileSelection(null);
+            android.widget.Toast.makeText(this, "Unable to open camera.", android.widget.Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void finishFileSelection(Uri[] result) {
+        ValueCallback<Uri[]> callback = fileCallback;
+        fileCallback = null;
+        cameraPhoto = null;
+        if (callback != null) callback.onReceiveValue(result);
     }
 
     private void loadAuthenticatedRoute(String route) {
