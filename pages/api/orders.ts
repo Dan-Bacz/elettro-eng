@@ -1,3 +1,4 @@
+import { isSikatPayTestOrder } from '../../lib/sikatpay-test-status'
 import { PrismaClient } from '@prisma/client'
 import { randomUUID } from 'crypto'
 import jwt from 'jsonwebtoken'
@@ -127,6 +128,9 @@ export default async function handler(req: any, res: any) {
       })
 
       if (!order) return res.status(404).json({ error: 'Order not found' })
+      if (isSikatPayTestOrder(order.paymentStatus)) {
+        return res.status(409).json({ error: 'SikatPay test orders cannot be fulfilled or marked as real payments.' })
+      }
 
       let assignedRiderUser: any = null
       if (hasRiderId && riderId) {

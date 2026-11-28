@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { prisma } from '../../../lib/prisma'
+import { orderAmountCentavos, sikatPayOrderId } from '../../../lib/sikatpay-test'
+import { SIKATPAY_TEST_PAID, SIKATPAY_TEST_PENDING } from '../../../lib/sikatpay-test-status'
 
 export const runtime = 'nodejs'
 
@@ -78,17 +80,35 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { count } = await prisma.sikatPayWebhookEvent.createMany({
-      data: {
-        id: event.id,
-        paymentId: payment.id,
-        orderReference: payment.order_id ?? null,
-        amountCentavos: BigInt(payment.amount),
-        livemode: event.livemode,
-      },
-      skipDuplicates: true,
+    const duplicate = await prisma.$transaction(async (tx) => {
+      const { count } = await tx.sikatPayWebhookEvent.createMany({
+        data: {
+          id: event.id,
+          paymentId: payment.id,
+          orderReference: payment.order_id ?? null,
+          amountCentavos: BigInt(payment.amount),
+          livemode: event.livemode,
+        },
+        skipDuplicates: true,
+      })
+
+      const orderId = !event.livemode && event.sample !== true ? sikatPayOrderId(payment.order_id) : null
+      if (orderId) {
+        const order = await tx.order.findFirst({
+          where: { id: orderId, paymentStatus: SIKATPAY_TEST_PENDING, sikatPayPaymentId: payment.id },
+          select: { id: true, total: true, shipping: true },
+        })
+        if (order && orderAmountCentavos(order) === payment.amount) {
+          await tx.order.updateMany({
+            where: { id: order.id, paymentStatus: SIKATPAY_TEST_PENDING, sikatPayPaymentId: payment.id },
+            data: { paymentStatus: SIKATPAY_TEST_PAID },
+          })
+        }
+      }
+
+      return count === 0
     })
-    return Response.json({ ok: true, duplicate: count === 0 })
+    return Response.json({ ok: true, duplicate })
   } catch {
     console.error('Could not record SikatPay payment webhook.')
     return Response.json({ error: 'Could not record payment event.' }, { status: 503 })

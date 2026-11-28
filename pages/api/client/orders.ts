@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireVerifiedClient } from '../../../lib/client-auth'
 import { prisma } from '../../../lib/prisma'
+import { startSikatPayTest } from '../../../lib/sikatpay-test'
+import { isSikatPayTestOrder, SIKATPAY_TEST_PAID } from '../../../lib/sikatpay-test-status'
 
 function orderReference(id: string) {
   return `ORD-${id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
@@ -27,10 +29,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         paymentMethod: true,
         paymentStatus: true,
         shippingConfirmed: true,
+        total: true,
+        shipping: true,
+        sikatPayPaymentId: true,
       },
     })
 
     if (!order) return res.status(404).json({ error: 'Order not found' })
+
+    if (isSikatPayTestOrder(order.paymentStatus)) {
+      if (action !== 'start-test-payment') return res.status(409).json({ error: 'Use SikatPay test checkout for this order.' })
+      if (order.paymentStatus === SIKATPAY_TEST_PAID) return res.status(200).json({ paymentStatus: SIKATPAY_TEST_PAID })
+      if (order.status !== 'PENDING') return res.status(409).json({ error: 'This test order is closed.' })
+      try {
+        return res.status(200).json(await startSikatPayTest(order))
+      } catch {
+        return res.status(502).json({ error: 'Could not open the GCash test checkout. Please try again.' })
+      }
+    }
 
     if (action === 'submit-payment') {
       if (!process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME || !process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER) {

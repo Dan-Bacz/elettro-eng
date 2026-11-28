@@ -1,5 +1,6 @@
 "use client"
 
+import { isSikatPayTestOrder, SIKATPAY_TEST_PAID, SIKATPAY_TEST_PENDING } from '@/lib/sikatpay-test-status'
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useState } from "react"
@@ -123,6 +124,8 @@ function StatusPill({ status, labels }: { status: string; labels: Record<string,
 }
 
 function orderStatusLabel(order: Order) {
+  if (order.paymentStatus === SIKATPAY_TEST_PAID) return "Test payment recorded"
+  if (order.paymentStatus === SIKATPAY_TEST_PENDING) return "Test payment pending"
   if (order.status === "PENDING") return "Awaiting confirmation"
   if (order.status === "APPROVED" && order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID") return "To Pay"
   if (order.status === "APPROVED" && order.warehouseRequest && order.warehouseRequest.status !== "FULFILLED") return "Awaiting warehouse release"
@@ -236,8 +239,13 @@ export default function ClientDashboardPage() {
 
   useEffect(() => {
     loadDashboard()
+    const returningFromTest = new URLSearchParams(window.location.search).has("sikatpay")
     const interval = window.setInterval(loadDashboard, 30_000)
-    return () => window.clearInterval(interval)
+    const check = returningFromTest ? window.setTimeout(loadDashboard, 3_000) : undefined
+    return () => {
+      window.clearInterval(interval)
+      window.clearTimeout(check)
+    }
   }, [loadDashboard])
 
   const filteredBookings = useMemo(() => {
@@ -266,7 +274,7 @@ export default function ClientDashboardPage() {
     if (response.ok) await loadDashboard()
   }
 
-  async function updateClientOrder(orderId: string, action: "submit-payment" | "confirm-received") {
+  async function updateClientOrder(orderId: string, action: "submit-payment" | "confirm-received" | "start-test-payment") {
     setBusyOrderId(orderId)
     setError("")
     try {
@@ -281,6 +289,10 @@ export default function ClientDashboardPage() {
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || "Could not update your order.")
+      if (action === "start-test-payment" && result.checkoutUrl) {
+        window.location.assign(result.checkoutUrl)
+        return
+      }
       await loadDashboard()
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not update your order.")
@@ -481,10 +493,10 @@ export default function ClientDashboardPage() {
                       <tfoot><tr><td colSpan={3} className="pt-3 text-right text-xs font-semibold text-gray-500">{order.fulfillmentMethod === "DELIVERY" && !order.shippingConfirmed ? "Products total · delivery fee pending" : "Total including delivery fee"}</td><td className="pt-3 text-right font-black text-gray-900">{formatMoney(order.total + order.shipping)}</td></tr></tfoot>
                     </table>
                   </div>
-                  <div className="mt-4 rounded-xl bg-gray-50 p-4">
+                  {!isSikatPayTestOrder(order.paymentStatus) && <div className="mt-4 rounded-xl bg-gray-50 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-bold uppercase tracking-wide text-gray-600">Order progress · {orderStatusLabel(order)}</p><p className="text-xs text-gray-500">Last saved update: {formatDate(order.updatedAt, true)}</p></div>
                     <OrderProgress order={order} />
-                  </div>
+                  </div>}
                   {order.warehouseRequest && (
                     <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                       <p className="text-sm font-bold text-emerald-900">Warehouse verification · {order.warehouseRequest.status.replace(/_/g, " ")}</p>
@@ -498,7 +510,18 @@ export default function ClientDashboardPage() {
                   )}
                   {order.fulfillmentMethod === "DELIVERY" && <p className="mt-4 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery address:</span> {[order.address, order.barangay, order.city, order.province, order.postalCode].filter(Boolean).join(", ") || "Not specified"}</p>}
                   {order.deliveryNotes && <p className="mt-2 text-sm text-gray-600"><span className="font-bold text-gray-700">Delivery notes:</span> {order.deliveryNotes}</p>}
-                  {order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID" && order.status === "PENDING" && (
+                  {isSikatPayTestOrder(order.paymentStatus) && (
+                    <div className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                      <p className="font-bold">{order.paymentStatus === SIKATPAY_TEST_PAID ? "Test payment recorded" : "GCash test checkout"}</p>
+                      <p className="mt-1">This is a simulation. No real money was charged and the order will not be fulfilled.</p>
+                      {order.paymentStatus === SIKATPAY_TEST_PENDING && (
+                        <button type="button" disabled={busyOrderId === order.id} onClick={() => void updateClientOrder(order.id, "start-test-payment")} className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+                          {busyOrderId === order.id ? "Checking payment..." : "Continue test checkout"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {order.paymentMethod === "GCASH" && !isSikatPayTestOrder(order.paymentStatus) && order.paymentStatus !== "PAID" && order.status === "PENDING" && (
                     <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Your order is awaiting confirmation. We will confirm the delivery fee before payment is due.</p>
                   )}
                   {order.paymentMethod === "GCASH" && order.paymentStatus !== "PAID" && order.status === "APPROVED" && order.shippingConfirmed && (

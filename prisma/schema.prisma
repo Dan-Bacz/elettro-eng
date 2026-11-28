@@ -321,6 +321,7 @@ model Order {
   paymentMethod     String            @default("CASH_ON_DELIVERY")
   paymentStatus     String            @default("UNPAID")
   paymentReference  String?
+  sikatPayPaymentId String?
   fulfillmentMethod String            @default("DELIVERY")
   shipping          Float             @default(0)
   shippingConfirmed Boolean           @default(false)

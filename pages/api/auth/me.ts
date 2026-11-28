@@ -1,3 +1,4 @@
+import { canStartSikatPayTest, isSikatPayTestMode } from '../../../lib/sikatpay-test'
 import { PrismaClient } from '@prisma/client'
 import jwt from 'jsonwebtoken'
 import { getJwtSecret, getTokenFromRequest } from '../../../lib/auth'
@@ -22,6 +23,8 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0')
     return res.json({
       ok: true,
+      sikatPayTestMode: isSikatPayTestMode(),
+      sikatPayTestAvailable: canStartSikatPayTest(),
       user: {
         id: user.id,
         email: user.email,

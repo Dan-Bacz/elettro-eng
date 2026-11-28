@@ -9,7 +9,7 @@ import { loadMindanaoLocations, type MindanaoLocation } from "@/lib/mindanaoLoca
 import { findPostalCode } from "@/lib/postalCodes"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-const GCASH_CONFIGURED = Boolean(
+const MANUAL_GCASH_CONFIGURED = Boolean(
   process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME && process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER
 )
 
@@ -51,6 +51,8 @@ type Confirmation = {
   paymentMethod: string
   fulfillmentMethod: string
   status: string
+  testPayment?: boolean
+  checkoutUrl?: string | null
 }
 
 function isValidPhone(p: string) {
@@ -71,6 +73,9 @@ export default function CheckoutModal() {
     postalCode: "",
     deliveryNotes: "",
   })
+  const [gcashTestMode, setGcashTestMode] = useState(false)
+  const [gcashTestAvailable, setGcashTestAvailable] = useState(false)
+  const gcashAvailable = gcashTestMode ? gcashTestAvailable : MANUAL_GCASH_CONFIGURED
   const [paymentMethod, setPaymentMethod] = useState("CASH_ON_DELIVERY")
   const [fulfillmentMethod, setFulfillmentMethod] = useState<"DELIVERY" | "PICKUP">("DELIVERY")
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({})
@@ -136,6 +141,8 @@ export default function CheckoutModal() {
       .then((response) => response.ok ? response.json() : null)
       .then((data) => {
         if (!active || !data?.user) return
+        setGcashTestMode(data.sikatPayTestMode === true)
+        setGcashTestAvailable(data.sikatPayTestAvailable === true)
         setForm((current) => ({
           ...current,
           clientName: data.user.name || current.clientName,
@@ -248,7 +255,7 @@ export default function CheckoutModal() {
           postalCode: form.postalCode.trim(),
           deliveryNotes: form.deliveryNotes.trim(),
           fulfillmentMethod,
-          paymentMethod,
+          paymentMethod: paymentMethod === "GCASH" && gcashTestMode ? "GCASH_TEST" : paymentMethod,
           items: items.map((it) => ({ inventoryItemId: it.id, quantity: it.quantity })),
         }),
       })
@@ -262,6 +269,8 @@ export default function CheckoutModal() {
         paymentMethod: data.paymentMethod || paymentMethod,
         fulfillmentMethod: data.fulfillmentMethod || fulfillmentMethod,
         status: data.status || "PENDING",
+        testPayment: data.testPayment === true,
+        checkoutUrl: data.checkoutUrl,
       })
       clear()
     } catch (err: any) {
@@ -285,10 +294,11 @@ export default function CheckoutModal() {
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                 <CheckIcon className="w-8 h-8" />
               </div>
-              <h2 className="mt-4 text-2xl font-black text-gray-900">{confirmation.fulfillmentMethod === "PICKUP" ? "Item Reserved Successfully" : "Order Placed Successfully"}</h2>
+              <h2 className="mt-4 text-2xl font-black text-gray-900">{confirmation.testPayment ? "Test order saved" : confirmation.fulfillmentMethod === "PICKUP" ? "Item Reserved Successfully" : "Order Placed Successfully"}</h2>
               <p className="mt-2 text-sm text-gray-500">
-                Thank you, <strong className="text-gray-800">{form.clientName.trim()}</strong>! We have received your
-                order and our team will review it shortly.
+                {confirmation.testPayment
+                  ? "Continue to SikatPay to simulate a payment. No money will move and no products will be shipped."
+                  : <>Thank you, <strong className="text-gray-800">{form.clientName.trim()}</strong>! We have received your order and our team will review it shortly.</>}
               </p>
 
               <div className="mt-6 w-full rounded-2xl border border-gray-200 bg-gray-50 p-5 text-left">
@@ -307,27 +317,33 @@ export default function CheckoutModal() {
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Payment Method</p>
-                    <p className="text-sm font-bold text-gray-800">{paymentLabel}</p>
+                    <p className="text-sm font-bold text-gray-800">{confirmation.testPayment ? "GCash (SikatPay test)" : paymentLabel}</p>
                   </div>
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Order Status</p>
-                    <p className="text-sm font-bold text-amber-600">Order Under Review</p>
+                    <p className="text-sm font-bold text-amber-600">{confirmation.testPayment ? "Test payment pending" : "Order Under Review"}</p>
                   </div>
                   <div className="sm:col-span-2">
                     <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{confirmation.fulfillmentMethod === "PICKUP" ? "Fulfillment" : "Deliver To"}</p>
-                    <p className="text-sm font-medium text-gray-700">{confirmation.fulfillmentMethod === "PICKUP" ? "Pickup instructions will be shared when the order is ready." : `${form.address.trim()}${form.barangay ? `, ${form.barangay.trim()}` : ""}, ${form.city.trim()}, ${form.province.trim()}${form.postalCode.trim() ? ` ${form.postalCode.trim()}` : ""}`}</p>
+                    <p className="text-sm font-medium text-gray-700">{confirmation.testPayment ? "Test order only" : confirmation.fulfillmentMethod === "PICKUP" ? "Pickup instructions will be shared when the order is ready." : `${form.address.trim()}${form.barangay ? `, ${form.barangay.trim()}` : ""}, ${form.city.trim()}, ${form.province.trim()}${form.postalCode.trim() ? ` ${form.postalCode.trim()}` : ""}`}</p>
                   </div>
                 </div>
               </div>
 
               <p className="mt-5 text-xs leading-relaxed text-gray-500">
-                {paymentMethod === "CASH_ON_DELIVERY"
+                {confirmation.testPayment ? "Check the test payment status in your client dashboard." : paymentMethod === "CASH_ON_DELIVERY"
                 ? "Pay cash when your order is delivered. Follow the order status in your client dashboard."
                 : paymentMethod === "CASH_ON_PICKUP"
                   ? "Pay cash when you collect your order after it is marked ready for pickup."
                   : "Our team will confirm the order and delivery fee first. Then pay by GCash from your client dashboard; the payment stays pending until verified."}{" "}
                 Keep your order number for reference.
               </p>
+
+              {confirmation.testPayment && (
+                <a href={confirmation.checkoutUrl || "/client/dashboard#orders"} className="mt-5 inline-flex rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800">
+                  {confirmation.checkoutUrl ? "Continue to test checkout" : "Open your orders to resume test payment"}
+                </a>
+              )}
 
               <button
                 type="button"
@@ -483,20 +499,20 @@ export default function CheckoutModal() {
                           key={method.id}
                           type="button"
                           onClick={() => {
-                            if (method.id !== "GCASH" || GCASH_CONFIGURED) setPaymentMethod(method.id)
+                            if (method.id !== "GCASH" || gcashAvailable) setPaymentMethod(method.id)
                           }}
-                          disabled={method.id === "GCASH" && !GCASH_CONFIGURED}
+                          disabled={method.id === "GCASH" && !gcashAvailable}
                           aria-pressed={active}
                           className={`rounded-xl border-2 p-3.5 text-left transition-all ${
                             active
                               ? "border-yellow-400 bg-yellow-50 ring-2 ring-yellow-400/30"
-                              : method.id === "GCASH" && !GCASH_CONFIGURED
+                              : method.id === "GCASH" && !gcashAvailable
                                 ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
                                 : "border-gray-200 bg-white hover:border-yellow-300"
                           }`}
                         >
                           <span className="flex items-center justify-between">
-                            <span className="text-sm font-black text-gray-900">{method.label}</span>
+                            <span className="text-sm font-black text-gray-900">{method.id === "GCASH" && gcashTestMode ? "GCash (test only)" : method.label}</span>
                             <span
                               className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${
                                 active ? "border-yellow-500 bg-yellow-400" : "border-gray-300"
@@ -505,8 +521,10 @@ export default function CheckoutModal() {
                               {active && <span className="h-1.5 w-1.5 rounded-full bg-black" />}
                             </span>
                           </span>
-                          <span className="mt-1 block text-xs text-gray-500">{method.id === "GCASH" && !GCASH_CONFIGURED ? "Temporarily unavailable — GCash recipient details not configured" : method.hint}</span>
-                          {active && <span className="mt-2 block text-[10px] leading-relaxed text-gray-500">{method.note}</span>}
+                          <span className="mt-1 block text-xs text-gray-500">{method.id === "GCASH" && !gcashAvailable
+                              ? "GCash checkout is temporarily unavailable"
+                              : method.id === "GCASH" && gcashTestMode ? "Simulate a payment in SikatPay. No real charge." : method.hint}</span>
+                          {active && <span className="mt-2 block text-[10px] leading-relaxed text-gray-500">{method.id === "GCASH" && gcashTestMode ? "Save the test order, then continue to SikatPay." : method.note}</span>}
                         </button>
                       )
                     })}

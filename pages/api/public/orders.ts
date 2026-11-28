@@ -3,6 +3,8 @@ import { getSalesStock } from '../../../lib/sales-stock'
 import { sendOrderSubmittedNotification } from '../../../lib/email'
 import { requireVerifiedClient } from '../../../lib/client-auth'
 import { calculateShipping } from '../../../lib/shipping'
+import { canStartSikatPayTest, isSikatPayTestMode, orderAmountCentavos, startSikatPayTest, validSikatPayTestAmount } from '../../../lib/sikatpay-test'
+import { SIKATPAY_TEST_PENDING } from '../../../lib/sikatpay-test-status'
 
 const prisma = new PrismaClient()
 
@@ -14,6 +16,7 @@ const MAX_LINE_QTY = 999
 // canonical stored value.
 const PAYMENT_METHOD_ALIASES: Record<string, string> = {
   GCASH: 'GCASH',
+  GCASH_TEST: 'GCASH',
   G_CASH: 'GCASH',
   CASH_ON_DELIVERY: 'CASH_ON_DELIVERY',
   COD: 'CASH_ON_DELIVERY',
@@ -110,11 +113,14 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Cash on pickup is only available for pickup orders' })
   }
 
-  if (paymentMethod === 'GCASH' && (!process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME || !process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER)) {
+  const testPayment = paymentMethod === 'GCASH' && (rawMethod === 'GCASH_TEST' || isSikatPayTestMode())
+  if (paymentMethod === 'GCASH' && (testPayment
+    ? !canStartSikatPayTest()
+    : !process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NAME || !process.env.NEXT_PUBLIC_GCASH_ACCOUNT_NUMBER)) {
     return res.status(503).json({ error: 'GCash payment is not configured yet. Please choose cash or try again later.' })
   }
 
-  const paymentStatus = paymentMethod === 'GCASH' ? 'UNPAID' : 'CASH_DUE'
+  const paymentStatus = testPayment ? SIKATPAY_TEST_PENDING : paymentMethod === 'GCASH' ? 'UNPAID' : 'CASH_DUE'
 
   try {
     const cleanEmail = String(email).trim().toLowerCase()
@@ -169,6 +175,10 @@ export default async function handler(req: any, res: any) {
         })
       }
 
+      if (testPayment && !validSikatPayTestAmount(orderAmountCentavos({ total: round2(total), shipping }))) {
+        return { error: 'GCash test payments support totals from PHP 20 to PHP 50,000.' }
+      }
+
       const created = await tx.order.create({
         data: {
           clientId: client.id,
@@ -186,7 +196,7 @@ export default async function handler(req: any, res: any) {
           paymentStatus,
           fulfillmentMethod,
           shippingConfirmed: true,
-          usesSalesStock: true,
+          usesSalesStock: !testPayment,
           shipping,
           status: 'PENDING',
           total: round2(total),
@@ -196,7 +206,7 @@ export default async function handler(req: any, res: any) {
 
       const reference = `ORD-${created.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
 
-      await tx.notification.create({
+      if (!testPayment) await tx.notification.create({
         data: {
           userId: client.id,
           type: 'ORDER',
@@ -213,6 +223,20 @@ export default async function handler(req: any, res: any) {
 
     const { order, total, orderItems } = result
     const reference = `ORD-${order.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`
+
+    if (testPayment) {
+      let checkoutUrl: string | null = null
+      try {
+        checkoutUrl = (await startSikatPayTest(order)).checkoutUrl
+      } catch {
+        console.error('Could not start SikatPay test checkout for a saved order.')
+      }
+      return res.status(201).json({
+        ok: true, id: order.id, reference, paymentMethod, paymentStatus, fulfillmentMethod,
+        status: order.status, total: round2(total + shipping), subtotal: round2(total), shipping,
+        distanceKm: shippingEstimate.distanceKm, testPayment: true, checkoutUrl,
+      })
+    }
 
     // Notify the staff who handle Sales Stock orders.
     try {
