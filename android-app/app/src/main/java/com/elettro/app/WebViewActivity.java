@@ -57,10 +57,13 @@ public class WebViewActivity extends AppCompatActivity {
         configureTechnicianDrawer(route);
 
         configureWebView();
-        // SwipeRefreshLayout must only intercept a pull when the WebView is
-        // already at the very top. Otherwise an upward page scroll can be
-        // mistaken for refresh and trap the WebView near its current position.
-        refreshLayout.setOnChildScrollUpCallback((parent, child) -> webView.canScrollVertically(-1));
+        refreshLayout.setOnChildScrollUpCallback((parent, child) -> {
+            String url = webView.getUrl();
+            String path = url == null ? null : Uri.parse(url).getPath();
+            // The job dialog scrolls independently of the WebView's root page.
+            return "/technician/jobs".equals(path) || "/technician/jobs/".equals(path)
+                    || webView.canScrollVertically(-1);
+        });
         refreshLayout.setOnRefreshListener(() -> {
             errorPanel.setVisibility(View.GONE);
             webView.reload();

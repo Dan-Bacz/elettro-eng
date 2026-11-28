@@ -22,6 +22,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ProgressBar;
@@ -813,9 +814,12 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             }
         }
 
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(layout);
+
         new AlertDialog.Builder(this)
                 .setTitle(jobTitle)
-                .setView(layout)
+                .setView(scroll)
                 .setNegativeButton("Close", null)
                 .show();
     }

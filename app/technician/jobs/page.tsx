@@ -38,7 +38,10 @@ export default function TechnicianJobsPage() {
 
   useEffect(() => {
     const current = dialog.current
-    if (selectedJobId && current && !current.open) current.showModal()
+    if (selectedJobId && current && !current.open) {
+      current.showModal()
+      current.scrollTop = 0
+    }
   }, [selectedJobId])
   const [activityMsg, setActivityMsg] = useState('')
   const [busy, setBusy] = useState(false)
@@ -251,18 +254,18 @@ export default function TechnicianJobsPage() {
         aria-labelledby="technician-job-title"
         onClose={() => setSelectedJobId(null)}
         onCancel={(event) => { if (busy) event.preventDefault() }}
-        className="m-auto w-[calc(100%_-_1rem)] max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/65 sm:w-[calc(100%_-_2rem)]"
+        className="m-auto max-h-[90dvh] w-[calc(100%_-_1rem)] max-w-3xl overflow-y-auto overscroll-y-contain rounded-2xl border border-slate-200 bg-white p-0 shadow-2xl backdrop:bg-slate-950/65 sm:w-[calc(100%_-_2rem)]"
       >
         {b && (
-          <div className="flex max-h-[90dvh] flex-col">
-            <header className="flex shrink-0 items-start justify-between gap-4 bg-gradient-to-r from-slate-950 to-cyan-950 px-5 py-4 text-white sm:px-6">
+          <div>
+            <header className="sticky top-0 z-10 flex items-start justify-between gap-4 bg-gradient-to-r from-slate-950 to-cyan-950 px-5 py-4 text-white sm:px-6">
               <div className="min-w-0">
                 <p className="text-xs font-semibold text-cyan-200">Job details</p>
                 <h2 id="technician-job-title" className="mt-1 break-words text-lg font-black">{b.title}</h2>
               </div>
               <button type="button" disabled={busy} onClick={() => dialog.current?.close()} className="rounded-lg border border-white/25 px-3 py-2 text-xs font-bold hover:bg-white/10 disabled:opacity-50">Close</button>
             </header>
-            <div className="min-h-0 space-y-4 overflow-y-auto p-4 sm:p-6">
+            <div className="space-y-4 p-4 sm:p-6">
               <dl className="grid gap-3 rounded-xl bg-slate-50 p-4 text-xs text-slate-700 sm:grid-cols-2">
                 <div><dt className="font-semibold text-slate-600">Client</dt><dd className="mt-1 font-bold">{b.client?.name || 'Client'}</dd></div>
                 <div><dt className="font-semibold text-slate-600">Schedule</dt><dd className="mt-1 font-bold">{formatDate(b.startDate)} to {formatDate(b.endDate)}</dd></div>
