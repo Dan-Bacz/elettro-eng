@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { flushSync } from 'react-dom'
+import SalesOrderPrint from '../../../../components/sales/SalesOrderPrint'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import EmptyState from '../../../../components/admin/EmptyState'
@@ -72,6 +74,10 @@ export default function SalesOrdersPage() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('ALL')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [newestFirst, setNewestFirst] = useState(true)
+  const [printSelection, setPrintSelection] = useState<React.ComponentProps<typeof SalesOrderPrint>['selection'] | null>(null)
 
   // Rider assignment state
   const [viewingOrder, setViewingOrder] = useState<OrderObj | null>(null)
@@ -178,6 +184,30 @@ export default function SalesOrdersPage() {
     }
   }
 
+  useEffect(() => {
+    const clearPrint = () => setPrintSelection(null)
+    window.addEventListener('afterprint', clearPrint)
+    return () => window.removeEventListener('afterprint', clearPrint)
+  }, [])
+
+  async function printOrders(selection: NonNullable<typeof printSelection>) {
+    flushSync(() => setPrintSelection(selection))
+    await document.querySelector<HTMLImageElement>('.sales-orders-print .sales-letterhead-logo')?.decode().catch(() => {})
+    window.print()
+  }
+
+  const start = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : -Infinity
+  const end = dateTo ? new Date(`${dateTo}T00:00:00`) : null
+  const endExclusive = end ? end.setDate(end.getDate() + 1) : Infinity
+  const invalidDates = Boolean(dateFrom && dateTo && dateFrom > dateTo)
+  const printCriteria = [
+    newestFirst ? 'Newest first' : 'Oldest first',
+    dateFrom ? `From ${dateFrom}` : '',
+    dateTo ? `Through ${dateTo}` : '',
+    filter !== 'ALL' ? `Status: ${FILTERS.find((option) => option.value === filter)?.label}` : '',
+    query.trim() ? `Search: ${query.trim()}` : '',
+  ].filter(Boolean)
+
   const visible = orders.filter((o) => {
     const matchesFilter = filter === 'ALL' || o.status === filter
     const q = query.trim().toLowerCase()
@@ -190,13 +220,17 @@ export default function SalesOrdersPage() {
       (o.trackingNumber || '').toLowerCase().includes(q) ||
       (o.riderName || '').toLowerCase().includes(q) ||
       (o.items || []).some((it) => (it.name || '').toLowerCase().includes(q))
-    return matchesFilter && matchesQuery
+    const time = new Date(o.createdAt).getTime()
+    return matchesFilter && matchesQuery && !invalidDates && time >= start && time < endExclusive
+  }).sort((a, b) => {
+    const difference = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    return newestFirst ? difference : -difference
   })
 
   const pendingCount = orders.filter((o) => o.status === 'PENDING').length
 
   return (
-    <div className="space-y-5">
+    <div className="sales-orders-page space-y-5">
       <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-5 py-6 text-white shadow-xl shadow-slate-200 sm:px-7">
         <div className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-yellow-400/20 blur-3xl" />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
@@ -248,6 +282,32 @@ export default function SalesOrdersPage() {
           />
           </div>
         </div>
+        <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
+          <label className="text-xs font-bold text-slate-700">
+            From
+            <input type="date" value={dateFrom} max={dateTo || undefined} onChange={(event) => setDateFrom(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm" />
+          </label>
+          <label className="text-xs font-bold text-slate-700">
+            Through
+            <input type="date" value={dateTo} min={dateFrom || undefined} onChange={(event) => setDateTo(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm" />
+          </label>
+          <label className="text-xs font-bold text-slate-700">
+            Date order
+            <select value={newestFirst ? 'newest' : 'oldest'} onChange={(event) => setNewestFirst(event.target.value === 'newest')} className="mt-1 block rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            disabled={loading || Boolean(error) || visible.length === 0}
+            onClick={() => void printOrders({ kind: 'list', orders: visible, criteria: printCriteria })}
+            className="rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-700 disabled:opacity-50"
+          >
+            Print list
+          </button>
+        </div>
+        {invalidDates && <p role="alert" className="mt-2 text-xs font-semibold text-red-700">The end date must be on or after the start date.</p>}
       </div>
 
       {error && (
@@ -266,7 +326,7 @@ export default function SalesOrdersPage() {
         <EmptyState
           icon={<CartIcon className="h-6 w-6" />}
           title={orders.length === 0 ? 'No orders yet' : 'No orders match your filters'}
-          message={orders.length === 0 ? 'Client orders will appear here.' : 'Try adjusting the search query or filter.'}
+          message={orders.length === 0 ? 'Client orders will appear here.' : 'Try adjusting the date range, search, or status filter.'}
         />
       ) : (
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -362,6 +422,7 @@ export default function SalesOrdersPage() {
               </div>
 
               <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 px-6 py-4">
+                <button type="button" onClick={() => void printOrders({ kind: 'order', order })} className="rounded-xl border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Print order</button>
                 {order.status === 'PENDING' && <button onClick={() => { setConfirmingOrder(order); setShippingFee(order.shipping ? String(order.shipping) : ''); setViewingOrder(null) }} className="rounded-xl bg-yellow-400 px-4 py-2 text-xs font-black text-black hover:bg-yellow-300">Confirm order</button>}
                 {order.usesSalesStock && order.status === 'APPROVED' && (
                   <button onClick={() => void updateOrder(order, 'PROCESSING')} disabled={updatingOrder || (order.paymentMethod === 'GCASH' && order.paymentStatus !== 'PAID')} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">Start preparing</button>
@@ -600,6 +661,7 @@ export default function SalesOrdersPage() {
           </div>
         </div>
       )}
+      {printSelection && <SalesOrderPrint selection={printSelection} />}
     </div>
   )
 }
