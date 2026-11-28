@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { key: 'jobs', label: 'My Jobs', icon: HammerIcon, href: '/technician/jobs' },
   { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/technician/dashboard#notifications' },
   { key: 'materials', label: 'Material Requests', icon: CartIcon, href: '/technician/dashboard#materials' },
+  { key: 'material-usage', label: 'Material Usage', icon: HammerIcon, href: '/technician/material-usage' },
   { key: 'profile', label: 'Profile', icon: UserIcon, href: '/technician/dashboard#profile' },
   { key: 'reports', label: 'Reports', icon: BarChartIcon, href: '/technician/dashboard#reports' },
   { key: 'settings', label: 'Settings', icon: GearIcon, href: '/technician/dashboard#settings' },

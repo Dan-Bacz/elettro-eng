@@ -62,6 +62,7 @@
     <string name="nav_home">Home</string>
     <string name="nav_more">More</string>
     <string name="nav_my_jobs">My Jobs</string>
+    <string name="nav_material_usage">Material Usage</string>
 
     <!-- Admin navigation -->
     <string name="drawer_dashboard">Dashboard</string>

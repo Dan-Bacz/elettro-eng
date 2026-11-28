@@ -1,5 +1,4 @@
 import { PrismaClient } from '@prisma/client'
-import { technicianMaterialRequestFilter } from '../../lib/technician-material-requests'
 import jwt from 'jsonwebtoken'
 import { uploadToCloudinary } from '../../lib/cloudinary'
 import { getJwtSecret } from '../../lib/auth'
@@ -77,18 +76,6 @@ export default async function handler(req: any, res: any) {
               include: { author: { select: { id: true, name: true } } }
             },
             materialRequests: { orderBy: { createdAt: 'desc' } },
-            warehouseRequests: {
-              where: technicianMaterialRequestFilter(String(techUserId)),
-              select: {
-                items: {
-                  where: { inventoryItem: { deletedAt: null } },
-                  select: {
-                    requestedQuantity: true,
-                    inventoryItem: { select: { id: true, name: true, unit: true } },
-                  },
-                },
-              },
-            },
             materialUsages: {
               orderBy: { createdAt: 'desc' },
               include: { inventoryItem: { select: { id: true, name: true, unit: true } }, tech: { select: { id: true, name: true } } },

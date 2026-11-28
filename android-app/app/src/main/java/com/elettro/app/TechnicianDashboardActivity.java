@@ -239,6 +239,12 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
             drawerLayout.closeDrawer(GravityCompat.START);
             if (id == R.id.nav_home) { showSection("home"); return true; }
             if (id == R.id.nav_my_jobs) { showSection("jobs"); return true; }
+            if (id == R.id.nav_material_usage) {
+                Intent intent = new Intent(this, WebViewActivity.class);
+                intent.putExtra(WebViewActivity.EXTRA_ROUTE, "/technician/material-usage");
+                startActivity(intent);
+                return true;
+            }
             if (id == R.id.nav_notifications) { showSection("notifications"); return true; }
             if (id == R.id.nav_materials) { showSection("materials"); return true; }
             if (id == R.id.nav_profile) { showSection("profile"); return true; }

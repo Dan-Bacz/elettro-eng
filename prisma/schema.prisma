@@ -209,8 +209,10 @@ model ProjectMaterialUsage {
   id              String        @id @default(uuid())
   bookingId       String
   booking         Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  inventoryItemId String
-  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  inventoryItemId String?
+  inventoryItem   InventoryItem? @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  materialName    String?
+  evidence        ProjectMaterialUsageEvidence?
   techId          String
   tech            User          @relation(fields: [techId], references: [id], onDelete: Restrict)
   quantity        Int
@@ -221,6 +223,13 @@ model ProjectMaterialUsage {
   @@index([bookingId, createdAt])
   @@index([inventoryItemId, createdAt])
   @@index([techId, createdAt])
+}
+
+model ProjectMaterialUsageEvidence {
+  usageId      String @id
+  usage        ProjectMaterialUsage @relation(fields: [usageId], references: [id], onDelete: Cascade)
+  receiptPhoto String
+  productPhoto String
 }
 
 model MaterialRequest {

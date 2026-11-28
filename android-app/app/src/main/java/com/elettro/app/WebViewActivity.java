@@ -133,6 +133,10 @@ public class WebViewActivity extends AppCompatActivity {
                 loadAuthenticatedRoute("/technician/jobs");
                 return true;
             }
+            if (id == R.id.nav_material_usage) {
+                loadAuthenticatedRoute("/technician/material-usage");
+                return true;
+            }
 
             String section = null;
             if (id == R.id.nav_notifications) section = "notifications";
@@ -142,7 +146,7 @@ public class WebViewActivity extends AppCompatActivity {
             if (section != null) loadAuthenticatedRoute("/technician/dashboard#" + section);
             return section != null;
         });
-        techNavView.setCheckedItem(R.id.nav_home);
+        techNavView.setCheckedItem("/technician/material-usage".equals(route) ? R.id.nav_material_usage : R.id.nav_home);
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -214,8 +218,11 @@ public class WebViewActivity extends AppCompatActivity {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
                                                        FileChooserParams params) {
                 String url = view.getUrl();
-                if (url == null || !isAppUrl(Uri.parse(url)) || !params.isCaptureEnabled()
-                        || !"/technician/jobs".equals(Uri.parse(url).getPath())) return false;
+                if (url == null || !params.isCaptureEnabled()) return false;
+                Uri page = Uri.parse(url);
+                String path = page.getPath();
+                if (!isAppUrl(page) || !("/technician/jobs".equals(path) || "/technician/jobs/".equals(path)
+                        || "/technician/material-usage".equals(path) || "/technician/material-usage/".equals(path))) return false;
                 finishFileSelection(null);
                 fileCallback = callback;
                 if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
