@@ -18,6 +18,8 @@ type RequestRow = {
   items: { id: string; requestedQuantity: number; releasedQuantity: number; unit: string | null; inventoryItem: { name: string; sku: string | null; unit: string | null } }[]
 }
 
+type PrintTarget = { kind: 'register'; rows: RequestRow[]; criteria: string[] } | { kind: 'request'; request: RequestRow }
+
 const statusLabels: Record<string, string> = {
   PENDING: 'Pending approval',
   UNDER_REVIEW: 'Under review',
@@ -118,9 +120,12 @@ export default function AdminMaterialsRequestsPage() {
   const [query, setQuery] = useState('')
   const [source, setSource] = useState('ALL')
   const [status, setStatus] = useState('ALL')
+  const [from, setFrom] = useState('')
+  const [through, setThrough] = useState('')
+  const [dateOrder, setDateOrder] = useState<'newest' | 'oldest'>('newest')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [decisionError, setDecisionError] = useState('')
-  const [printTarget, setPrintTarget] = useState<'register' | RequestRow | null>(null)
+  const [printTarget, setPrintTarget] = useState<PrintTarget | null>(null)
   const dialog = useRef<HTMLDialogElement>(null)
   const printDocument = useRef<HTMLElement>(null)
   const selected = requests.find((request) => request.id === selectedId)
@@ -148,7 +153,7 @@ export default function AdminMaterialsRequestsPage() {
     return () => window.removeEventListener('afterprint', reset)
   }, [])
 
-  async function print(target: 'register' | RequestRow) {
+  async function print(target: PrintTarget) {
     flushSync(() => setPrintTarget(target))
     await printDocument.current?.querySelector('img')?.decode().catch(() => {})
     window.print()
@@ -173,11 +178,39 @@ export default function AdminMaterialsRequestsPage() {
     }
   }
 
-  const visible = useMemo(() => requests.filter((request) => {
-    const text = `${request.reference} ${request.requester?.name || ''} ${request.projectReference || ''} ${request.items.map((item) => item.inventoryItem.name).join(' ')}`.toLowerCase()
-    const matchesSource = source === 'ALL' || (source === 'SALES' ? request.source !== 'TECHNICIAN' : request.source === 'TECHNICIAN')
-    return matchesSource && (status === 'ALL' || request.status === status) && (!query.trim() || text.includes(query.trim().toLowerCase()))
-  }), [requests, query, source, status])
+  const invalidDates = Boolean(from && through && from > through)
+  const visible = useMemo(() => {
+    if (invalidDates) return []
+
+    const start = from ? new Date(`${from}T00:00:00`).getTime() : -Infinity
+    const end = through ? new Date(`${through}T00:00:00`) : null
+    const endExclusive = end ? end.setDate(end.getDate() + 1) : Infinity
+    const term = query.trim().toLowerCase()
+
+    return requests.filter((request) => {
+      const submitted = new Date(request.createdAt).getTime()
+      if (submitted < start || submitted >= endExclusive) return false
+      const matchesSource = source === 'ALL' || (source === 'SALES' ? request.source !== 'TECHNICIAN' : request.source === 'TECHNICIAN')
+      if (!matchesSource || (status !== 'ALL' && request.status !== status)) return false
+      const text = `${request.reference} ${request.requester?.name || ''} ${request.projectReference || ''} ${request.items.map((item) => item.inventoryItem.name).join(' ')}`.toLowerCase()
+      return !term || text.includes(term)
+    }).sort((a, b) => {
+      const difference = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      return dateOrder === 'newest' ? difference : -difference
+    })
+  }, [requests, query, source, status, from, through, dateOrder, invalidDates])
+
+  function printRegister() {
+    const criteria = [
+      dateOrder === 'newest' ? 'Newest first' : 'Oldest first',
+      from ? `From ${from}` : '',
+      through ? `Through ${through}` : '',
+      source === 'TECHNICIAN' ? 'Technicians' : source === 'SALES' ? 'Sales / client orders' : '',
+      status === 'ALL' ? '' : statusLabel(status),
+      query.trim() ? `Search: ${query.trim()}` : '',
+    ].filter(Boolean)
+    void print({ kind: 'register', rows: visible, criteria })
+  }
 
   const pendingCount = requests.filter((request) => ['PENDING', 'UNDER_REVIEW'].includes(request.status)).length
 
@@ -211,8 +244,8 @@ export default function AdminMaterialsRequestsPage() {
             <p className="mt-2 text-sm text-slate-200">Review and approve materials before Warehouse releases them.</p>
             {!loading && <p className="mt-3 text-sm font-semibold text-yellow-300">{pendingCount} awaiting approval</p>}
           </div>
-          <button type="button" onClick={() => void print('register')} disabled={loading || Boolean(error) || requests.length === 0} className="rounded-xl bg-yellow-300 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-yellow-200 disabled:opacity-50">
-            Print all requests
+          <button type="button" onClick={printRegister} disabled={loading || Boolean(error) || visible.length === 0} className="rounded-xl bg-yellow-300 px-4 py-2.5 text-sm font-bold text-slate-950 hover:bg-yellow-200 disabled:opacity-50">
+            Print request list
           </button>
         </div>
       </section>
@@ -234,6 +267,27 @@ export default function AdminMaterialsRequestsPage() {
             </select>
             <button type="button" onClick={() => void load()} disabled={loading} className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Refresh</button>
           </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-xs font-bold text-slate-700">
+              From
+              <input type="date" value={from} max={through || undefined} onChange={(event) => setFrom(event.target.value)} className={`${field} mt-1 block`} />
+            </label>
+            <label className="text-xs font-bold text-slate-700">
+              Through
+              <input type="date" value={through} min={from || undefined} onChange={(event) => setThrough(event.target.value)} className={`${field} mt-1 block`} />
+            </label>
+            <label className="text-xs font-bold text-slate-700">
+              Date order
+              <select value={dateOrder} onChange={(event) => setDateOrder(event.target.value === 'oldest' ? 'oldest' : 'newest')} className={`${field} mt-1 block`}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+            </label>
+            {(from || through) && (
+              <button type="button" onClick={() => { setFrom(''); setThrough('') }} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">Clear dates</button>
+            )}
+          </div>
+          {invalidDates && <p role="alert" className="text-xs font-semibold text-rose-700">The end date must be on or after the start date.</p>}
         </div>
 
         {loading || visible.length === 0 ? (
@@ -305,7 +359,7 @@ export default function AdminMaterialsRequestsPage() {
               <RequestDetails request={selected} />
             </div>
             <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 sm:px-6">
-              <button type="button" onClick={() => void print(selected)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100">Print request</button>
+              <button type="button" onClick={() => void print({ kind: 'request', request: selected })} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100">Print request</button>
               {['PENDING', 'UNDER_REVIEW'].includes(selected.status) && (
                 <div className="flex flex-wrap gap-2">
                   <button type="button" disabled={Boolean(busyId)} onClick={() => void decide(selected, 'REJECTED')} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50">Reject</button>
@@ -321,13 +375,13 @@ export default function AdminMaterialsRequestsPage() {
         <section ref={printDocument} className="admin-material-print hidden print:block">
           <header className="mb-5">
             <SalesLetterhead />
-            <h1 className="elettro-document-title">{printTarget === 'register' ? 'Materials Request Register' : 'Warehouse Materials Request'}</h1>
-            <p>{printTarget === 'register' ? `${requests.length.toLocaleString()} requests` : printTarget.reference}</p>
+            <h1 className="elettro-document-title">{printTarget.kind === 'register' ? 'Materials Request Register' : 'Warehouse Materials Request'}</h1>
+            <p className="break-words">{printTarget.kind === 'register' ? `${printTarget.rows.length.toLocaleString()} requests. ${printTarget.criteria.join(' / ')}` : printTarget.request.reference}</p>
           </header>
-          {printTarget === 'register' ? (
+          {printTarget.kind === 'register' ? (
             <table className="text-left">
               <thead><tr><th scope="col">Request</th><th scope="col">Requester / Department</th><th scope="col">Submitted</th><th scope="col">Materials</th><th scope="col">Status</th></tr></thead>
-              <tbody>{requests.map((request) => (
+              <tbody>{printTarget.rows.map((request) => (
                 <tr key={request.id}>
                   <th scope="row">{request.reference}</th>
                   <td>{request.requester?.name || 'Unknown requester'}<br />{department(request.source)}</td>
@@ -337,7 +391,7 @@ export default function AdminMaterialsRequestsPage() {
                 </tr>
               ))}</tbody>
             </table>
-          ) : <RequestDetails request={printTarget} />}
+          ) : <RequestDetails request={printTarget.request} />}
         </section>
       )}
     </div>
