@@ -102,11 +102,11 @@ export default function WarehouseReports() {
 
   const prints = (section: Exclude<PrintReport, 'all'>) => printReport === 'all' || printReport === section
   const summary = data?.summary || {}
-  const cards = [
-    ['Inventory items', summary.totalProducts || 0, `${summary.availableStockItems || 0} with stock`, 'from-emerald-400 to-teal-500'],
-    ['Low stock', summary.lowStockCount || 0, 'Needs replenishment', 'from-amber-300 to-orange-500'],
-    ['Requests', summary.totalRequests || 0, `${summary.technicianRequestsCount || 0} technician requests`, 'from-cyan-400 to-blue-500'],
-    ['Released quantity', summary.totalReleasedQty || 0, `${summary.totalReceipts || 0} receipts`, 'from-violet-400 to-indigo-500'],
+  const indicators = [
+    ['Inventory items', summary.totalProducts || 0, `${summary.availableStockItems || 0} with stock`],
+    ['Low stock', summary.lowStockCount || 0, 'Needs replenishment'],
+    ['Requests', summary.totalRequests || 0, `${summary.technicianRequestsCount || 0} technician requests`],
+    ['Released quantity', summary.totalReleasedQty || 0, `${summary.totalReceipts || 0} receipts`],
   ] as const
 
   return (
@@ -138,12 +138,23 @@ export default function WarehouseReports() {
             </button>
           </div>
         </div>
+        {data && !loading && !error && (
+          <dl className="relative mt-6 grid grid-cols-2 gap-x-5 gap-y-4 border-t border-white/20 pt-5 lg:grid-cols-4">
+            {indicators.map(([label, value, note]) => (
+              <div key={label} className="min-w-0">
+                <dt className="text-xs font-semibold text-cyan-100">{label}</dt>
+                <dd className="mt-1 break-words text-2xl font-black tabular-nums text-white">{value.toLocaleString()}</dd>
+                <dd className="mt-0.5 text-xs text-slate-200">{note}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </section>
 
       <section className="reports-print-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"><div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-700">Report controls</p><h2 className="mt-1 text-lg font-black text-slate-950">Choose a reporting period</h2><p className="mt-1 text-xs text-slate-500">Leave dates blank to include the complete warehouse history.</p></div><div className="flex flex-col gap-3 sm:flex-row sm:items-end"><label className="text-xs font-bold text-slate-600">From<input type="date" value={startDate} onChange={event => setStartDate(event.target.value)} className="mt-1 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-cyan-500" /></label><label className="text-xs font-bold text-slate-600">To<input type="date" value={endDate} onChange={event => setEndDate(event.target.value)} className="mt-1 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-cyan-500" /></label><button type="button" onClick={() => void load()} className="rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white hover:bg-cyan-800">Generate report</button></div></div><div className="mt-4 border-t border-slate-100 pt-4"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Filter materials, references, staff, statuses…" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-cyan-500 focus:bg-white" /></div></section>
 
       {error && <div role="alert" className="reports-print-hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{error}</div>}
-      {loading && <div className="reports-print-hidden grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[1, 2, 3, 4].map(item => <div key={item} className="h-32 animate-pulse rounded-2xl bg-slate-200" />)}</div>}
+      {loading && <p role="status" className="reports-print-hidden px-4 py-5 text-sm text-slate-600">Loading warehouse report...</p>}
 
       {!loading && data && <>
         {!error && (
@@ -159,7 +170,17 @@ export default function WarehouseReports() {
             ) : undefined}
           />
         )}
-        <div className={`department-print-summary [--report-summary-columns:4] grid gap-4 sm:grid-cols-2 xl:grid-cols-4 ${printReport !== 'all' ? 'reports-print-hidden' : ''}`}>{cards.map(([label, value, note, accent]) => <div key={label} className="reports-print-card relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent}`} /><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">{label}</p><p className="mt-3 text-2xl font-black text-slate-950">{value}</p><p className="mt-1 text-xs font-medium text-slate-500">{note}</p></div>)}</div>
+        {printReport === 'all' && !error && (
+          <div className="department-print-summary [--report-summary-columns:4] hidden print:grid">
+            {indicators.map(([label, value, note]) => (
+              <div key={label} className="reports-print-card">
+                <p className="text-xs font-bold">{label}</p>
+                <p className="font-black tabular-nums">{value.toLocaleString()}</p>
+                <p className="text-xs">{note}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         <ReportTable print={prints('inventory')} title="Inventory stock report" eyebrow="Current warehouse stock" count={filtered.inventory.length}><table><thead><tr><th>Material</th><th>SKU</th><th>Category</th><th>Stock</th><th>Reorder level</th><th>Stock value</th></tr></thead><tbody>{filtered.inventory.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.name}</td><td>{item.sku || '—'}</td><td>{item.category || 'General'}</td><td className={item.quantity <= item.reorderLevel ? 'font-black text-red-600' : 'font-black text-emerald-700'}>{item.quantity} {item.unit || 'units'}</td><td>{item.reorderLevel}</td><td className="font-black text-slate-900">{money(item.quantity * Number(item.buyPrice || 0))}</td></tr>)}</tbody></table></ReportTable>
         <div className={`department-print-table-group grid gap-6 xl:grid-cols-2 ${prints('lowStock') || prints('requests') ? '' : 'reports-print-hidden'}`}><ReportTable print={prints('lowStock')} title="Low-stock report" eyebrow="Replenishment monitoring" count={filtered.lowStockItems.length}><table><thead><tr><th>Material</th><th>Current stock</th><th>Reorder level</th><th>Unit</th></tr></thead><tbody>{filtered.lowStockItems.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.name}</td><td className="font-black text-red-600">{item.quantity}</td><td>{item.reorderLevel}</td><td>{item.unit || 'units'}</td></tr>)}</tbody></table></ReportTable><ReportTable print={prints('requests')} title="Requests report" eyebrow="Incoming material requests" count={filtered.requests.length}><table><thead><tr><th>Reference</th><th>Source</th><th>Status</th><th>Requester</th><th>Date</th></tr></thead><tbody>{filtered.requests.map(item => <tr key={item.id}><td className="font-black text-slate-900">{item.reference}</td><td>{item.source}</td><td><Status value={item.status} /></td><td>{item.requester?.name || '—'}</td><td>{dateLabel(item.createdAt)}</td></tr>)}</tbody></table></ReportTable></div>
