@@ -154,40 +154,43 @@ export default function CheckoutModal() {
     return () => { active = false }
   }, [checkoutOpen])
 
+  const { address, barangay, city, province, postalCode } = form
+
   useEffect(() => {
-    if (!checkoutOpen || fulfillmentMethod !== "DELIVERY") {
-      setShippingEstimate(null)
-      setShippingError("")
-      return
-    }
-    if (!form.address.trim() || !form.city.trim() || !form.province.trim()) {
-      setShippingEstimate(null)
-      setShippingError("")
+    setShippingEstimate(null)
+    setShippingError("")
+    if (!checkoutOpen || fulfillmentMethod !== "DELIVERY" || !address.trim() || !barangay || !city || !province) {
+      setShippingLoading(false)
       return
     }
 
+    const controller = new AbortController()
+    setShippingLoading(true)
     const timer = window.setTimeout(async () => {
-      setShippingLoading(true)
-      setShippingError("")
       try {
         const response = await fetch("/api/public/shipping-estimate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          signal: controller.signal,
+          body: JSON.stringify({ address, barangay, city, province, postalCode }),
         })
         const data = await response.json().catch(() => ({}))
         if (!response.ok) throw new Error(data?.error || "Could not calculate shipping.")
-        setShippingEstimate({ distanceKm: Number(data.distanceKm), shippingFee: Number(data.shippingFee) })
-      } catch (error: any) {
-        setShippingEstimate(null)
-        setShippingError(error?.message || "Could not calculate shipping.")
+        if (!controller.signal.aborted) {
+          setShippingEstimate({ distanceKm: Number(data.distanceKm), shippingFee: Number(data.shippingFee) })
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) setShippingError(error instanceof Error ? error.message : "Could not calculate shipping.")
       } finally {
-        setShippingLoading(false)
+        if (!controller.signal.aborted) setShippingLoading(false)
       }
     }, 600)
 
-    return () => window.clearTimeout(timer)
-  }, [checkoutOpen, fulfillmentMethod, form.address, form.barangay, form.city, form.province, form.postalCode])
+    return () => {
+      controller.abort()
+      window.clearTimeout(timer)
+    }
+  }, [checkoutOpen, fulfillmentMethod, address, barangay, city, province, postalCode])
 
   const paymentLabel = useMemo(
     () => PAYMENT_METHODS.find((p) => p.id === paymentMethod)?.label || paymentMethod,
@@ -231,7 +234,7 @@ export default function CheckoutModal() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (items.length === 0) return
+    if (submitting || items.length === 0) return
     setServerError("")
     if (!validate()) return
     if (fulfillmentMethod === "DELIVERY" && !shippingEstimate) {
@@ -248,12 +251,14 @@ export default function CheckoutModal() {
           clientName: form.clientName.trim(),
           email: form.email.trim(),
           phone: form.phone.trim(),
-          address: form.address.trim(),
-          barangay: form.barangay.trim(),
-          city: form.city.trim(),
-          province: form.province.trim(),
-          postalCode: form.postalCode.trim(),
-          deliveryNotes: form.deliveryNotes.trim(),
+          ...(fulfillmentMethod === "DELIVERY" ? {
+            address: form.address.trim(),
+            barangay: form.barangay.trim(),
+            city: form.city.trim(),
+            province: form.province.trim(),
+            postalCode: form.postalCode.trim(),
+            deliveryNotes: form.deliveryNotes.trim(),
+          } : {}),
           fulfillmentMethod,
           paymentMethod: paymentMethod === "GCASH" && gcashTestMode ? "GCASH_TEST" : paymentMethod,
           items: items.map((it) => ({ inventoryItemId: it.id, quantity: it.quantity })),
@@ -280,13 +285,22 @@ export default function CheckoutModal() {
     }
   }
 
-  const inputClass =
-    "w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+  const delivery = fulfillmentMethod === "DELIVERY"
+  const testCheckout = paymentMethod === "GCASH" && gcashTestMode
+  const total = subtotal + (delivery ? shippingEstimate?.shippingFee || 0 : 0)
+  const inputClass = "mt-1.5 block min-h-[42px] w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-teal-600 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100 disabled:text-slate-600 aria-[invalid=true]:border-red-500"
+  const sectionClass = "min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"
+
+  function selectFulfillment(method: "DELIVERY" | "PICKUP") {
+    setFulfillmentMethod(method)
+    setPaymentMethod((current) => current === "GCASH" ? current : method === "DELIVERY" ? "CASH_ON_DELIVERY" : "CASH_ON_PICKUP")
+    setServerError("")
+  }
 
   return (
     <ClientSessionGate>
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true">
-      <div className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[2rem] border border-white/70 bg-white shadow-[0_30px_100px_-35px_rgba(8,47,73,.8)]">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/75 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label="Checkout">
+      <div className="max-h-[92dvh] w-full max-w-5xl overflow-y-auto overscroll-contain rounded-3xl border border-slate-200 bg-white shadow-2xl">
         {confirmation ? (
           /* ---------- Order confirmation ---------- */
           <div className="p-6 sm:p-10">
@@ -376,214 +390,174 @@ export default function CheckoutModal() {
             </button>
           </div>
         ) : (
-          /* ---------- Checkout form ---------- */
           <form onSubmit={handleSubmit} noValidate>
-            <header className="relative overflow-hidden border-b border-cyan-100 bg-gradient-to-r from-[#071c2c] via-[#0b5360] to-[#f0b429] px-6 py-5 text-white sm:px-8">
-              <div className="absolute -right-10 -top-16 h-40 w-40 rounded-full bg-cyan-300/20 blur-2xl" />
-              <div className="relative">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-200">Secure order checkout</p>
-                <h2 className="mt-1 text-2xl font-black tracking-tight">Complete your order</h2>
-                <p className="mt-1 text-xs text-cyan-50/80">{count} item{count === 1 ? "" : "s"} ready for fulfillment</p>
+            <header className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-white/15 bg-gradient-to-r from-slate-950 to-[#0b5360] px-5 py-4 text-white sm:px-7">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-200/15 text-teal-100 sm:flex">
+                  <CartIcon className="h-5 w-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black tracking-tight sm:text-2xl">Checkout</h2>
+                  <p className="mt-0.5 text-xs text-slate-200">Review your details and place your order.</p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={closeCheckout}
+                disabled={submitting}
                 aria-label="Close checkout"
-                className="relative flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/25 text-white hover:bg-white/10 disabled:opacity-50"
               >
-                <CloseIcon className="w-5 h-5" />
+                <CloseIcon className="h-5 w-5" />
               </button>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px]">
-              {/* Left: forms */}
-              <div className="space-y-5 bg-gradient-to-br from-white via-white to-cyan-50/40 px-6 py-6 sm:px-8">
-                <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_30px_-28px_rgba(8,47,73,.8)]">
-                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Customer Information</h3>
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Full Name *</label>
-                      <input value={form.clientName} readOnly autoComplete="name" className={`${inputClass} bg-gray-50`} />
-                      {errors.clientName && <p className="mt-1 text-xs font-semibold text-red-600">{errors.clientName}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Email Address *</label>
-                      <input type="email" value={form.email} readOnly autoComplete="email" className={`${inputClass} bg-gray-50`} />
-                      {errors.email && <p className="mt-1 text-xs font-semibold text-red-600">{errors.email}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Mobile Number *</label>
-                      <input type="tel" value={form.phone} readOnly autoComplete="tel" className={`${inputClass} bg-gray-50`} />
-                      {errors.phone && <p className="mt-1 text-xs font-semibold text-red-600">{errors.phone}</p>}
-                    </div>
+            <div className="grid min-w-0 gap-4 bg-slate-50 p-4 sm:gap-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <fieldset disabled={submitting} className="min-w-0 space-y-4">
+                <section className={sectionClass} aria-labelledby="checkout-contact">
+                  <h3 id="checkout-contact" className="text-base font-bold text-slate-950">Contact details</h3>
+                  <p className="mt-1 text-xs text-slate-600">We use the details from your client account.</p>
+                  <div className="mt-4 grid min-w-0 gap-3 sm:grid-cols-2">
+                    <CheckoutField label="Full name" error={errors.clientName} className="sm:col-span-2">
+                      <input value={form.clientName} readOnly autoComplete="name" aria-invalid={Boolean(errors.clientName)} className={inputClass} />
+                    </CheckoutField>
+                    <CheckoutField label="Email address" error={errors.email}>
+                      <input type="email" value={form.email} readOnly autoComplete="email" aria-invalid={Boolean(errors.email)} className={inputClass} />
+                    </CheckoutField>
+                    <CheckoutField label="Mobile number" error={errors.phone}>
+                      <input type="tel" value={form.phone} readOnly autoComplete="tel" aria-invalid={Boolean(errors.phone)} className={inputClass} />
+                    </CheckoutField>
                   </div>
                 </section>
 
-                <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_30px_-28px_rgba(8,47,73,.8)]">
-                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Fulfillment</h3>
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {(["DELIVERY", "PICKUP"] as const).map((method) => (
-                      <button
-                        key={method}
-                        type="button"
-                        onClick={() => {
-                          setFulfillmentMethod(method)
-                          setPaymentMethod(method === "DELIVERY" ? "CASH_ON_DELIVERY" : "CASH_ON_PICKUP")
-                        }}
-                        aria-pressed={fulfillmentMethod === method}
-                        className={`rounded-xl border-2 p-3 text-left text-sm font-bold ${fulfillmentMethod === method ? "border-yellow-400 bg-yellow-50" : "border-gray-200"}`}
-                      >
-                        {method === "DELIVERY" ? "Deliver to address" : "Pick up"}
-                      </button>
-                    ))}
+                <section className={sectionClass} aria-labelledby="checkout-fulfillment">
+                  <h3 id="checkout-fulfillment" className="text-base font-bold text-slate-950">Delivery or pickup</h3>
+                  <div className="mt-4">
+                    <CheckoutField label="Fulfillment method">
+                      <select value={fulfillmentMethod} onChange={(event) => selectFulfillment(event.target.value === "PICKUP" ? "PICKUP" : "DELIVERY")} className={`${inputClass} border-teal-600/50 bg-teal-50 font-bold`}>
+                        <option value="DELIVERY">Deliver to address</option>
+                        <option value="PICKUP">Pick up</option>
+                      </select>
+                    </CheckoutField>
                   </div>
-                  {fulfillmentMethod === "DELIVERY" ? (
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Province *</label>
-                      <select value={form.province} onChange={(e) => selectProvince(e.target.value)} disabled={locationLoading} autoComplete="address-level1" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
-                        <option value="">{locationLoading ? "Loading Mindanao provinces…" : "Select province in Mindanao"}</option>
-                        {locations.map((location) => <option key={location.code} value={location.province}>{location.province}</option>)}
-                      </select>
-                      {errors.province && <p className="mt-1 text-xs font-semibold text-red-600">{errors.province}</p>}
+
+                  {delivery ? (
+                    <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+                      <h4 className="text-sm font-bold text-slate-950">Delivery address</h4>
+                      <p className="mt-1 text-xs text-slate-600">Select your location, then enter your street address.</p>
+                      <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
+                        <CheckoutField label="Province" error={errors.province}>
+                          <select value={form.province} onChange={(event) => selectProvince(event.target.value)} disabled={locationLoading} autoComplete="address-level1" required aria-invalid={Boolean(errors.province)} className={inputClass}>
+                            <option value="">{locationLoading ? "Loading provinces..." : "Select province"}</option>
+                            {locations.map((location) => <option key={location.code} value={location.province}>{location.province}</option>)}
+                          </select>
+                        </CheckoutField>
+                        <CheckoutField label="City or municipality" error={errors.city}>
+                          <select value={form.city} onChange={(event) => selectCity(event.target.value)} disabled={!form.province || locationLoading} autoComplete="address-level2" required aria-invalid={Boolean(errors.city)} className={inputClass}>
+                            <option value="">{form.province ? "Select city or municipality" : "Select province first"}</option>
+                            {municipalityOptions.map((municipality) => <option key={municipality.code} value={municipality.name}>{municipality.name}</option>)}
+                          </select>
+                        </CheckoutField>
+                        <CheckoutField label="Barangay" error={errors.barangay}>
+                          <select value={form.barangay} onChange={(event) => {
+                            setForm((current) => ({ ...current, barangay: event.target.value, postalCode: "" }))
+                            setErrors((current) => ({ ...current, barangay: undefined }))
+                          }} disabled={!form.city} required aria-invalid={Boolean(errors.barangay)} className={inputClass}>
+                            <option value="">{form.city ? "Select barangay" : "Select city first"}</option>
+                            {barangayOptions.map((barangay) => <option key={barangay.code} value={barangay.name}>{barangay.name}</option>)}
+                          </select>
+                        </CheckoutField>
+                        <CheckoutField label="Postal code" error={errors.postalCode}>
+                          <input value={form.postalCode} readOnly placeholder={postalLoading ? "Finding code..." : "Filled automatically"} autoComplete="postal-code" aria-invalid={Boolean(errors.postalCode)} className={inputClass} />
+                        </CheckoutField>
+                        <CheckoutField label="Street address" error={errors.address} className="sm:col-span-2">
+                          <input value={form.address} onChange={(event) => setField("address", event.target.value)} placeholder="House or unit number, street, subdivision" autoComplete="street-address" required aria-invalid={Boolean(errors.address)} className={inputClass} />
+                        </CheckoutField>
+                        <CheckoutField label="Delivery notes (optional)" className="sm:col-span-2">
+                          <textarea value={form.deliveryNotes} onChange={(event) => setField("deliveryNotes", event.target.value)} placeholder="Landmark or instructions for the rider" rows={2} className={`${inputClass} resize-y`} />
+                        </CheckoutField>
+                        {locationError && <p role="alert" className="text-xs font-semibold text-red-700 sm:col-span-2">{locationError} Refresh the page to try again.</p>}
+                      </div>
                     </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Municipality / City *</label>
-                      <select value={form.city} onChange={(e) => selectCity(e.target.value)} disabled={!form.province || locationLoading} autoComplete="address-level2" className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
-                        <option value="">{locationLoading ? "Loading municipalities / cities…" : form.province ? "Select municipality / city" : "Select province first"}</option>
-                        {municipalityOptions.map((municipality) => <option key={municipality.code} value={municipality.name}>{municipality.name}</option>)}
-                      </select>
-                      {errors.city && <p className="mt-1 text-xs font-semibold text-red-600">{errors.city}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Barangay *</label>
-                      <select value={form.barangay} onChange={(e) => {
-                        setForm((current) => ({ ...current, barangay: e.target.value, postalCode: "" }))
-                        setErrors((current) => ({ ...current, barangay: undefined }))
-                      }} disabled={!form.city} className={`${inputClass} disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}>
-                        <option value="">{form.city ? "Select barangay" : "Select city first"}</option>
-                        {barangayOptions.map((barangay) => <option key={barangay.code} value={barangay.name}>{barangay.name}</option>)}
-                      </select>
-                      {errors.barangay && <p className="mt-1 text-xs font-semibold text-red-600">{errors.barangay}</p>}
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Complete Address *</label>
-                      <input value={form.address} onChange={(e) => setField("address", e.target.value)} placeholder="House no., street, subdivision" autoComplete="street-address" className={inputClass} />
-                      {errors.address && <p className="mt-1 text-xs font-semibold text-red-600">{errors.address}</p>}
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Postal Code</label>
-                      <input value={form.postalCode} readOnly placeholder={postalLoading ? "Finding postal code…" : "Auto-filled from address"} inputMode="numeric" autoComplete="postal-code" className={`${inputClass} bg-slate-50 text-slate-600`} />
-                      {errors.postalCode && <p className="mt-1 text-xs font-semibold text-red-600">{errors.postalCode}</p>}
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="mb-1 block text-xs font-bold text-gray-700">Delivery Notes (optional)</label>
-                      <textarea value={form.deliveryNotes} onChange={(e) => setField("deliveryNotes", e.target.value)} placeholder="Landmarks, preferred delivery time, special instructions…" rows={2} className={inputClass} />
-                    </div>
-                    {locationError && <p className="sm:col-span-2 mt-1 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold leading-5 text-red-600">{locationError} Please refresh the checkout and try again.</p>}
-                  </div>
                   ) : (
-                    <p className="mt-3 rounded-lg bg-gray-50 p-3 text-xs leading-5 text-gray-600">We will share pickup instructions when your order is ready. You can pay cash when you collect it, or choose GCash.</p>
+                    <div className="mt-4 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-950">
+                      <p className="font-bold">Pickup at Elettro</p>
+                      <p className="mt-1">Pickup instructions will appear in your client dashboard when your order is ready.</p>
+                    </div>
                   )}
                 </section>
 
-                <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_12px_30px_-28px_rgba(8,47,73,.8)]">
-                  <h3 className="text-sm font-black uppercase tracking-[0.12em] text-slate-900">Payment Method</h3>
-                  <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                    {PAYMENT_METHODS.map((method) => {
-                      if (method.id === "CASH_ON_DELIVERY" && fulfillmentMethod !== "DELIVERY") return null
-                      if (method.id === "CASH_ON_PICKUP" && fulfillmentMethod !== "PICKUP") return null
+                <section className={sectionClass} aria-labelledby="checkout-payment">
+                  <h3 id="checkout-payment" className="text-base font-bold text-slate-950">Payment method</h3>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    {PAYMENT_METHODS.filter((method) => method.id === "GCASH" || method.id === (delivery ? "CASH_ON_DELIVERY" : "CASH_ON_PICKUP")).map((method) => {
                       const active = paymentMethod === method.id
+                      const gcash = method.id === "GCASH"
                       return (
                         <button
                           key={method.id}
                           type="button"
-                          onClick={() => {
-                            if (method.id !== "GCASH" || gcashAvailable) setPaymentMethod(method.id)
-                          }}
-                          disabled={method.id === "GCASH" && !gcashAvailable}
+                          onClick={() => setPaymentMethod(method.id)}
+                          disabled={gcash && !gcashAvailable}
                           aria-pressed={active}
-                          className={`rounded-xl border-2 p-3.5 text-left transition-all ${
-                            active
-                              ? "border-yellow-400 bg-yellow-50 ring-2 ring-yellow-400/30"
-                              : method.id === "GCASH" && !gcashAvailable
-                                ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
-                                : "border-gray-200 bg-white hover:border-yellow-300"
-                          }`}
+                          className={`min-w-0 rounded-xl border p-3.5 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-600 ${active ? "border-teal-600 bg-teal-50" : "border-slate-200 hover:border-teal-400"} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70`}
                         >
-                          <span className="flex items-center justify-between">
-                            <span className="text-sm font-black text-gray-900">{method.id === "GCASH" && gcashTestMode ? "GCash (test only)" : method.label}</span>
-                            <span
-                              className={`flex h-4 w-4 items-center justify-center rounded-full border-2 ${
-                                active ? "border-yellow-500 bg-yellow-400" : "border-gray-300"
-                              }`}
-                            >
-                              {active && <span className="h-1.5 w-1.5 rounded-full bg-black" />}
-                            </span>
+                          <span className="flex items-center justify-between gap-2 text-sm font-bold text-slate-950">
+                            {gcash && gcashTestMode ? "GCash (test only)" : method.label}
+                            {active && <CheckIcon className="h-4 w-4 shrink-0 text-teal-700" />}
                           </span>
-                          <span className="mt-1 block text-xs text-gray-500">{method.id === "GCASH" && !gcashAvailable
-                              ? "GCash checkout is temporarily unavailable"
-                              : method.id === "GCASH" && gcashTestMode ? "Simulate a payment in SikatPay. No real charge." : method.hint}</span>
-                          {active && <span className="mt-2 block text-[10px] leading-relaxed text-gray-500">{method.id === "GCASH" && gcashTestMode ? "Save the test order, then continue to SikatPay." : method.note}</span>}
+                          <span className="mt-1 block text-xs leading-5 text-slate-600">
+                            {gcash && !gcashAvailable ? "Currently unavailable" : gcash && gcashTestMode ? "Simulate payment with SikatPay." : method.hint}
+                          </span>
                         </button>
                       )
                     })}
                   </div>
-                  <p className="mt-2 text-[10px] text-gray-400">
-                    GCash transfers are manually verified by our team. Cash is collected upon delivery or pickup.
+                  <p className="mt-3 text-xs leading-5 text-slate-600">
+                    {testCheckout ? "Continue to SikatPay after saving your test order. The simulation will not move real money." : PAYMENT_METHODS.find((method) => method.id === paymentMethod)?.note}
                   </p>
                 </section>
+              </fieldset>
 
-                {serverError && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600">{serverError}</div>
-                )}
-              </div>
-
-              {/* Right: order summary */}
-              <aside className="border-t border-cyan-100 bg-gradient-to-br from-[#effbfd] via-white to-[#fff7d6] p-6 lg:border-l lg:border-t-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-700">Your basket</p>
-                <h3 className="mt-1 text-xl font-black tracking-tight text-slate-900">Order Summary</h3>
-                <ul className="mt-3 max-h-56 space-y-2.5 overflow-y-auto pr-1">
+              <aside className="min-w-0 self-start rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:sticky lg:top-24" aria-labelledby="checkout-summary">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 id="checkout-summary" className="text-lg font-black tracking-tight text-slate-950">Order summary</h3>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{count} {count === 1 ? "item" : "items"}</span>
+                </div>
+                <ul className="mt-3 max-h-56 divide-y divide-slate-100 overflow-y-auto">
                   {items.map((item) => (
-                    <li key={item.id} className="flex items-start justify-between gap-3 text-sm">
-                      <span className="min-w-0 text-gray-700">
-                        <span className="font-black text-gray-900">{item.quantity}×</span>{" "}
-                        <span className="line-clamp-1 font-medium">{item.name}</span>
-                        <span className="mt-0.5 block text-[11px] text-gray-400">
-                          {formatPeso(item.unitPrice, 2)} / {item.unit || "pc"}
-                        </span>
-                      </span>
-                      <span className="shrink-0 font-bold text-gray-900">{formatPeso(Number(item.unitPrice) * item.quantity, 2)}</span>
+                    <li key={item.id} className="flex items-start justify-between gap-3 py-2.5 text-sm">
+                      <div className="min-w-0">
+                        <p className="break-words font-semibold text-slate-900">{item.name}</p>
+                        <p className="mt-0.5 text-xs text-slate-600">{item.quantity} {item.unit || "pcs"} at {formatPeso(item.unitPrice, 2)}</p>
+                      </div>
+                      <span className="shrink-0 font-semibold tabular-nums text-slate-950">{formatPeso(Number(item.unitPrice) * item.quantity, 2)}</span>
                     </li>
                   ))}
                 </ul>
 
-                <dl className="mt-4 space-y-2 border-t border-gray-200 pt-4 text-sm">
-                  <div className="flex items-center justify-between text-gray-600">
-                    <dt>Subtotal</dt>
-                    <dd className="font-bold text-gray-900">{formatPeso(subtotal, 2)}</dd>
+                <dl className="mt-3 space-y-2 border-t border-slate-200 pt-3 text-sm">
+                  <div className="flex justify-between gap-3"><dt className="text-slate-600">Subtotal</dt><dd className="font-semibold tabular-nums">{formatPeso(subtotal, 2)}</dd></div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-slate-600">{delivery ? "Delivery fee" : "Pickup"}</dt>
+                    <dd aria-live="polite" className="text-right text-xs font-semibold text-slate-700">
+                      {!delivery ? "No delivery fee" : shippingLoading ? "Calculating..." : shippingEstimate ? formatPeso(shippingEstimate.shippingFee, 2) : "Enter delivery address"}
+                    </dd>
                   </div>
-                  <div className="flex items-center justify-between text-gray-600">
-                    <dt>Shipping</dt>
-                    <dd className={shippingEstimate ? "font-bold text-gray-900" : "text-xs font-semibold text-gray-400"}>{fulfillmentMethod === "PICKUP" ? "No delivery fee" : shippingLoading ? "Calculating…" : shippingEstimate ? `${formatPeso(shippingEstimate.shippingFee, 2)} · ${shippingEstimate.distanceKm} km` : "Enter address"}</dd>
-                  </div>
-                  {shippingError && fulfillmentMethod === "DELIVERY" && <div className="rounded-lg bg-red-50 px-3 py-2 text-[11px] font-semibold leading-4 text-red-600">{shippingError}</div>}
-                  <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-base">
-                    <dt className="font-black text-gray-900">Total</dt>
-                    <dd className="font-black text-gray-900">{formatPeso(subtotal + (fulfillmentMethod === "DELIVERY" ? shippingEstimate?.shippingFee || 0 : 0), 2)}</dd>
+                  <div className="flex justify-between gap-3 border-t border-slate-200 pt-3 text-base font-black text-slate-950">
+                    <dt>{delivery && !shippingEstimate ? "Estimated total" : "Total"}</dt><dd className="tabular-nums">{formatPeso(total, 2)}</dd>
                   </div>
                 </dl>
+                {delivery && shippingError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700">{shippingError}</p>}
+                {serverError && <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-700">{serverError}</p>}
 
                 <button
                   type="submit"
-                  disabled={submitting}
-                  className="mt-5 w-full rounded-xl bg-yellow-400 px-4 py-3.5 text-sm font-black text-black shadow-lg shadow-yellow-400/25 transition-all hover:bg-yellow-300 active:scale-[0.99] disabled:opacity-60"
+                  disabled={submitting || (delivery && shippingLoading) || (paymentMethod === "GCASH" && !gcashAvailable)}
+                  className="mt-4 w-full rounded-xl bg-yellow-400 px-4 py-3 text-sm font-black text-slate-950 hover:bg-yellow-300 disabled:opacity-60"
                 >
-                  {submitting ? (fulfillmentMethod === "PICKUP" ? "Reserving Item…" : "Placing Order…") : fulfillmentMethod === "PICKUP" ? "Reserve Item" : `Place Order · ${formatPeso(subtotal + (fulfillmentMethod === "DELIVERY" ? shippingEstimate?.shippingFee || 0 : 0), 2)}`}
+                  {submitting ? "Saving order..." : testCheckout ? "Save test order" : delivery ? "Place order" : "Reserve for pickup"}
                 </button>
-                <p className="mt-2 text-center text-[10px] text-gray-400">
-                  A valid email and mobile number are required so we can confirm your order.
-                </p>
               </aside>
             </div>
           </form>
@@ -591,5 +565,20 @@ export default function CheckoutModal() {
       </div>
     </div>
     </ClientSessionGate>
+  )
+}
+
+function CheckoutField({ label, error, className = "", children }: {
+  label: string
+  error?: string
+  className?: string
+  children: React.ReactNode
+}) {
+  return (
+    <label className={`block min-w-0 text-xs font-semibold text-slate-700 ${className}`}>
+      {label}
+      {children}
+      {error && <span className="mt-1 block text-xs text-red-700">{error}</span>}
+    </label>
   )
 }
