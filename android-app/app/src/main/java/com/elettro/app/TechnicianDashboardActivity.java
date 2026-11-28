@@ -631,7 +631,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 addActionButton(actionRow, start);
             }
 
-            Button details = createButton("Details", R.drawable.bg_action_dark);
+            Button details = createButton("View job", R.drawable.bg_action_dark);
             details.setTextColor(Color.parseColor("#F5C400"));
             LinearLayout.LayoutParams dp = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
