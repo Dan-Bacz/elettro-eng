@@ -185,7 +185,6 @@ export default function AdminMaterialsRequestsPage() {
     <div className="admin-material-requests space-y-5">
       <style jsx global>{`
         @media print {
-          @page { size: A4 portrait; margin: 15mm; }
           html:has(.admin-material-print), body:has(.admin-material-print) { height: auto; overflow: visible; background: white; }
           div:has(> div > main > .admin-material-requests .admin-material-print) { min-height: 0; background: white; }
           div:has(> div > main > .admin-material-requests .admin-material-print) > aside,
@@ -195,7 +194,6 @@ export default function AdminMaterialsRequestsPage() {
           div:has(> main > .admin-material-requests .admin-material-print) { display: block; min-height: 0; margin: 0 !important; }
           main:has(> .admin-material-requests .admin-material-print) { padding: 0; }
           .admin-material-print { display: block; margin: 0 !important; color: #111; font: 10pt/1.4 Arial, sans-serif; }
-          .admin-material-print h1 { margin: 5mm 0 2mm; font-size: 20pt; font-weight: 700; }
           .admin-material-print header, .admin-material-print dl { break-inside: avoid; }
           .admin-material-print .request-detail-meta { background: white; border: 0; padding: 0; }
           .admin-material-print .request-detail-table { overflow: visible; border: 0; }
@@ -323,7 +321,7 @@ export default function AdminMaterialsRequestsPage() {
         <section ref={printDocument} className="admin-material-print hidden print:block">
           <header className="mb-5">
             <SalesLetterhead />
-            <h1>{printTarget === 'register' ? 'Materials Request Register' : 'Warehouse Materials Request'}</h1>
+            <h1 className="elettro-document-title">{printTarget === 'register' ? 'Materials Request Register' : 'Warehouse Materials Request'}</h1>
             <p>{printTarget === 'register' ? `${requests.length.toLocaleString()} requests` : printTarget.reference}</p>
           </header>
           {printTarget === 'register' ? (

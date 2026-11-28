@@ -338,6 +338,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({
         department: 'ADMIN',
+        preparedBy: { name: user.name, role: user.role },
         dateRange: { start: startDateStr || null, end: endDateStr || null },
         summary: {
           totalWorkers: users.length,

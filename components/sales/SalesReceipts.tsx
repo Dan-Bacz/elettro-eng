@@ -4,36 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { DocumentIcon, SearchIcon } from '../admin/icons'
 
-type Sale = {
-  id: string
-  reference: string
-  customerName: string | null
-  customerContact: string | null
-  total: number
-  paymentAmount: number
-  changeAmount: number
-  createdAt: string
-  createdBy?: { name: string } | null
-  items: { id: string; name: string; quantity: number; unit: string | null; unitPrice: number }[]
-}
+import { openSalesReceiptWindow, printSalesReceipt, type PrintableSale } from '../../lib/print-sales-receipt'
 
-const money = (value: number) => `₱${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character] || character)
-
-function printReceipt(sale: Sale) {
-  const printWindow = window.open('', '_blank', 'width=460,height=760')
-  if (!printWindow) return false
-
-  const rows = sale.items.map((item) => `<tr><td><strong>${item.quantity} × ${escapeHtml(item.name)}</strong><small>${escapeHtml(item.unit || 'pcs')} · ${money(Number(item.unitPrice))} each</small></td><td class="amount">${money(Number(item.unitPrice) * item.quantity)}</td></tr>`).join('')
-  const customer = escapeHtml(sale.customerName || 'Walk-in customer')
-  const contact = sale.customerContact ? `<br/>${escapeHtml(sale.customerContact)}` : ''
-
-  printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(sale.reference)}</title><style>
-    @page{size:80mm auto;margin:8mm}*{box-sizing:border-box}body{margin:0;background:#fff;color:#172033;font-family:Arial,Helvetica,sans-serif;font-size:12px}.receipt{width:100%;max-width:420px;margin:0 auto}.brand{text-align:center;border-bottom:2px solid #172033;padding-bottom:16px}.mark{display:inline-flex;width:38px;height:38px;align-items:center;justify-content:center;border-radius:12px;background:#facc15;color:#172033;font-weight:900;font-size:20px;margin-bottom:8px}.brand h1{font-size:18px;letter-spacing:.04em;margin:0;font-weight:900}.brand p{margin:5px 0 0;color:#667085;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}.meta{display:flex;justify-content:space-between;gap:16px;border-bottom:1px solid #d9dee8;padding:14px 0;color:#667085;font-size:10px;line-height:1.7}.meta strong{display:block;color:#172033;font-size:11px}.items{width:100%;border-collapse:collapse;margin:16px 0}.items th{text-align:left;color:#98a2b3;font-size:9px;text-transform:uppercase;letter-spacing:.12em;padding-bottom:8px}.items th:last-child{text-align:right}.items td{border-top:1px solid #edf0f5;padding:10px 0;vertical-align:top}.items small{display:block;color:#667085;font-size:10px;margin-top:3px}.amount{text-align:right;white-space:nowrap;font-weight:700}.summary{border-top:2px solid #172033;padding-top:10px}.line{display:flex;justify-content:space-between;padding:4px 0;color:#667085}.line strong{color:#172033}.grand{font-size:17px;padding-top:9px;margin-top:5px;border-top:1px dashed #b9c1cf}.change{margin-top:12px;border-radius:10px;background:#ecfdf3;padding:10px;color:#087443}.footer{text-align:center;border-top:1px solid #d9dee8;margin-top:18px;padding-top:16px;color:#667085;font-size:10px;line-height:1.7}.footer strong{display:block;color:#172033;font-size:11px;margin-bottom:4px}@media print{body{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
-  </style></head><body><main class="receipt"><header class="brand"><div class="mark">E</div><h1>ELETTRO ENGINEERING</h1><p>Official Sales Receipt</p></header><section class="meta"><div><strong>Receipt</strong>${escapeHtml(sale.reference)}<br/><strong>Date</strong>${new Date(sale.createdAt).toLocaleString()}</div><div style="text-align:right"><strong>Customer</strong>${customer}${contact}</div></section><table class="items"><thead><tr><th>Item</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table><section class="summary"><div class="line"><span>Subtotal</span><strong>${money(Number(sale.total))}</strong></div><div class="line"><span>Cash received</span><strong>${money(Number(sale.paymentAmount))}</strong></div><div class="line grand"><span>Total paid</span><strong>${money(Number(sale.total))}</strong></div><div class="line change"><span>Change</span><strong>${money(Number(sale.changeAmount))}</strong></div></section><footer class="footer"><strong>Thank you for your purchase.</strong>Please keep this receipt for your records.<br/>ELETTRO Engineering Enterprises</footer></main><script>window.onload=function(){window.focus();window.print()}</script></body></html>`)
-  printWindow.document.close()
-  return true
-}
+type Sale = PrintableSale & { id: string }
+const money = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format
 
 export default function SalesReceipts() {
   const [sales, setSales] = useState<Sale[]>([])
@@ -70,7 +44,7 @@ export default function SalesReceipts() {
   const total = visibleSales.reduce((sum, sale) => sum + Number(sale.total), 0)
 
   function handlePrint(sale: Sale) {
-    setNotice(printReceipt(sale) ? `Receipt ${sale.reference} is ready to print.` : 'Please allow pop-ups to print the receipt.')
+    setNotice(printSalesReceipt(sale, openSalesReceiptWindow()) ? `Receipt ${sale.reference} is ready to print.` : 'Please allow pop-ups to print the receipt.')
   }
 
   return <div className="space-y-7">

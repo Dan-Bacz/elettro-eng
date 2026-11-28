@@ -219,7 +219,7 @@ export default function WarehouseReceipts({ canPrintRegister = false }: { canPri
                       </div>
                 <div className="warehouse-receipt-heading">
                   <SalesLetterhead />
-                  <h2 id="warehouse-receipt-title" className="warehouse-receipt-title mt-4 text-xl font-black text-slate-900">Warehouse Material Release Receipt</h2>
+                  <h2 id="warehouse-receipt-title" className="elettro-document-title mt-4 text-xl font-black text-slate-900">Warehouse Material Release Receipt</h2>
 
                   {/* Metadata Grid */}
                   <div className="warehouse-receipt-meta mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-4 text-xs sm:grid-cols-4">
@@ -353,7 +353,7 @@ export default function WarehouseReceipts({ canPrintRegister = false }: { canPri
         <section className="warehouse-receipt-register hidden">
           <header className="warehouse-receipt-heading">
             <SalesLetterhead />
-            <h2 className="warehouse-receipt-title">Warehouse Receipt Register</h2>
+            <h2 className="elettro-document-title">Warehouse Receipt Register</h2>
             <div className="warehouse-receipt-meta">
               <div><strong>{register.preparedBy.role === 'WAREHOUSE' ? 'Warehouse Department Officer' : 'Prepared by'}</strong><div>{register.preparedBy.name}</div></div>
               <div><strong>Receipts on record</strong><div>{register.receipts.length.toLocaleString()}</div></div>
@@ -380,11 +380,10 @@ export default function WarehouseReceipts({ canPrintRegister = false }: { canPri
 
       <style jsx global>{`
         @media print {
-          @page { size: A4 portrait; margin: 15mm; }
           html:has(.warehouse-receipts-page[data-print-mode]),
           body:has(.warehouse-receipts-page[data-print-mode]) { height: auto; overflow: visible; background: white; }
           div:has(> div > main > .warehouse-receipts-page[data-print-mode]) { background: white !important; min-height: 0; }
-          div:has(> div > main > .warehouse-receipts-page[data-print-mode]) > aside,
+          div:has(> div > main > .warehouse-receipts-page[data-print-mode]) > :not(div:has(> main)),
           div:has(> main > .warehouse-receipts-page[data-print-mode]) > :is(header, footer),
           .warehouse-receipts-page[data-print-mode="register"] .warehouse-receipt-list,
           .warehouse-receipts-page[data-print-mode="receipt"] .receipt-card:not(.receipt-open) { display: none !important; }
@@ -400,7 +399,6 @@ export default function WarehouseReceipts({ canPrintRegister = false }: { canPri
             margin: 0; padding: 0; border: 0; border-radius: 0; background: white; box-shadow: none;
           }
           .warehouse-receipt-heading, .warehouse-receipt-signatures { break-inside: avoid; }
-          .warehouse-receipt-title { margin: 5mm 0 2mm; font-size: 20pt; line-height: 1.15; font-weight: 700; }
           .warehouse-receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 5mm; margin: 0; padding: 0; background: white; }
           .warehouse-receipt-meta > div { overflow-wrap: anywhere; }
           .warehouse-receipt-meta > div > :first-child { display: block; color: #111; font-size: 8pt; font-weight: 700; }

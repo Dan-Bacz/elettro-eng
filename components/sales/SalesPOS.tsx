@@ -3,18 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import Link from 'next/link'
 import { CheckCircleIcon, DocumentIcon, PackageIcon, SearchIcon } from '../admin/icons'
+import { openSalesReceiptWindow, printSalesReceipt } from '../../lib/print-sales-receipt'
 import type { SalesStockItem } from './SalesStock'
 
 type SaleLine = { inventoryItemId: string; quantity: number }
 const money = (value: number) => `₱${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-function printReceipt(sale: any) {
-  const receipt = window.open('', '_blank', 'width=420,height=720')
-  if (!receipt) return
-  const rows = (sale.items || []).map((item: any) => `<tr><td>${item.quantity} × ${item.name}</td><td style="text-align:right">₱${Number(item.unitPrice * item.quantity).toFixed(2)}</td></tr>`).join('')
-  receipt.document.write(`<html><head><title>${sale.reference}</title><style>body{font-family:Arial,sans-serif;width:320px;margin:24px auto;color:#111}h1{text-align:center;font-size:18px;margin:0}p{text-align:center;font-size:11px;color:#555}table{width:100%;border-collapse:collapse;margin:20px 0;font-size:12px}td{padding:7px 0;border-bottom:1px solid #ddd}.total{display:flex;justify-content:space-between;border-top:2px solid #111;padding-top:12px;font-weight:bold;font-size:16px}.meta{font-size:11px;color:#555;line-height:1.6}.payment{font-size:12px;line-height:1.8;margin-top:14px}</style></head><body><h1>ELETTRO ENGINEERING</h1><p>SALES RECEIPT</p><div class="meta">Receipt: ${sale.reference}<br/>Date: ${new Date(sale.createdAt).toLocaleString()}<br/>Customer: ${sale.customerName || 'Walk-in customer'}</div><table>${rows}</table><div class="total"><span>TOTAL</span><span>₱${Number(sale.total).toFixed(2)}</span></div><div class="payment">Cash received: ₱${Number(sale.paymentAmount).toFixed(2)}<br/>Change: ₱${Number(sale.changeAmount).toFixed(2)}</div><p>Thank you for your purchase.</p><script>window.onload=function(){window.print()}</script></body></html>`)
-  receipt.document.close()
-}
 
 export default function SalesPOS() {
   const [stock, setStock] = useState<SalesStockItem[]>([])
@@ -74,16 +67,31 @@ export default function SalesPOS() {
   }
   async function completeSale(event: FormEvent) {
     event.preventDefault()
+    if (saving) return
     if (!sale.length) { setError('Scan or add at least one product.'); return }
     if (!paymentSufficient) { setError('Enter an amount equal to or greater than the sale total.'); return }
+    const receiptWindow = openSalesReceiptWindow()
     setSaving(true); setError(''); setNotice('')
     try {
       const response = await fetch('/api/sales-sales', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: sale, customerName, customerContact, paymentAmount: payment }) })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Could not complete sale.')
-      setNotice(`Receipt ${data.sale.reference} saved. The print dialog is ready.`)
-      printReceipt(data.sale); setSale([]); setCustomerName(''); setCustomerContact(''); setPaymentAmount(''); await load(); searchRef.current?.focus()
-    } catch (err) { setError(err instanceof Error ? err.message : 'Could not complete sale.') }
+      setSale([]); setCustomerName(''); setCustomerContact(''); setPaymentAmount('')
+      let readyToPrint = false
+      try {
+        readyToPrint = printSalesReceipt(data.sale, receiptWindow)
+      } catch {
+        receiptWindow?.close()
+      }
+      setNotice(readyToPrint
+        ? `Receipt ${data.sale.reference} saved and ready to print.`
+        : `Receipt ${data.sale.reference} saved. Open Sales Receipts to print it.`)
+      await load()
+      searchRef.current?.focus()
+    } catch (err) {
+      receiptWindow?.close()
+      setError(err instanceof Error ? err.message : 'Could not complete sale.')
+    }
     finally { setSaving(false) }
   }
 

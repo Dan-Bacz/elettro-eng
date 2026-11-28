@@ -30,7 +30,7 @@ export default function DepartmentReportPrint({
   return (
     <header className="department-print-header">
       <SalesLetterhead />
-      <h1 className="department-print-title">{title}</h1>
+      <h1 className="elettro-document-title">{title}</h1>
       <dl className="department-print-meta">
         <div>
           <dt>{officerLabel}</dt>
@@ -55,7 +55,6 @@ export function DepartmentReportStyles() {
         .department-report-page .report-table td { border-top: 1px solid #eef2f7; color: #64748b; padding: 12px 16px; vertical-align: middle; }
 
         @media print {
-          @page { size: A4 portrait; margin: 15mm; }
           html:has(.department-report-page),
           body:has(.department-report-page) { height: auto !important; overflow: visible !important; }
           body:has(.department-report-page),
@@ -70,7 +69,6 @@ export function DepartmentReportStyles() {
           .department-report-page > * + * { margin-top: 6mm !important; }
 
           .department-print-header { display: block; margin-top: 0 !important; break-inside: avoid; }
-          .department-print-title { margin: 5mm 0 2mm; font-size: 20pt; line-height: 1.15; font-weight: 700; }
           .department-print-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 5mm; }
           .department-print-meta dt { font-size: 8pt; font-weight: 700; }
           .department-print-meta dd { margin: 0; overflow-wrap: anywhere; }
@@ -91,10 +89,10 @@ export function DepartmentReportStyles() {
           .department-print-table-heading h2 { font-size: 12pt; font-weight: 700; }
           .department-print-table-heading > span { background: none; padding: 0; font-size: 8pt; }
           .department-report-page .report-table { overflow: visible; }
-          .department-report-page .report-table table { table-layout: fixed; font-size: 8.5pt; }
+          .department-report-page .report-table table { min-width: 0; table-layout: fixed; font-size: 8.5pt; }
           .department-report-page .report-table thead { display: table-header-group; }
           .department-report-page .report-table tr { break-inside: avoid; }
-          .department-report-page .report-table :is(th, td) { padding: 2mm 1.5mm; color: #111; white-space: normal; overflow-wrap: anywhere; }
+          .department-report-page .report-table :is(th, td) { padding: 2mm 1.5mm; color: #111; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
           .department-report-page .report-table th { background: none; font-size: 8pt; letter-spacing: normal; border-block: 1px solid #555; }
           .department-report-page .report-table td { border-bottom: 1px solid #bbb; }
           .department-report-page .report-table td span { color: inherit; background: none; padding: 0; }

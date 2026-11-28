@@ -159,7 +159,6 @@ export default function SalesReceiptsPage() {
     <div className="sales-receipts-page space-y-6">
       <style jsx global>{`
         @media print {
-          @page { size: A4 portrait; margin: 15mm; }
           html:has(.sales-receipt-print), body:has(.sales-receipt-print) { height: auto; overflow: visible; background: white; }
           div:has(> div > main > .sales-receipts-page .sales-receipt-print) { background: white; min-height: 0; }
           div:has(> div > main > .sales-receipts-page .sales-receipt-print) > aside,
@@ -170,7 +169,6 @@ export default function SalesReceiptsPage() {
           .sales-receipt-print { position: static; display: block; padding: 0; margin: 0 !important; background: white; backdrop-filter: none; }
           .sales-receipt-paper { display: block; max-height: none; max-width: none; overflow: visible; padding: 0; border: 0; box-shadow: none; color: #111; font: 10pt/1.4 Arial, sans-serif; }
           .sales-receipt-header { display: block; padding: 0; border: 0; background: white; color: #111; break-inside: avoid; }
-          .sales-receipt-title { margin: 5mm 0 2mm; font-size: 20pt; line-height: 1.15; }
           .sales-receipt-body { padding: 0; overflow: visible; }
           .sales-receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm 5mm; padding: 0; border: 0; background: white; break-inside: avoid; }
           .sales-receipt-meta dt { color: #111; font-size: 8pt; font-weight: 700; }
@@ -293,7 +291,7 @@ export default function SalesReceiptsPage() {
                   Close
                 </button>
               </div>
-              <h2 id="receipt-title" className="sales-receipt-title mt-4 text-xl font-black tracking-tight sm:text-2xl">Warehouse Material Release Receipt</h2>
+              <h2 id="receipt-title" className="elettro-document-title mt-4 text-xl font-black tracking-tight sm:text-2xl">Warehouse Material Release Receipt</h2>
             </header>
 
             <div className="sales-receipt-body min-h-0 space-y-5 overflow-y-auto px-5 py-5 sm:px-7">
