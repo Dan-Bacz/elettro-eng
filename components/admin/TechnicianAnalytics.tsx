@@ -16,7 +16,7 @@ export default function TechnicianAnalytics({ bookings }: Props) {
     const active = bookings.filter((b) => ['ASSIGNED', 'IN_PROGRESS'].includes(b.status)).length
     const completed = bookings.filter((b) => b.status === 'COMPLETED').length
     const queued = Math.max(0, bookings.length - active - completed)
-    const total = Math.max(1, bookings.length)
+    const total = bookings.length || 1
     const average = bookings.length ? Math.round(bookings.reduce((sum, b) => sum + progressFor(b), 0) / bookings.length) : 0
     const days = Array.from({ length: 7 }, (_, index) => {
       const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (6 - index))
@@ -24,10 +24,9 @@ export default function TechnicianAnalytics({ bookings }: Props) {
       const count = bookings.reduce((sum, b) => sum + (b.technicianActivities || []).filter((a: any) => String(a.createdAt || '').slice(0, 10) === key).length + (b.reports || []).filter((r: any) => String(r.createdAt || '').slice(0, 10) === key).length, 0)
       return { label: date.toLocaleDateString(undefined, { weekday: 'short' }).slice(0, 2), count }
     })
-    return { active, completed, queued, total, average, days, top: bookings.slice().sort((a, b) => progressFor(b) - progressFor(a)).slice(0, 4) }
+    return { active, completed, queued, total, average, days }
   }, [bookings])
 
-  const ring = `${Math.round((analytics.completed / analytics.total) * 100)}% ${Math.round((analytics.completed / analytics.total) * 100)}%, ${Math.round(((analytics.completed + analytics.active) / analytics.total) * 100)}% ${Math.round(((analytics.completed + analytics.active) / analytics.total) * 100)}%, 100% 100%`
   const maxActivity = Math.max(1, ...analytics.days.map((day) => day.count))
 
   return (
@@ -57,10 +56,6 @@ export default function TechnicianAnalytics({ bookings }: Props) {
         <div className="mt-5 rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-medium text-slate-500">Keep posting concise updates to keep your project timeline and admin analytics current.</div>
       </div>
 
-      <div className="rounded-[2rem] border border-slate-200/90 bg-white p-5 shadow-[0_18px_40px_-26px_rgba(15,23,42,.52)] xl:col-span-2 sm:p-6">
-        <div className="flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Project radar</p><h2 className="mt-1 text-lg font-black text-slate-900">Progress across your jobs</h2></div><span className="text-xs font-bold text-slate-400">{analytics.total} total</span></div>
-        <div className="mt-5 grid gap-4 md:grid-cols-2">{analytics.top.map((booking) => { const progress = progressFor(booking); return <div key={booking.id} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4"><div className="flex items-center justify-between gap-3"><span className="truncate text-sm font-black text-slate-800">{booking.title}</span><span className="text-sm font-black text-cyan-700">{progress}%</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200"><div className="h-full rounded-full bg-gradient-to-r from-yellow-400 via-cyan-400 to-emerald-400 transition-all duration-1000" style={{ width: `${progress}%` }} /></div><div className="mt-2 flex justify-between text-[10px] font-bold uppercase tracking-wide text-slate-400"><span>{booking.status.replace('_', ' ')}</span><span>{booking.client?.name || 'Client'}</span></div></div> })}{analytics.top.length === 0 && <p className="text-sm text-slate-400">Your project analytics will appear when jobs are assigned.</p>}</div>
-      </div>
     </section>
   )
 }

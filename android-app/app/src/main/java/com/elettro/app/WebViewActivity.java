@@ -107,9 +107,13 @@ public class WebViewActivity extends AppCompatActivity {
                 return true;
             }
 
+            if (id == R.id.nav_my_jobs) {
+                loadAuthenticatedRoute("/technician/jobs");
+                return true;
+            }
+
             String section = null;
-            if (id == R.id.nav_my_jobs) section = "jobs";
-            else if (id == R.id.nav_notifications) section = "notifications";
+            if (id == R.id.nav_notifications) section = "notifications";
             else if (id == R.id.nav_materials) section = "materials";
             else if (id == R.id.nav_profile) section = "profile";
 

@@ -8,7 +8,7 @@ import { BarChartIcon, BellIcon, GearIcon, GridIcon, HammerIcon, LogoutIcon, Use
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: GridIcon, href: '/technician/dashboard' },
-  { key: 'jobs', label: 'My Jobs', icon: HammerIcon, href: '/technician/dashboard#jobs' },
+  { key: 'jobs', label: 'My Jobs', icon: HammerIcon, href: '/technician/jobs' },
   { key: 'notifications', label: 'Notifications', icon: BellIcon, href: '/technician/dashboard#notifications' },
   { key: 'materials', label: 'Material Requests', icon: CartIcon, href: '/technician/dashboard#materials' },
   { key: 'profile', label: 'Profile', icon: UserIcon, href: '/technician/dashboard#profile' },
@@ -67,9 +67,9 @@ export default function TechnicianSidebar({ collapsed, onToggle, mobileOpen, onC
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
           {NAV_ITEMS.map((item) => {
-            const active = item.key === 'dashboard' ? pathname === '/technician/dashboard' : pathname === '/technician/dashboard'
+            const active = pathname === item.href
             return (
-              <Link key={item.key} href={item.href} onClick={onClose} title={collapsed ? item.label : undefined} className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${active && item.key === 'dashboard' ? 'bg-yellow-400 text-black shadow-md shadow-yellow-400/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+              <Link key={item.key} href={item.href} aria-current={active ? 'page' : undefined} onClick={onClose} title={collapsed ? item.label : undefined} className={`group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors ${active ? 'bg-yellow-400 text-black shadow-md shadow-yellow-400/20' : 'text-gray-400 hover:bg-white/5 hover:text-white'}`}>
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center"><item.icon className="h-[18px] w-[18px]" /></span>
                 {!collapsed && <span className="truncate">{item.label}</span>}
               </Link>

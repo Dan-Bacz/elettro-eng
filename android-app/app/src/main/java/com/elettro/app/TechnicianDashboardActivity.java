@@ -81,7 +81,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     // Home
     private TextView techName, statTodayJobs, statActiveJobs, statCompletedJobs, statPendingMaterials;
     private View cardStatToday, cardStatActive, cardStatCompleted, cardStatMaterials;
-    private LinearLayout recentJobsContainer, homeNotificationsContainer;
 
     // Jobs
     private Button tabActive, tabCompleted;
@@ -108,10 +107,9 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
     private ImageView profileImage;
     private View btnChangePhoto;
     private String profileImageUrl = "";
-    private TextView btnLogout, btnViewInventory, btnGotoJobs;
+    private TextView btnLogout, btnViewInventory;
 
     // Quick actions
-    private LinearLayout btnQaUpdateProgress, btnQaSubmitReport, btnQaMaterialRequest, btnQaMyJobs;
 
     // Data
     private JSONObject techData;
@@ -187,8 +185,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         cardStatActive = findViewById(R.id.card_stat_active);
         cardStatCompleted = findViewById(R.id.card_stat_completed);
         cardStatMaterials = findViewById(R.id.card_stat_materials);
-        recentJobsContainer = findViewById(R.id.tech_recent_jobs_container);
-        homeNotificationsContainer = findViewById(R.id.home_notifications_container);
 
         tabActive = findViewById(R.id.tab_active);
         tabCompleted = findViewById(R.id.tab_completed);
@@ -206,11 +202,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
         inventoryListContainer = findViewById(R.id.inventory_list_container);
 
-        btnGotoJobs = findViewById(R.id.btn_goto_jobs);
-        btnQaUpdateProgress = findViewById(R.id.btn_qa_update_progress);
-        btnQaSubmitReport = findViewById(R.id.btn_qa_submit_report);
-        btnQaMaterialRequest = findViewById(R.id.btn_qa_material_request);
-        btnQaMyJobs = findViewById(R.id.btn_qa_my_jobs);
 
         profileName = findViewById(R.id.profile_name);
         profileEmail = findViewById(R.id.profile_email);
@@ -334,13 +325,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
 
         btnLogout.setOnClickListener(v -> logout());
 
-        btnGotoJobs.setOnClickListener(v -> showSection("jobs"));
-
-        btnQaUpdateProgress.setOnClickListener(v -> showSection("jobs"));
-        btnQaSubmitReport.setOnClickListener(v -> showSection("jobs"));
-        btnQaMaterialRequest.setOnClickListener(v -> showMaterialDialog(null, null));
-        btnQaMyJobs.setOnClickListener(v -> showSection("jobs"));
-
         cardStatToday.setOnClickListener(v -> showSection("jobs"));
         cardStatActive.setOnClickListener(v -> showSection("jobs"));
         cardStatCompleted.setOnClickListener(v -> {
@@ -380,7 +364,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                     renderProfile();
                     refreshDrawerHeader();
                 });
-                loadHomeNotifications();
+                loadNotificationBadge();
             } catch (Exception e) {
                 e.printStackTrace();
                 runOnUiThread(() -> Toast.makeText(this, R.string.network_error, Toast.LENGTH_SHORT).show());
@@ -543,72 +527,6 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         statCompletedJobs.setText(String.valueOf(completed));
         statPendingMaterials.setText(String.valueOf(pendingMaterials));
         statPendingMaterials.setTextColor(pendingMaterials > 0 ? Color.parseColor("#DC2626") : Color.parseColor("#111827"));
-
-        recentJobsContainer.removeAllViews();
-        if (bookingsArray == null || bookingsArray.length() == 0) {
-            showEmpty(recentJobsContainer, R.string.no_assignments);
-            return;
-        }
-        int count = Math.min(5, bookingsArray.length());
-        for (int i = 0; i < count; i++) {
-            JSONObject b = bookingsArray.optJSONObject(i);
-            if (b == null) continue;
-            String status = b.optString("status", "PENDING");
-            String title = b.optString("title", "Job");
-            String clientName = b.optJSONObject("client") != null ? b.optJSONObject("client").optString("name", "") : "";
-            String start = b.optString("startDate", "");
-            String schedule = start.isEmpty() ? "" : start.substring(0, Math.min(10, start.length()));
-
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.VERTICAL);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(0, 10, 0, 10);
-            row.setLayoutParams(new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-            LinearLayout topRow = new LinearLayout(this);
-            topRow.setOrientation(LinearLayout.HORIZONTAL);
-            topRow.setGravity(Gravity.CENTER_VERTICAL);
-
-            View dot = new View(this);
-            LinearLayout.LayoutParams dotLp = new LinearLayout.LayoutParams(8, 8);
-            dotLp.setMarginEnd(10);
-            dot.setLayoutParams(dotLp);
-            dot.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getStatusColor(status)));
-            topRow.addView(dot);
-
-            TextView tv = new TextView(this);
-            tv.setText(title);
-            tv.setTextColor(Color.parseColor("#101416"));
-            tv.setTextSize(13);
-            tv.setTypeface(null, Typeface.BOLD);
-            tv.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-            topRow.addView(tv);
-
-            TextView tvStatus = new TextView(this);
-            tvStatus.setText(status.replace("_", " "));
-            tvStatus.setTextColor(getStatusColor(status));
-            tvStatus.setTextSize(9);
-            tvStatus.setTypeface(null, Typeface.BOLD);
-            tvStatus.setPadding(8, 3, 8, 3);
-            tvStatus.setBackgroundResource(R.drawable.bg_pill);
-            topRow.addView(tvStatus);
-
-            row.addView(topRow);
-
-            String info = (clientName.isEmpty() ? "" : clientName)
-                    + (schedule.isEmpty() ? "" : (clientName.isEmpty() ? "" : " • ") + schedule);
-            if (!info.isEmpty()) {
-                TextView tvInfo = new TextView(this);
-                tvInfo.setText(info);
-                tvInfo.setTextColor(Color.parseColor("#68747A"));
-                tvInfo.setTextSize(11);
-                tvInfo.setPadding(0, 2, 0, 0);
-                row.addView(tvInfo);
-            }
-
-            recentJobsContainer.addView(row);
-        }
     }
 
     // === JOBS ===
@@ -1516,7 +1434,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
         }).start();
     }
 
-    private void loadHomeNotifications() {
+    private void loadNotificationBadge() {
         new Thread(() -> {
             try {
                 String resp = ApiClient.get("/notifications");
@@ -1524,27 +1442,11 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                     JSONObject obj = new JSONObject(resp);
                     notificationsArray = obj.optJSONArray("notifications");
                 }
-                runOnUiThread(this::renderHomeNotifications);
+                runOnUiThread(this::updateBellBadge);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }).start();
-    }
-
-    private void renderHomeNotifications() {
-        homeNotificationsContainer.removeAllViews();
-        if (notificationsArray == null || notificationsArray.length() == 0) {
-            showEmpty(homeNotificationsContainer, R.string.no_notifications);
-            updateBellBadge();
-            return;
-        }
-        int count = Math.min(3, notificationsArray.length());
-        for (int i = 0; i < count; i++) {
-            JSONObject n = notificationsArray.optJSONObject(i);
-            if (n == null) continue;
-            homeNotificationsContainer.addView(buildNotificationCard(n));
-        }
-        updateBellBadge();
     }
 
     private void updateBellBadge() {
@@ -1624,7 +1526,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 ApiClient.patch("/notifications", obj.toString());
                 runOnUiThread(() -> {
                     loadNotifications();
-                    loadHomeNotifications();
+                    loadNotificationBadge();
                 });
             } catch (Exception ignored) {}
         }).start();
@@ -1639,7 +1541,7 @@ public class TechnicianDashboardActivity extends AppCompatActivity {
                 runOnUiThread(() -> {
                     Toast.makeText(this, "All marked read", Toast.LENGTH_SHORT).show();
                     loadNotifications();
-                    loadHomeNotifications();
+                    loadNotificationBadge();
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(this, "Failed", Toast.LENGTH_SHORT).show());
