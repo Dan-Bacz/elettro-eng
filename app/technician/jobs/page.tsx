@@ -9,12 +9,16 @@ import { formatPeso } from '@/components/client/store/storeUtils'
 import ReportPhotoPicker, { ReportPhotoGallery } from '@/components/ReportPhotoPicker'
 import { MAX_REPORT_PHOTOS, readReportPhotos } from '@/lib/report-photos'
 
-type TechPayload = {
-  tech: UserObj
-  bookings: BookingObj[]
+type RequestedMaterial = {
+  requestedQuantity: number
+  inventoryItem: { id: string; name: string; unit: string | null }
 }
 
-type InventoryOption = { id: string; name: string; unit?: string | null }
+type TechPayload = {
+  tech: UserObj
+  bookings: (BookingObj & { warehouseRequests: { items: RequestedMaterial[] }[] })[]
+}
+
 type UsageDraft = { inventoryItemId: string; quantity: string; note: string }
 
 type ChecklistItem = { id: string; text: string; checked: boolean }
@@ -54,21 +58,16 @@ export default function TechnicianJobsPage() {
   const [preparingPhoto, setPreparingPhoto] = useState(false)
   const closed = b?.status === 'COMPLETED' || b?.status === 'CANCELLED'
   const readyToComplete = !closed && b?.reports?.[0]?.progress === 100
-  const [inventoryItems, setInventoryItems] = useState<InventoryOption[]>([])
   const [usageDrafts, setUsageDrafts] = useState<Record<string, UsageDraft>>({})
   async function load() {
     try {
-      const [res, inventoryRes] = await Promise.all([fetch('/api/tech'), fetch('/api/inventory')])
+      const res = await fetch('/api/tech')
       if (!res.ok) {
         if (res.status === 401) { router.push('/technician/login'); return }
         throw new Error('Failed to load your jobs')
       }
       const payload = await res.json()
       setData(payload)
-      if (inventoryRes.ok) {
-        const inventoryPayload = await inventoryRes.json()
-        setInventoryItems((Array.isArray(inventoryPayload) ? inventoryPayload : inventoryPayload.inventory || []).filter((item: InventoryOption) => item.id && item.name))
-      }
       setError('')
     } catch (e: any) {
       setError(e.message || 'Failed to load your jobs')
@@ -290,20 +289,35 @@ export default function TechnicianJobsPage() {
               {/* Actual materials consumed on this project */}
               {(() => {
                 const draft = usageDraftFor(b.id)
+                const requestedMaterials = new Map<string, RequestedMaterial>()
+                for (const request of b.warehouseRequests) {
+                  for (const item of request.items) {
+                    const previous = requestedMaterials.get(item.inventoryItem.id)
+                    requestedMaterials.set(item.inventoryItem.id, {
+                      ...item,
+                      requestedQuantity: (previous?.requestedQuantity ?? 0) + item.requestedQuantity,
+                    })
+                  }
+                }
+                const quantity = Number(draft.quantity)
                 const materialUsages = (b as any).materialUsages || []
                 return (
                   <div className="rounded-2xl border border-cyan-200 bg-cyan-50/60 p-4">
                     <h3 className="text-sm font-black text-slate-900">Record material usage</h3>
-                    <p className="mt-1 text-[11px] text-slate-500">Log the materials actually consumed in the field. Warehouse releases remain separate from project usage.</p>
-                    <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_85px_minmax(0,1fr)_auto]">
-                      <select value={draft.inventoryItemId} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, inventoryItemId: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500">
+                    <p className="mt-1 text-[11px] text-slate-500">Choose a material you requested for this project and enter how many units you used.</p>
+                    {requestedMaterials.size === 0 ? (
+                      <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-600">You have no requested materials available to log for this project.</p>
+                    ) : <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_85px_minmax(0,1fr)_auto]">
+                      <select aria-label="Requested material" value={requestedMaterials.has(draft.inventoryItemId) ? draft.inventoryItemId : ''} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, inventoryItemId: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500">
                         <option value="">Select material</option>
-                        {inventoryItems.map(item => <option key={item.id} value={item.id}>{item.name} ({item.unit || 'pcs'})</option>)}
+                        {Array.from(requestedMaterials.values(), ({ inventoryItem, requestedQuantity }) => (
+                          <option key={inventoryItem.id} value={inventoryItem.id}>{inventoryItem.name} ({requestedQuantity} {inventoryItem.unit || 'pcs'} requested)</option>
+                        ))}
                       </select>
-                      <input type="number" min="1" step="1" value={draft.quantity} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, quantity: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500" placeholder="Qty" />
+                      <input aria-label="Quantity used" type="number" min="1" max="1000000" step="1" value={draft.quantity} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, quantity: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500" placeholder="Qty" />
                       <input value={draft.note} onChange={e => setUsageDrafts(current => ({ ...current, [b.id]: { ...draft, note: e.target.value } }))} className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs outline-none focus:border-cyan-500" placeholder="Usage note (optional)" />
-                      <button type="button" onClick={() => submitUsage(b.id)} disabled={busy || !draft.inventoryItemId} className="rounded-xl bg-cyan-700 px-4 py-2 text-xs font-black text-white transition hover:bg-cyan-800 disabled:opacity-50">Record</button>
-                    </div>
+                      <button type="button" onClick={() => submitUsage(b.id)} disabled={busy || !requestedMaterials.has(draft.inventoryItemId) || !Number.isInteger(quantity) || quantity < 1 || quantity > 1_000_000} className="rounded-xl bg-cyan-700 px-4 py-2 text-xs font-black text-white transition hover:bg-cyan-800 disabled:opacity-50">Record</button>
+                    </div>}
                     {materialUsages.length > 0 && <div className="mt-3 space-y-1.5">{materialUsages.map((usage: any) => <div key={usage.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-xs"><span className="font-bold text-slate-700">{usage.inventoryItem?.name || 'Material'}</span><span className="text-slate-500">{usage.quantity} {usage.unit || usage.inventoryItem?.unit || 'pcs'}{usage.note ? ` · ${usage.note}` : ''}</span></div>)}</div>}
                   </div>
                 )

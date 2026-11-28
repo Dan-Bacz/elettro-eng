@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { requireActiveRole } from '../../lib/department-auth'
+import { technicianMaterialRequestFilter } from '../../lib/technician-material-requests'
 
 const prisma = new PrismaClient()
 
@@ -35,8 +36,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const note = String(req.body?.note || '').trim().slice(0, 500) || null
   if (!bookingId || !inventoryItemId || !Number.isInteger(quantity) || quantity < 1 || quantity > 1_000_000) return res.status(400).json({ error: 'Choose a material and enter a valid whole-number quantity.' })
   if (!(await canAccessBooking(user, bookingId))) return res.status(403).json({ error: 'You can only record usage for assigned projects.' })
-  const item = await prisma.inventoryItem.findFirst({ where: { id: inventoryItemId, deletedAt: null }, select: { id: true, unit: true } })
-  if (!item) return res.status(404).json({ error: 'Inventory item not found.' })
+  const item = await prisma.inventoryItem.findFirst({
+    where: {
+      id: inventoryItemId,
+      deletedAt: null,
+      ...(user.role === 'TECH' ? {
+        warehouseRequestItems: { some: { request: { bookingId, ...technicianMaterialRequestFilter(user.id) } } },
+      } : {}),
+    },
+    select: { id: true, unit: true },
+  })
+  if (!item) {
+    if (user.role === 'TECH') return res.status(400).json({ error: 'Choose a material you requested for this project.' })
+    return res.status(404).json({ error: 'Inventory item not found.' })
+  }
   const usage = await prisma.projectMaterialUsage.create({ data: { bookingId, inventoryItemId, techId: user.id, quantity, unit: item.unit || 'pcs', note }, include: { inventoryItem: { select: { id: true, name: true, sku: true, unit: true } }, tech: { select: { id: true, name: true } } } })
   const booking = await prisma.booking.findUnique({ where: { id: bookingId }, select: { title: true } })
   const admins = await prisma.user.findMany({ where: { role: 'ADMIN', status: 'ACTIVE' }, select: { id: true } })
